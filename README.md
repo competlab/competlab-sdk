@@ -6,8 +6,8 @@
 [![Node](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[![Share on X](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=TypeScript%20SDK%20for%20competitive%20intelligence%20%E2%80%94%20track%20what%20ChatGPT%20says%20about%20your%20brand&url=https://github.com/competlab/competlab-sdk)
-[![Share on LinkedIn](https://img.shields.io/badge/share-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/competlab/competlab-sdk)
+[![Share on X](https://img.shields.io/badge/Share_on_X-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/intent/tweet?text=TypeScript%20SDK%20for%20competitive%20intelligence%20%E2%80%94%20track%20what%20ChatGPT%20says%20about%20your%20brand&url=https://github.com/competlab/competlab-sdk)
+[![Share on LinkedIn](https://img.shields.io/badge/Share_on_LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/competlab/competlab-sdk)
 
 > Track what ChatGPT, Claude, and Gemini say about your brand — programmatically.
 
@@ -119,15 +119,9 @@ const tech = await cl.techTrust.dashboard('proj_abc');
 
 ## MCP Server
 
-Prefer AI-native access? Connect Claude Code, Cursor, or VS Code directly to CompetLab — no SDK needed:
+Prefer AI-native access? CompetLab also offers an MCP server with 24 tools — connect Claude Code, Cursor, or VS Code directly.
 
-```sh
-claude mcp add competlab --transport http https://mcp.competlab.com/mcp
-```
-
-24 tools for AI-powered competitive intelligence workflows.
-
-> [MCP Server docs](https://competlab.com/developers/mcp)
+> [competlab.com/developers/mcp](https://competlab.com/developers/mcp)
 
 ## API Reference
 
