@@ -1,0 +1,66 @@
+{
+  "name": "@competlab/sdk",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for the CompetLab competitive intelligence API",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "generate": "openapi-ts",
+    "build": "tsdown",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "competlab",
+    "competitive-intelligence",
+    "ai-visibility",
+    "competitor-analysis",
+    "api-client",
+    "mcp",
+    "chatgpt",
+    "claude",
+    "gemini",
+    "seo"
+  ],
+  "author": "CompetLab",
+  "homepage": "https://competlab.com/developers/api",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/competlab/competlab-sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/competlab/competlab-sdk/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "devDependencies": {
+    "@hey-api/openapi-ts": "0.94.2",
+    "tsdown": "0.21.4",
+    "tsx": "^4.21.0",
+    "typescript": "5.9.3"
+  }
+}
