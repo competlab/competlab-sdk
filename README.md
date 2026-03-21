@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./assets/banner.png" alt="CompetLab TypeScript SDK — Competitive Intelligence for the AI Era" width="100%" />
+</p>
+
 # @competlab/sdk
 
 [![npm version](https://img.shields.io/npm/v/@competlab/sdk)](https://www.npmjs.com/package/@competlab/sdk)
@@ -5,9 +9,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-[![Share on X](https://img.shields.io/badge/Share_on_X-000000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/intent/tweet?text=TypeScript%20SDK%20for%20competitive%20intelligence%20%E2%80%94%20track%20what%20ChatGPT%20says%20about%20your%20brand&url=https://github.com/competlab/competlab-sdk)
-[![Share on LinkedIn](https://img.shields.io/badge/Share_on_LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/competlab/competlab-sdk)
+[![25 Methods](https://img.shields.io/badge/Methods-25-brightgreen)](#available-resources)
+[![Zero Dependencies](https://img.shields.io/badge/Dependencies-0-brightgreen)]()
 
 > Track what ChatGPT, Claude, and Gemini say about your brand — programmatically.
 
@@ -134,6 +137,29 @@ Full interactive API documentation with "Try It" panel:
 - Node.js 20+
 - CompetLab API key ([start free trial](https://app.competlab.com/register) — 14 days, no credit card)
 
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| `api_key_missing` error | Ensure you're passing the key via `apiKey` option or `COMPETLAB_API_KEY` env var |
+| `api_key_invalid` error | Keys must start with `cl_live_` and be exactly 40 characters |
+| `fetch is not defined` | Requires Node.js 20+ (uses native `fetch`) |
+| TypeScript type errors after update | Run `npm install @competlab/sdk@latest` and restart your TS server |
+
+## Links
+
+- [REST API Reference](https://competlab.com/developers/api)
+- [MCP Server](https://competlab.com/developers/mcp) (AI-native access with 24 tools)
+- [GitHub — MCP Server](https://github.com/competlab/competlab-mcp-server)
+- [Privacy Policy](https://competlab.com/privacy-policy)
+- [Start Free Trial](https://app.competlab.com/register)
+
+## Support
+
+- Bug reports: [GitHub Issues](https://github.com/competlab/competlab-sdk/issues)
+- Email: [support@competlab.com](mailto:support@competlab.com)
+- Documentation: [competlab.com/developers](https://competlab.com/developers/api)
+
 ## License
 
 MIT — see [LICENSE](./LICENSE)
@@ -141,3 +167,6 @@ MIT — see [LICENSE](./LICENSE)
 ---
 
 Built by the [CompetLab](https://competlab.com) team. Competitive intelligence for the AI era.
+
+[![Share on X](https://img.shields.io/badge/Share_on_X-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=TypeScript%20SDK%20for%20competitive%20intelligence%20%E2%80%94%20track%20what%20ChatGPT%20says%20about%20your%20brand&url=https://github.com/competlab/competlab-sdk)
+[![Share on LinkedIn](https://img.shields.io/badge/Share_on_LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/competlab/competlab-sdk)
