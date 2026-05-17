@@ -12,6 +12,7 @@ import {
   Analysis as GenAnalysis,
   Alerts as GenAlerts,
   Schedules as GenSchedules,
+  Tools as GenTools,
 } from './generated/sdk.gen';
 import type {
   PublicTechTrustControllerGetTechTrustHistoryV1Data,
@@ -22,6 +23,11 @@ import type {
   PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data,
   PublicAiVisibilityControllerGetAiVisibilityTrendV1Data,
   PublicAlertsControllerListAlertsV1Data,
+  PtTechStackRequestDto,
+  PtTrustSignalsRequestDto,
+  PtAiCrawlerCheckerRequestDto,
+  PtSitemapVisualizerRequestDto,
+  PtAgentAdoptionRequestDto,
 } from './generated/types.gen';
 
 export type { Client } from './generated/client';
@@ -58,6 +64,7 @@ class CompetLab {
   readonly analysis: CompetLab.Analysis;
   readonly alerts: CompetLab.Alerts;
   readonly schedules: CompetLab.Schedules;
+  readonly tools: CompetLab.Tools;
 
   constructor(options: CompetLabOptions) {
     this.#client = createClient(
@@ -97,6 +104,7 @@ class CompetLab {
     this.analysis = new CompetLab.Analysis(this.#client);
     this.alerts = new CompetLab.Alerts(this.#client);
     this.schedules = new CompetLab.Schedules(this.#client);
+    this.tools = new CompetLab.Tools(this.#client);
   }
 }
 
@@ -320,6 +328,86 @@ namespace CompetLab {
       return GenSchedules.publicSchedulesControllerListSchedulesV1({
         client: this.client,
         path: { projectId },
+      });
+    }
+  }
+
+  export class TechStackScans {
+    constructor(private readonly client: Client) {}
+
+    startScan(body: PtTechStackRequestDto) {
+      return GenTools.publicTechStackToolControllerCreateScanV1({
+        client: this.client,
+        body,
+      });
+    }
+
+    getScan(scanId: string) {
+      return GenTools.publicTechStackToolControllerGetScanV1({
+        client: this.client,
+        path: { scanId },
+      });
+    }
+  }
+
+  export class TrustSignalsScans {
+    constructor(private readonly client: Client) {}
+
+    startScan(body: PtTrustSignalsRequestDto) {
+      return GenTools.publicTrustSignalsToolControllerCreateScanV1({
+        client: this.client,
+        body,
+      });
+    }
+
+    getScan(scanId: string) {
+      return GenTools.publicTrustSignalsToolControllerGetScanV1({
+        client: this.client,
+        path: { scanId },
+      });
+    }
+  }
+
+  export class AgentAdoptionScans {
+    constructor(private readonly client: Client) {}
+
+    startScan(body: PtAgentAdoptionRequestDto) {
+      return GenTools.publicAgentAdoptionToolControllerCreateScanV1({
+        client: this.client,
+        body,
+      });
+    }
+
+    getScan(scanId: string) {
+      return GenTools.publicAgentAdoptionToolControllerGetScanV1({
+        client: this.client,
+        path: { scanId },
+      });
+    }
+  }
+
+  export class Tools {
+    readonly techStack: TechStackScans;
+    readonly trustSignals: TrustSignalsScans;
+    readonly agentAdoption: AgentAdoptionScans;
+
+    constructor(private readonly client: Client) {
+      this.techStack = new TechStackScans(client);
+      this.trustSignals = new TrustSignalsScans(client);
+      this.agentAdoption = new AgentAdoptionScans(client);
+    }
+
+    sitemapVisualizer(body: PtSitemapVisualizerRequestDto) {
+      return GenTools.publicSitemapVisualizerToolControllerAnalyzeSitemapV1({
+        client: this.client,
+        body,
+      });
+    }
+
+    aiCrawlerChecker(body: PtAiCrawlerCheckerRequestDto) {
+      return GenTools.publicAiCrawlerCheckerToolControllerDetectAiCrawlersV1({
+        client: this.client,
+        body,
       });
     }
   }

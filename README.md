@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![25 Methods](https://img.shields.io/badge/Methods-25-brightgreen)](#available-resources)
+[![33 Methods](https://img.shields.io/badge/Methods-33-brightgreen)](#available-resources)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-0-brightgreen)]()
 
 > Track what ChatGPT, Claude, and Gemini say about your brand — programmatically.
@@ -63,9 +63,10 @@ cl.aiVisibility     // AI visibility scores & trends
 cl.analysis         // AI-generated action plans
 cl.alerts           // Competitive change alerts
 cl.schedules        // Monitoring schedules
+cl.tools            // Free tools — sitemap, AI crawlers, tech stack, trust signals, agent adoption
 ```
 
-**11 resources. 25 methods. Zero dependencies.** Uses native `fetch` — no axios, no bloat.
+**12 resources. 33 methods. Zero dependencies.** Uses native `fetch` — no axios, no bloat.
 
 ## Examples
 
@@ -120,9 +121,33 @@ const tech = await cl.techTrust.dashboard('proj_abc');
 // Security headers, frameworks, CDNs, analytics tools — across all monitored competitors
 ```
 
+### Free tools — no project required
+
+Stateless utilities that work on any public domain. Sync tools return immediately; the three async scans (`techStack`, `trustSignals`, `agentAdoption`) return a `scanId` you poll until `status` is `completed` or `failed` (24h TTL).
+
+```typescript
+// Sync
+const sitemap = await cl.tools.sitemapVisualizer({ domain: 'example.com' });
+const crawlers = await cl.tools.aiCrawlerChecker({ domain: 'example.com' });
+
+// Async — start a scan, poll until done
+const { data } = await cl.tools.techStack.startScan({ domain: 'example.com' });
+const scanId = data!.item.id;
+
+let result;
+while (true) {
+  const polled = await cl.tools.techStack.getScan(scanId);
+  if (polled.data!.item.status === 'completed') { result = polled.data!.item.result; break; }
+  if (polled.data!.item.status === 'failed') throw new Error(polled.data!.item.error?.code);
+  await new Promise((r) => setTimeout(r, 3000));
+}
+```
+
+Same shape applies to `cl.tools.trustSignals.{startScan,getScan}` and `cl.tools.agentAdoption.{startScan,getScan}`.
+
 ## MCP Server
 
-Prefer AI-native access? CompetLab also offers an MCP server with 24 tools — connect Claude Code, Cursor, or VS Code directly.
+Prefer AI-native access? CompetLab also offers an MCP server with 32 tools — connect Claude Code, Cursor, or VS Code directly.
 
 > [competlab.com/developers/mcp](https://competlab.com/developers/mcp)
 
@@ -149,7 +174,7 @@ Full interactive API documentation with "Try It" panel:
 ## Links
 
 - [REST API Reference](https://competlab.com/developers/api)
-- [MCP Server](https://competlab.com/developers/mcp) (AI-native access with 24 tools)
+- [MCP Server](https://competlab.com/developers/mcp) (AI-native access with 32 tools)
 - [GitHub — MCP Server](https://github.com/competlab/competlab-mcp-server)
 - [Privacy Policy](https://competlab.com/privacy-policy)
 - [Start Free Trial](https://app.competlab.com/register)

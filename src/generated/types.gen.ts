@@ -892,13 +892,13 @@ export type ContentChangelogItemResponse = {
      */
     totalRemoved: number;
     /**
-     * Added URLs grouped by content category
+     * Added URLs grouped by content category. By default each category is capped at 3 sample URLs (numeric totals remain accurate via `addedCounts`). Pass `allUrlsPerCategory=true` to return full URL lists.
      */
     addedByCategory: {
         [key: string]: unknown;
     };
     /**
-     * Removed URLs grouped by content category
+     * Removed URLs grouped by content category. By default each category is capped at 3 sample URLs (numeric totals remain accurate via `removedCounts`). Pass `allUrlsPerCategory=true` to return full URL lists.
      */
     removedByCategory: {
         [key: string]: unknown;
@@ -1952,6 +1952,1278 @@ export type ScheduleItemResponse = {
     } | null;
 };
 
+export type TechStackEvidenceResponse = {
+    /**
+     * Match source: 'header' = HTTP response header; 'html' = homepage body
+     */
+    kind: 'header' | 'html';
+    /**
+     * Human-readable source: header key name (e.g. 'x-vercel-id') or the regex pattern that fired
+     */
+    source: string;
+    /**
+     * The specific text that matched, newline-stripped and truncated for safety
+     */
+    matched: string;
+};
+
+export type TechStackDetectedTechnologyResponse = {
+    /**
+     * Canonical technology name (enum value from TechStackTechnology / GrowthStackTechnology / EngagementStackTechnology)
+     */
+    name: string;
+    /**
+     * Count of independent matchers that fired for this technology
+     */
+    evidenceCount: number;
+    /**
+     * One entry per matcher that fired — lets consumers show 'why did this match?'
+     */
+    evidence: Array<TechStackEvidenceResponse>;
+};
+
+export type TechStackToolResponse = {
+    /**
+     * Normalized domain, as actually requested (post-normalizeDomain)
+     */
+    domain: string;
+    /**
+     * Final URL after redirects (from N8N response)
+     */
+    finalUrl: string;
+    /**
+     * ISO-8601 timestamp of when detection completed
+     */
+    fetchedAt: string;
+    /**
+     * Total count of detected technologies across all three stacks
+     */
+    totalTechnologies: number;
+    /**
+     * TECH STACK category — hosting, CDN, frameworks, CMS, auth, payments, cookie consent
+     */
+    techStack: Array<TechStackDetectedTechnologyResponse>;
+    /**
+     * GROWTH STACK category — analytics, tag managers, session recording, marketing, CRM, advertising, A/B
+     */
+    growthStack: Array<TechStackDetectedTechnologyResponse>;
+    /**
+     * ENGAGEMENT STACK category — customer support, forms, video, monitoring
+     */
+    engagementStack: Array<TechStackDetectedTechnologyResponse>;
+};
+
+export type TechStackScanErrorResponse = {
+    /**
+     * Machine-readable error code
+     */
+    code: 'homepage_fetch_failed' | 'scan_failed';
+    /**
+     * Human-readable error message
+     */
+    message: string;
+};
+
+export type TechStackScanResponse = {
+    /**
+     * Scan ID (24-char hex Mongo ObjectId). Use to poll GET /scans/:scanId.
+     */
+    id: string;
+    /**
+     * Current lifecycle state. Poll until `completed` or `failed`.
+     */
+    status: 'queued' | 'running' | 'completed' | 'failed';
+    /**
+     * ISO-8601 timestamp when the scan was created.
+     */
+    createdAt: string;
+    /**
+     * ISO-8601 timestamp when the doc auto-deletes (createdAt + 24h). After this, GET returns 404.
+     */
+    expiresAt: string;
+    /**
+     * ISO-8601 timestamp when the background runner began scanning. Set once status leaves `queued`.
+     */
+    startedAt?: string;
+    /**
+     * ISO-8601 timestamp when the scan reached a terminal state (completed or failed).
+     */
+    completedAt?: string;
+    /**
+     * Full scan result. Present only when `status === "completed"`. Same shape as the legacy sync `/v1/tools/tech-stack` response.
+     */
+    result?: TechStackToolResponse;
+    /**
+     * Error details. Present only when `status === "failed"`.
+     */
+    error?: TechStackScanErrorResponse;
+};
+
+export type PtTechStackRequestDto = {
+    [key: string]: unknown;
+};
+
+export type TrustSignalsVerdictResponse = {
+    /**
+     * Tier verdict — describes homepage TRUST SIGNAL COVERAGE, not company market tier
+     */
+    tier: 'comprehensive' | 'substantial' | 'moderate' | 'minimal';
+    /**
+     * Total trust score (0-100, capped)
+     */
+    score: number;
+    /**
+     * Tier mean score from CompetLab SaaS Trust Benchmarks
+     */
+    benchmarkForTier: number;
+    /**
+     * How this domain compares to peers at the same tier
+     */
+    benchmarkComparison: 'above-average' | 'at-average' | 'below-average';
+    /**
+     * One-line human-readable verdict
+     */
+    summary: string;
+};
+
+export type TrustSignalsCategoryScoreResponse = {
+    /**
+     * Points earned in this category (post-cap, post-weight)
+     */
+    score: number;
+    /**
+     * Maximum possible points in this category
+     */
+    max: number;
+    /**
+     * Count of distinct signals detected in this category
+     */
+    signalsFound: number;
+};
+
+export type TrustSignalsCategoryScoresResponse = {
+    /**
+     * Enterprise readiness — compliance, trust center, privacy posture
+     */
+    enterpriseReadiness: TrustSignalsCategoryScoreResponse;
+    /**
+     * Third-party validation — G2, Capterra, Trustpilot, Gartner, etc.
+     */
+    thirdPartyValidation: TrustSignalsCategoryScoreResponse;
+    /**
+     * Social proof — customer logos, case studies, testimonials, count claims
+     */
+    socialProof: TrustSignalsCategoryScoreResponse;
+    /**
+     * Brand authority — press, awards, funding, partner badges
+     */
+    brandAuthority: TrustSignalsCategoryScoreResponse;
+    /**
+     * Risk reversal — free trial, freemium, no-credit-card
+     */
+    riskReversal: TrustSignalsCategoryScoreResponse;
+};
+
+export type TrustSignalsEvidenceResponse = {
+    /**
+     * Match source: 'header' = HTTP response header; 'html' = homepage body
+     */
+    kind: 'header' | 'html';
+    /**
+     * Human-readable source: header key name or the regex pattern that fired
+     */
+    source: string;
+    /**
+     * The specific text that matched, newline-stripped and truncated for safety
+     */
+    matched: string;
+};
+
+export type TrustSignalsDetectedSignalResponse = {
+    /**
+     * Canonical trust signal name (enum value from PTTrustSignal)
+     */
+    signal: string;
+    /**
+     * Buyer-concern category this signal belongs to
+     */
+    category: 'enterpriseReadiness' | 'thirdPartyValidation' | 'socialProof' | 'brandAuthority' | 'riskReversal';
+    /**
+     * Points this signal contributed to the total score (post-cap)
+     */
+    weight: number;
+    /**
+     * Confidence band — reflects regex specificity, not business weight
+     */
+    confidence: 'high' | 'medium' | 'low';
+    /**
+     * Count of independent matchers that fired for this signal
+     */
+    evidenceCount: number;
+    /**
+     * One entry per matcher that fired — lets consumers show 'why did this match?'
+     */
+    evidence: Array<TrustSignalsEvidenceResponse>;
+    /**
+     * Optional extracted value — e.g., customer count number, case study count
+     */
+    extractedValue?: {
+        [key: string]: unknown;
+    };
+};
+
+export type TrustSignalsSuspiciousPatternResponse = {
+    /**
+     * Type of asymmetry detected on the page
+     */
+    type: 'unverified-compliance-claim' | 'count-vs-logo-mismatch' | 'unlinked-press-claim' | 'stale-review-widget';
+    /**
+     * Severity of the discrepancy
+     */
+    severity: 'low' | 'medium' | 'high';
+    /**
+     * Human-readable description of the pattern
+     */
+    description: string;
+    /**
+     * Short actionable competitive intelligence insight — under 25 words
+     */
+    ciInsight: string;
+    /**
+     * Evidence supporting the pattern detection
+     */
+    evidence: Array<TrustSignalsEvidenceResponse>;
+};
+
+export type TrustSignalsGapResponse = {
+    /**
+     * Canonical trust signal name that is missing
+     */
+    signal: string;
+    /**
+     * Buyer-concern category this gap belongs to
+     */
+    category: 'enterpriseReadiness' | 'thirdPartyValidation' | 'socialProof' | 'brandAuthority' | 'riskReversal';
+    /**
+     * Human-readable prevalence among peers at the same tier
+     */
+    benchmarkPrevalence: string;
+    /**
+     * Short actionable insight on closing the gap
+     */
+    ciInsight: string;
+};
+
+export type TrustSignalsMetaResponse = {
+    /**
+     * Total number of canonical trust signals the detector evaluates
+     */
+    signalsEvaluated: number;
+    /**
+     * Benchmark dataset identifier — quarter and sample size
+     */
+    benchmarkSource: string;
+    /**
+     * Total scan duration in milliseconds
+     */
+    scanDurationMs: number;
+};
+
+export type TrustSignalsToolResponse = {
+    /**
+     * Normalized domain, as actually requested (post-normalizeDomain)
+     */
+    domain: string;
+    /**
+     * Final URL after redirects (from N8N response)
+     */
+    finalUrl: string;
+    /**
+     * ISO-8601 timestamp of when detection completed
+     */
+    fetchedAt: string;
+    /**
+     * Overall verdict — tier, score, benchmark comparison, human-readable summary
+     */
+    verdict: TrustSignalsVerdictResponse;
+    /**
+     * Per-category breakdown — score, max, and signals found in each of the 5 categories
+     */
+    categoryScores: TrustSignalsCategoryScoresResponse;
+    /**
+     * All trust signals detected on the homepage, with evidence
+     */
+    signalsDetected: Array<TrustSignalsDetectedSignalResponse>;
+    /**
+     * Asymmetry detection — claims without proof, count/logo mismatches, unlinked press, etc.
+     */
+    suspiciousPatterns: Array<TrustSignalsSuspiciousPatternResponse>;
+    /**
+     * Missing signals relative to tier benchmark — drives competitive insights
+     */
+    gapsVsBenchmark: Array<TrustSignalsGapResponse>;
+    /**
+     * Scan metadata — signals evaluated, benchmark source, scan duration
+     */
+    meta: TrustSignalsMetaResponse;
+};
+
+export type TrustSignalsScanErrorResponse = {
+    /**
+     * Machine-readable error code
+     */
+    code: 'homepage_fetch_failed' | 'scan_failed';
+    /**
+     * Human-readable error message
+     */
+    message: string;
+};
+
+export type TrustSignalsScanResponse = {
+    /**
+     * Scan ID (24-char hex Mongo ObjectId). Use to poll GET /scans/:scanId.
+     */
+    id: string;
+    /**
+     * Current lifecycle state. Poll until `completed` or `failed`.
+     */
+    status: 'queued' | 'running' | 'completed' | 'failed';
+    /**
+     * ISO-8601 timestamp when the scan was created.
+     */
+    createdAt: string;
+    /**
+     * ISO-8601 timestamp when the doc auto-deletes (createdAt + 24h). After this, GET returns 404.
+     */
+    expiresAt: string;
+    /**
+     * ISO-8601 timestamp when the background runner began scanning. Set once status leaves `queued`.
+     */
+    startedAt?: string;
+    /**
+     * ISO-8601 timestamp when the scan reached a terminal state (completed or failed).
+     */
+    completedAt?: string;
+    /**
+     * Full scan result. Present only when `status === "completed"`. Same shape as the legacy sync `/v1/tools/trust-signals` response.
+     */
+    result?: TrustSignalsToolResponse;
+    /**
+     * Error details. Present only when `status === "failed"`.
+     */
+    error?: TrustSignalsScanErrorResponse;
+};
+
+export type PtTrustSignalsRequestDto = {
+    [key: string]: unknown;
+};
+
+export type AiCrawlerCheckerCrawlerResultResponse = {
+    /**
+     * Robots.txt user-agent token for this crawler
+     */
+    userAgent: string;
+    /**
+     * Human-readable display name
+     */
+    displayName: string;
+    /**
+     * Operating organization
+     */
+    operator: string;
+    /**
+     * Crawler purpose category
+     */
+    category: 'training' | 'retrieval' | 'hybrid';
+    /**
+     * Per-crawler access status derived from robots.txt rules
+     */
+    status: 'allowed' | 'blocked' | 'conditional';
+    /**
+     * Raw robots.txt line that triggered the status, or null if no directive matched
+     */
+    matchingDirective: {
+        [key: string]: unknown;
+    } | null;
+};
+
+export type AiCrawlerCheckerRobotsTxtResponse = {
+    /**
+     * Whether the robots.txt file was successfully fetched
+     */
+    found: boolean;
+    /**
+     * Raw text content of the robots.txt file when fetched successfully
+     */
+    content?: string;
+    /**
+     * HTTP status code of the robots.txt fetch
+     */
+    statusCode?: number;
+};
+
+export type AiCrawlerCheckerMetaTagResultResponse = {
+    /**
+     * Meta tag name (currently always 'robots')
+     */
+    name: string;
+    /**
+     * Directive value, e.g. 'noai', 'noimageai', 'noml', 'noimageml'
+     */
+    content: string;
+};
+
+export type AiCrawlerCheckerHeadersResponse = {
+    /**
+     * Value of the X-Robots-Tag header from the homepage response
+     */
+    xRobotsTag?: string;
+};
+
+export type AiCrawlerCheckerLlmsTxtResultResponse = {
+    /**
+     * Whether the file was found at /llms.txt or /llms-full.txt
+     */
+    found: boolean;
+    /**
+     * Count of markdown section headers (`# foo` lines)
+     */
+    sectionCount?: number;
+    /**
+     * Count of markdown inline links `[text](url)`
+     */
+    linkCount?: number;
+    /**
+     * Rough token estimate (chars / 4, ceil)
+     */
+    approxTokens?: number;
+};
+
+export type AiCrawlerCheckerAccessibilityResponse = {
+    /**
+     * 0-100 weighted composite accessibility score
+     */
+    score: number;
+    /**
+     * Coarse-grained accessibility label
+     */
+    label: 'Fully Open' | 'Mostly Open' | 'Mixed Access' | 'Mostly Blocked';
+    /**
+     * Human-readable interpretation of the score
+     */
+    interpretation: string;
+    /**
+     * UI hint color for the score
+     */
+    color: 'teal' | 'blue' | 'orange' | 'red';
+};
+
+export type AiCrawlerCheckerStrategyResponse = {
+    /**
+     * Stable machine-readable strategy type
+     */
+    type: 'block-nothing' | 'block-training-allow-retrieval' | 'block-everything' | 'block-retrieval-allow-training' | 'mixed';
+    /**
+     * Human-readable strategy label
+     */
+    label: string;
+    /**
+     * Description of the detected strategy
+     */
+    description: string;
+};
+
+export type AiCrawlerCheckerIndustryPositionResponse = {
+    /**
+     * Human-readable industry label
+     */
+    industryLabel: string;
+    /**
+     * Average percentage of sites in this industry blocking at least one AI bot
+     */
+    industryAvgBlockRate: number;
+    /**
+     * Typical accessibility score range for this industry [min, max]
+     */
+    typicalScoreRange: Array<number>;
+    /**
+     * Where this domain sits relative to the typical score range
+     */
+    position: 'below-average' | 'average' | 'above-average';
+    /**
+     * Human-readable sentence explaining the position in industry context
+     */
+    insight: string;
+};
+
+export type AiCrawlerCheckerRecommendationResponse = {
+    /**
+     * Stable machine-readable id (e.g. 'ip-protection', 'visibility-risk')
+     */
+    id: string;
+    /**
+     * Short recommendation title
+     */
+    title: string;
+    /**
+     * Recommendation detail
+     */
+    description: string;
+    /**
+     * Priority for the recommendation
+     */
+    priority: 'high' | 'medium' | 'low';
+};
+
+export type AiCrawlerCheckerToolResponse = {
+    /**
+     * Normalized domain, as actually analyzed (post-normalizeDomain)
+     */
+    domain: string;
+    /**
+     * ISO-8601 timestamp of when the scan completed
+     */
+    fetchedAt: string;
+    /**
+     * Industry echoed back — defaults to 'other' if caller didn't supply one
+     */
+    industry: 'news-media' | 'arts-entertainment' | 'law-government' | 'finance-healthcare' | 'saas-tech' | 'ecommerce' | 'other';
+    /**
+     * All 21 catalog entries with derived per-crawler status
+     */
+    crawlers: Array<AiCrawlerCheckerCrawlerResultResponse>;
+    /**
+     * robots.txt fetch result
+     */
+    robotsTxt: AiCrawlerCheckerRobotsTxtResponse;
+    /**
+     * AI-related meta robots directives captured from the homepage
+     */
+    metaTags: Array<AiCrawlerCheckerMetaTagResultResponse>;
+    /**
+     * Values captured from homepage response headers
+     */
+    headers: AiCrawlerCheckerHeadersResponse;
+    /**
+     * /llms.txt stats (AI search file spec)
+     */
+    llmsTxt: AiCrawlerCheckerLlmsTxtResultResponse;
+    /**
+     * /llms-full.txt stats (AI search file spec)
+     */
+    llmsFullTxt: AiCrawlerCheckerLlmsTxtResultResponse;
+    /**
+     * Accessibility verdict — score + label + interpretation
+     */
+    accessibility: AiCrawlerCheckerAccessibilityResponse;
+    /**
+     * Detected strategy — opt-in/opt-out pattern across crawler categories
+     */
+    strategy: AiCrawlerCheckerStrategyResponse;
+    /**
+     * Industry-context positioning — benchmark percentile and insight
+     */
+    industryPosition: AiCrawlerCheckerIndustryPositionResponse;
+    /**
+     * Prioritized recommendations for closing gaps
+     */
+    recommendations: Array<AiCrawlerCheckerRecommendationResponse>;
+    /**
+     * Ready-to-paste robots.txt patch for the detected blocked crawlers
+     */
+    robotsSnippet: string;
+};
+
+export type PtAiCrawlerCheckerRequestDto = {
+    [key: string]: unknown;
+};
+
+export type SitemapVisualizerSitemapInfoResponse = {
+    /**
+     * Absolute URL of the fetched sitemap resource
+     */
+    url: string;
+    /**
+     * Sitemap resource shape
+     */
+    type: 'index' | 'urlset';
+    /**
+     * Count of URLs collected from this sitemap (post 10k-cap)
+     */
+    urlCount: number;
+    /**
+     * Count of URLs this sitemap actually declared (pre 10k-cap)
+     */
+    actualUrlCount: number;
+};
+
+export type SitemapVisualizerMetricsResponse = {
+    /**
+     * Count of URLs analyzed (post 10k-cap)
+     */
+    totalUrls: number;
+    /**
+     * True upstream URL count before the 10k cap
+     */
+    totalActualUrls: number;
+    /**
+     * Number of sitemap resources fetched
+     */
+    totalSitemaps: number;
+    /**
+     * Number of distinct content categories with at least one URL
+     */
+    categoriesFound: number;
+    /**
+     * Maximum path depth observed
+     */
+    maxDepth: number;
+    /**
+     * Average pathname depth across all URLs. Null when urls[] is empty.
+     */
+    avgDepth: {
+        [key: string]: unknown;
+    } | null;
+};
+
+export type SitemapVisualizerCategorizedUrlResponse = {
+    /**
+     * Absolute URL of the page
+     */
+    url: string;
+    /**
+     * Content-category classification (forked taxonomy, kebab-case)
+     */
+    category: 'blog' | 'docs' | 'tools' | 'landing' | 'legal' | 'case-studies' | 'comparison' | 'integrations' | 'changelog' | 'webinars' | 'careers' | 'other';
+    /**
+     * Path depth — segment count of URL.pathname after filtering empty parts
+     */
+    depth: number;
+    /**
+     * Value of <lastmod> from the source XML if present, else null
+     */
+    lastmod: {
+        [key: string]: unknown;
+    } | null;
+};
+
+export type SitemapVisualizerCategoryBreakdownResponse = {
+    /**
+     * Number of URLs in this category
+     */
+    count: number;
+    /**
+     * Percentage of total URLs (0-100, one decimal place)
+     */
+    percentage: number;
+};
+
+export type SitemapVisualizerCategoriesResponse = {
+    /**
+     * Blog posts and editorial content
+     */
+    blog: SitemapVisualizerCategoryBreakdownResponse;
+    /**
+     * Product documentation
+     */
+    docs: SitemapVisualizerCategoryBreakdownResponse;
+    /**
+     * Free tools and utilities
+     */
+    tools: SitemapVisualizerCategoryBreakdownResponse;
+    /**
+     * Landing / marketing pages
+     */
+    landing: SitemapVisualizerCategoryBreakdownResponse;
+    /**
+     * Legal pages — privacy, terms, DPA, etc.
+     */
+    legal: SitemapVisualizerCategoryBreakdownResponse;
+    /**
+     * Customer case studies
+     */
+    'case-studies': SitemapVisualizerCategoryBreakdownResponse;
+    /**
+     * Comparison pages (X vs Y)
+     */
+    comparison: SitemapVisualizerCategoryBreakdownResponse;
+    /**
+     * Integration pages
+     */
+    integrations: SitemapVisualizerCategoryBreakdownResponse;
+    /**
+     * Changelog / release notes
+     */
+    changelog: SitemapVisualizerCategoryBreakdownResponse;
+    /**
+     * Webinars and events
+     */
+    webinars: SitemapVisualizerCategoryBreakdownResponse;
+    /**
+     * Careers / hiring pages
+     */
+    careers: SitemapVisualizerCategoryBreakdownResponse;
+    /**
+     * Uncategorized pages
+     */
+    other: SitemapVisualizerCategoryBreakdownResponse;
+};
+
+export type SitemapVisualizerValidationCheckResponse = {
+    /**
+     * Whether the validation check passed
+     */
+    passed: boolean;
+    /**
+     * Human-readable reason
+     */
+    message: string;
+};
+
+export type SitemapVisualizerValidationResultResponse = {
+    /**
+     * Whether a sitemap was discovered (via /sitemap.xml, robots.txt, or provided URL)
+     */
+    sitemapFound: SitemapVisualizerValidationCheckResponse;
+    /**
+     * Whether the discovered XML parsed successfully
+     */
+    validXml: SitemapVisualizerValidationCheckResponse;
+    /**
+     * Whether the sitemap contained at least one URL
+     */
+    nonEmpty: SitemapVisualizerValidationCheckResponse;
+    /**
+     * Whether sitemap index referenced valid child sitemaps (if applicable)
+     */
+    validIndex: SitemapVisualizerValidationCheckResponse;
+};
+
+export type SitemapVisualizerFreshnessBucketsResponse = {
+    /**
+     * URLs last modified within the last 3 months (0-90 days)
+     */
+    fresh: number;
+    /**
+     * URLs last modified 3-6 months ago (90-180 days)
+     */
+    recent: number;
+    /**
+     * URLs last modified 6-12 months ago (180-360 days)
+     */
+    aging: number;
+    /**
+     * URLs last modified more than a year ago (>360 days)
+     */
+    stale: number;
+    /**
+     * URLs missing the <lastmod> tag
+     */
+    noDate: number;
+};
+
+export type SitemapVisualizerDepthDistributionResponse = {
+    /**
+     * URLs at path depth 0 (home pages)
+     */
+    0: number;
+    /**
+     * URLs at path depth 1
+     */
+    1: number;
+    /**
+     * URLs at path depth 2
+     */
+    2: number;
+    /**
+     * URLs at path depth 3
+     */
+    3: number;
+    /**
+     * URLs at path depth 4 or deeper
+     */
+    '4+': number;
+};
+
+export type SitemapVisualizerInsightsResponse = {
+    /**
+     * Bucketization of URLs by content freshness
+     */
+    freshness: SitemapVisualizerFreshnessBucketsResponse;
+    /**
+     * URL count grouped by path depth (0 = home, '4+' = 4+ segments)
+     */
+    depthDistribution: SitemapVisualizerDepthDistributionResponse;
+    /**
+     * Count of URLs older than ~6 months (180 days). Null when no <lastmod> data is present at all.
+     */
+    stalePageCount: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Up to N sample URLs per populated category, largest categories first. Keys are content categories; absent keys mean the category had zero URLs.
+     */
+    sampleUrlsByCategory: {
+        [key: string]: Array<string>;
+    };
+    /**
+     * Deterministic, rule-based interpretation string (1-3 sentences)
+     */
+    summary: string;
+};
+
+export type SitemapVisualizerToolResponse = {
+    /**
+     * Normalized domain, as actually analyzed (post-normalizeDomain)
+     */
+    domain: string;
+    /**
+     * ISO-8601 timestamp of scan completion
+     */
+    fetchedAt: string;
+    /**
+     * Coarse status — 'ok'/'partial' for success, 'not-found'/'access-denied'/'invalid' as first-class envelope states
+     */
+    status: 'ok' | 'partial' | 'not-found' | 'access-denied' | 'invalid';
+    /**
+     * How the sitemap was discovered
+     */
+    source: 'sitemap-xml' | 'robots-txt' | 'provided' | 'none';
+    /**
+     * All sitemap resources fetched or attempted
+     */
+    sitemaps: Array<SitemapVisualizerSitemapInfoResponse>;
+    /**
+     * True if the URL list was capped at 10,000 or child-sitemap fan-out hit the 20-child cap
+     */
+    truncated: boolean;
+    /**
+     * True if the root sitemap returned 401/403
+     */
+    accessDenied: boolean;
+    /**
+     * Quantitative metrics — URL counts, sitemap count, category count, depth stats
+     */
+    metrics: SitemapVisualizerMetricsResponse;
+    /**
+     * Raw categorized URLs. Present only when request had includeUrls: true. Capped at 10,000; check `truncated` flag.
+     */
+    urls?: Array<SitemapVisualizerCategorizedUrlResponse>;
+    /**
+     * Per-category breakdown. Every category key is populated (count may be 0).
+     */
+    categories: SitemapVisualizerCategoriesResponse;
+    /**
+     * Quality checks for sitemap discovery and parsing
+     */
+    validation: SitemapVisualizerValidationResultResponse;
+    /**
+     * AI-consumable insight layer — freshness, depth distribution, stale-page count, category samples, summary
+     */
+    insights: SitemapVisualizerInsightsResponse;
+};
+
+export type PtSitemapVisualizerRequestDto = {
+    [key: string]: unknown;
+};
+
+export type AgentAdoptionScannerResponse = {
+    /**
+     * Scanner brand string (constant per implementation)
+     */
+    name: string;
+    /**
+     * Semver-ish version tag of the scanner emitting this response
+     */
+    version: string;
+};
+
+export type AgentAdoptionNextLevelResponse = {
+    /**
+     * Target level number
+     */
+    level: number;
+    /**
+     * Target level name
+     */
+    levelName: string;
+    /**
+     * Checks that must pass to advance (AND semantics)
+     */
+    requirements: Array<'robots-txt-exists' | 'sitemap-exists' | 'link-headers' | 'ai-bot-rules' | 'content-signals' | 'web-bot-auth' | 'robots-allow-all' | 'llms-txt-exists' | 'llms-txt-valid' | 'llms-txt-size' | 'llms-txt-has-optional-section' | 'markdown-url-support' | 'markdown-negotiation' | 'rendering-strategy' | 'page-size-html' | 'http-status-codes' | 'redirect-behavior' | 'agents-md-detection' | 'cache-header-hygiene' | 'api-catalog' | 'oauth-discovery' | 'oauth-protected-resource' | 'mcp-server-card' | 'a2a-agent-card' | 'agent-skills'>;
+};
+
+export type AgentAdoptionFixPromptResponse = {
+    /**
+     * Full paste-to-Claude-Code/Cursor remediation markdown
+     */
+    full: string;
+};
+
+export type AgentAdoptionEvidenceRequestResponse = {
+    /**
+     * Request URL
+     */
+    url: string;
+    /**
+     * HTTP method
+     */
+    method: string;
+    /**
+     * Sanitized request headers (auth/session headers stripped)
+     */
+    headers?: {
+        [key: string]: string;
+    };
+};
+
+export type AgentAdoptionEvidenceResponsePayload = {
+    /**
+     * HTTP status code
+     */
+    status: number;
+    /**
+     * HTTP status text
+     */
+    statusText: string;
+    /**
+     * Sanitized response headers (auth/session headers stripped)
+     */
+    headers?: {
+        [key: string]: string;
+    };
+    /**
+     * Truncated body preview for the response
+     */
+    bodyPreview?: string;
+};
+
+export type AgentAdoptionEvidenceFindingResponse = {
+    /**
+     * Outcome of the trace step
+     */
+    outcome: 'positive' | 'negative' | 'neutral';
+    /**
+     * Short summary of the finding
+     */
+    summary: string;
+};
+
+export type AgentAdoptionEvidenceResponse = {
+    /**
+     * Trace action kind
+     */
+    action: 'fetch' | 'parse' | 'conclude';
+    /**
+     * Human-readable label for this trace step
+     */
+    label: string;
+    /**
+     * Request details (only for fetch actions)
+     */
+    request?: AgentAdoptionEvidenceRequestResponse;
+    /**
+     * Response details (only for fetch actions)
+     */
+    response?: AgentAdoptionEvidenceResponsePayload;
+    /**
+     * Finding summary (only for parse/conclude actions)
+     */
+    finding?: AgentAdoptionEvidenceFindingResponse;
+};
+
+export type AgentAdoptionCheckResponse = {
+    /**
+     * Check identifier, kebab-case (matches 25-check v1 scorecard)
+     */
+    id: 'robots-txt-exists' | 'sitemap-exists' | 'link-headers' | 'ai-bot-rules' | 'content-signals' | 'web-bot-auth' | 'robots-allow-all' | 'llms-txt-exists' | 'llms-txt-valid' | 'llms-txt-size' | 'llms-txt-has-optional-section' | 'markdown-url-support' | 'markdown-negotiation' | 'rendering-strategy' | 'page-size-html' | 'http-status-codes' | 'redirect-behavior' | 'agents-md-detection' | 'cache-header-hygiene' | 'api-catalog' | 'oauth-discovery' | 'oauth-protected-resource' | 'mcp-server-card' | 'a2a-agent-card' | 'agent-skills';
+    /**
+     * Top-level category this check belongs to
+     */
+    category: 'discoverability' | 'accessControl' | 'contentReadability' | 'agentEndpoints';
+    /**
+     * Tri-state check result; 'neutral' is informational
+     */
+    status: 'pass' | 'fail' | 'neutral';
+    /**
+     * Whether the check is scored. false = informational — excluded from both numerator and denominator.
+     */
+    scored: boolean;
+    /**
+     * Weight on the 0-10 tier scale (Critical 10 / High 7 / Medium 4 / Low 2). 0 for informational checks.
+     */
+    weight: number;
+    /**
+     * Declarative, verdict-phrased — 'what is the verdict + why'
+     */
+    message: string;
+    /**
+     * Constant per-check one-sentence 'what this measures' (scan-invariant)
+     */
+    description: string;
+    /**
+     * Per-check duration in milliseconds
+     */
+    durationMs: number;
+    /**
+     * Check IDs this check depends on — skipped when deps did not pass
+     */
+    dependsOn: Array<'robots-txt-exists' | 'sitemap-exists' | 'link-headers' | 'ai-bot-rules' | 'content-signals' | 'web-bot-auth' | 'robots-allow-all' | 'llms-txt-exists' | 'llms-txt-valid' | 'llms-txt-size' | 'llms-txt-has-optional-section' | 'markdown-url-support' | 'markdown-negotiation' | 'rendering-strategy' | 'page-size-html' | 'http-status-codes' | 'redirect-behavior' | 'agents-md-detection' | 'cache-header-hygiene' | 'api-catalog' | 'oauth-discovery' | 'oauth-protected-resource' | 'mcp-server-card' | 'a2a-agent-card' | 'agent-skills'>;
+    /**
+     * Authoritative spec URLs (RFCs, W3C drafts, vendor docs). Always present so consumers can link to docs regardless of verdict.
+     */
+    specUrls: Array<string>;
+    /**
+     * Typed per-check structured metrics. Shape varies by check id (discriminated by 'kind' === check.id). Undefined when the check has no meaningful programmatic metrics beyond `message`.
+     */
+    details?: {
+        [key: string]: unknown;
+    };
+    /**
+     * Paste-to-Claude remediation. Emitted ONLY when request sent includeFixPrompts: true AND check is failed + scored.
+     */
+    fixPrompt?: AgentAdoptionFixPromptResponse;
+    /**
+     * Full HTTP trace. Emitted ONLY when request sent debugMode: true.
+     */
+    evidence?: Array<AgentAdoptionEvidenceResponse>;
+};
+
+export type AgentAdoptionCategoryReportResponse = {
+    /**
+     * Category identifier
+     */
+    category: 'discoverability' | 'accessControl' | 'contentReadability' | 'agentEndpoints';
+    /**
+     * One-sentence customer-value description of what the category covers
+     */
+    description: string;
+    /**
+     * 0..100 integer category subscore
+     */
+    score: number;
+    /**
+     * Count of scored checks that passed in this category
+     */
+    passed: number;
+    /**
+     * Count of scored checks that failed in this category
+     */
+    failed: number;
+    /**
+     * Count of checks that were neutral / informational
+     */
+    neutral: number;
+    /**
+     * All checks belonging to this category
+     */
+    checks: Array<AgentAdoptionCheckResponse>;
+};
+
+export type AgentAdoptionClusterVerdictResponse = {
+    /**
+     * Cluster verdict name
+     */
+    name: 'htmlPath' | 'spaRenderingCap' | 'noViablePathCap';
+    /**
+     * Verdict kind. 'coefficient' scales per-check weights; 'cap' clamps the final overall score.
+     */
+    kind: 'coefficient' | 'cap';
+    /**
+     * Whether the verdict fired for this scan
+     */
+    triggered: boolean;
+    /**
+     * Present when kind === 'coefficient'. Multiplier in 0..1 — 1 = no penalty.
+     */
+    coefficient?: number;
+    /**
+     * Present when kind === 'coefficient'. Check IDs whose weight is scaled.
+     */
+    appliesTo?: Array<'robots-txt-exists' | 'sitemap-exists' | 'link-headers' | 'ai-bot-rules' | 'content-signals' | 'web-bot-auth' | 'robots-allow-all' | 'llms-txt-exists' | 'llms-txt-valid' | 'llms-txt-size' | 'llms-txt-has-optional-section' | 'markdown-url-support' | 'markdown-negotiation' | 'rendering-strategy' | 'page-size-html' | 'http-status-codes' | 'redirect-behavior' | 'agents-md-detection' | 'cache-header-hygiene' | 'api-catalog' | 'oauth-discovery' | 'oauth-protected-resource' | 'mcp-server-card' | 'a2a-agent-card' | 'agent-skills'>;
+    /**
+     * Present when kind === 'cap' AND triggered. Final score is forced ≤ this value.
+     */
+    capScore?: number;
+    /**
+     * One-line human-readable verdict
+     */
+    message: string;
+};
+
+export type AgentAdoptionFetchCountersResponse = {
+    /**
+     * Total fetches attempted
+     */
+    total: number;
+    /**
+     * 2xx status codes
+     */
+    success: number;
+    /**
+     * 403 + 429 responses (Cloudflare WAF challenge signals)
+     */
+    wafBlocked: number;
+    /**
+     * 404-only responses
+     */
+    notFound: number;
+    /**
+     * Network / TLS / timeout / other 4xx-5xx failures
+     */
+    failed: number;
+};
+
+export type AgentAdoptionN8nCountersResponse = {
+    /**
+     * Total n8n calls attempted
+     */
+    total: number;
+    /**
+     * Successful n8n calls
+     */
+    success: number;
+    /**
+     * Workflow not deployed OR Browserless 503
+     */
+    unavailable: number;
+};
+
+export type AgentAdoptionCountersResponse = {
+    /**
+     * Per-scan HTTP fetch counters
+     */
+    fetches: AgentAdoptionFetchCountersResponse;
+    /**
+     * Per-scan n8n (Browserless-backed) call counters
+     */
+    n8nCalls: AgentAdoptionN8nCountersResponse;
+};
+
+export type AgentAdoptionMetaResponse = {
+    /**
+     * Count of checks that produced a result (pass/fail/neutral). Dep-skipped checks DO count.
+     */
+    checksEvaluated: number;
+    /**
+     * Count of v1 checks that did not run at all in this scan (e.g., future checks not yet implemented). Does NOT include dep-skipped checks.
+     */
+    checksSkipped: number;
+    /**
+     * Total wall-clock scan duration in milliseconds
+     */
+    scanDurationMs: number;
+    /**
+     * Per-scan counters — fetches + n8n calls. Visible in all modes.
+     */
+    counters: AgentAdoptionCountersResponse;
+};
+
+export type AgentAdoptionToolResponse = {
+    /**
+     * Spec version this output conforms to
+     */
+    specVersion: string;
+    /**
+     * Profile name this scanner output reflects
+     */
+    profile: string;
+    /**
+     * Scanner identity — name + version
+     */
+    scanner: AgentAdoptionScannerResponse;
+    /**
+     * Normalized domain, as actually requested
+     */
+    domain: string;
+    /**
+     * Final URL after redirects (from the upstream homepage fetch)
+     */
+    finalUrl: string;
+    /**
+     * ISO-8601 timestamp of when the scan completed
+     */
+    scannedAt: string;
+    /**
+     * 0..100 integer overall score. Informational checks excluded; capped when a cluster cap verdict fires. Decorative — does NOT drive `level`.
+     */
+    score: number;
+    /**
+     * Numeric level tier. Gate-based — see nextLevel.requirements.
+     */
+    level: number;
+    /**
+     * Human-readable level name paired with level
+     */
+    levelName: string;
+    /**
+     * Next-level gate — absent when at top of known ladder (L3+ gates unknown in v1)
+     */
+    nextLevel?: AgentAdoptionNextLevelResponse;
+    /**
+     * 4 category reports — locked order: discoverability → accessControl → contentReadability → agentEndpoints
+     */
+    categoryReports: Array<AgentAdoptionCategoryReportResponse>;
+    /**
+     * Cross-check scoring-layer verdicts (coefficients + caps). Always present — even non-triggered. Order locked: htmlPath → spaRenderingCap → noViablePathCap.
+     */
+    clusters: Array<AgentAdoptionClusterVerdictResponse>;
+    /**
+     * Envelope meta — scan duration, evaluated/skipped check counts, counters
+     */
+    meta: AgentAdoptionMetaResponse;
+};
+
+export type AgentAdoptionScanErrorResponse = {
+    /**
+     * Machine-readable error code
+     */
+    code: 'homepage_fetch_failed' | 'scan_failed';
+    /**
+     * Human-readable error message
+     */
+    message: string;
+};
+
+export type AgentAdoptionScanResponse = {
+    /**
+     * Scan ID (24-char hex Mongo ObjectId). Use to poll GET /scans/:scanId.
+     */
+    id: string;
+    /**
+     * Current lifecycle state. Poll until `completed` or `failed`.
+     */
+    status: 'queued' | 'running' | 'completed' | 'failed';
+    /**
+     * ISO-8601 timestamp when the scan was created.
+     */
+    createdAt: string;
+    /**
+     * ISO-8601 timestamp when the doc auto-deletes (createdAt + 24h). After this, GET returns 404.
+     */
+    expiresAt: string;
+    /**
+     * ISO-8601 timestamp when the background runner began scanning. Set once status leaves `queued`.
+     */
+    startedAt?: string;
+    /**
+     * ISO-8601 timestamp when the scan reached a terminal state (completed or failed).
+     */
+    completedAt?: string;
+    /**
+     * Full scan result. Present only when `status === "completed"`. Same shape as the legacy sync `/v1/tools/agent-adoption` response.
+     */
+    result?: AgentAdoptionToolResponse;
+    /**
+     * Error details. Present only when `status === "failed"`.
+     */
+    error?: AgentAdoptionScanErrorResponse;
+};
+
+export type PtAgentAdoptionRequestDto = {
+    [key: string]: unknown;
+};
+
 export type PublicHealthControllerGetHealthV1Data = {
     body?: never;
     path?: never;
@@ -2318,6 +3590,10 @@ export type PublicContentControllerGetContentChangelogV1Data = {
          * Filter by content category (blog, docs, tools, landing, legal, caseStudies, comparison, integrations, changelog, webinars, other)
          */
         category?: string;
+        /**
+         * By default each item returns up to 3 sample URLs per category. Set true to return the full URL list per category. High-activity competitors can produce large responses — combine with `category` and `competitorId` filters to scope. Subject to an internal byte cap; check `truncated` in the response.
+         */
+        allUrlsPerCategory?: boolean;
     };
     url: '/v1/projects/{projectId}/content/changelog';
 };
@@ -2335,6 +3611,10 @@ export type PublicContentControllerGetContentChangelogV1Responses = {
     200: {
         items: Array<ContentChangelogItemResponse>;
         pagination: PaginationMeta;
+        /**
+         * True when the verbose-mode byte cap fired and items/URLs were trimmed to fit the response budget. Refine your query with category/competitorId filters when seen. Always false in default mode.
+         */
+        truncated: boolean;
     };
 };
 
@@ -2800,3 +4080,222 @@ export type PublicSchedulesControllerListSchedulesV1Responses = {
 };
 
 export type PublicSchedulesControllerListSchedulesV1Response = PublicSchedulesControllerListSchedulesV1Responses[keyof PublicSchedulesControllerListSchedulesV1Responses];
+
+export type PublicTechStackToolControllerCreateScanV1Data = {
+    body: PtTechStackRequestDto;
+    path?: never;
+    query?: never;
+    url: '/v1/tools/tech-stack/scans';
+};
+
+export type PublicTechStackToolControllerCreateScanV1Errors = {
+    400: ApiErrorEnvelope;
+    401: ApiErrorEnvelope;
+    429: ApiErrorEnvelope;
+    502: ApiErrorEnvelope;
+};
+
+export type PublicTechStackToolControllerCreateScanV1Error = PublicTechStackToolControllerCreateScanV1Errors[keyof PublicTechStackToolControllerCreateScanV1Errors];
+
+export type PublicTechStackToolControllerCreateScanV1Responses = {
+    /**
+     * ItemResponseOfTechStackScanResponse
+     */
+    200: {
+        item: TechStackScanResponse;
+    };
+};
+
+export type PublicTechStackToolControllerCreateScanV1Response = PublicTechStackToolControllerCreateScanV1Responses[keyof PublicTechStackToolControllerCreateScanV1Responses];
+
+export type PublicTechStackToolControllerGetScanV1Data = {
+    body?: never;
+    path: {
+        scanId: string;
+    };
+    query?: never;
+    url: '/v1/tools/tech-stack/scans/{scanId}';
+};
+
+export type PublicTechStackToolControllerGetScanV1Errors = {
+    401: ApiErrorEnvelope;
+    404: ApiErrorEnvelope;
+    429: ApiErrorEnvelope;
+};
+
+export type PublicTechStackToolControllerGetScanV1Error = PublicTechStackToolControllerGetScanV1Errors[keyof PublicTechStackToolControllerGetScanV1Errors];
+
+export type PublicTechStackToolControllerGetScanV1Responses = {
+    /**
+     * ItemResponseOfTechStackScanResponse
+     */
+    200: {
+        item: TechStackScanResponse;
+    };
+};
+
+export type PublicTechStackToolControllerGetScanV1Response = PublicTechStackToolControllerGetScanV1Responses[keyof PublicTechStackToolControllerGetScanV1Responses];
+
+export type PublicTrustSignalsToolControllerCreateScanV1Data = {
+    body: PtTrustSignalsRequestDto;
+    path?: never;
+    query?: never;
+    url: '/v1/tools/trust-signals/scans';
+};
+
+export type PublicTrustSignalsToolControllerCreateScanV1Errors = {
+    400: ApiErrorEnvelope;
+    401: ApiErrorEnvelope;
+    429: ApiErrorEnvelope;
+    502: ApiErrorEnvelope;
+};
+
+export type PublicTrustSignalsToolControllerCreateScanV1Error = PublicTrustSignalsToolControllerCreateScanV1Errors[keyof PublicTrustSignalsToolControllerCreateScanV1Errors];
+
+export type PublicTrustSignalsToolControllerCreateScanV1Responses = {
+    /**
+     * ItemResponseOfTrustSignalsScanResponse
+     */
+    200: {
+        item: TrustSignalsScanResponse;
+    };
+};
+
+export type PublicTrustSignalsToolControllerCreateScanV1Response = PublicTrustSignalsToolControllerCreateScanV1Responses[keyof PublicTrustSignalsToolControllerCreateScanV1Responses];
+
+export type PublicTrustSignalsToolControllerGetScanV1Data = {
+    body?: never;
+    path: {
+        scanId: string;
+    };
+    query?: never;
+    url: '/v1/tools/trust-signals/scans/{scanId}';
+};
+
+export type PublicTrustSignalsToolControllerGetScanV1Errors = {
+    401: ApiErrorEnvelope;
+    404: ApiErrorEnvelope;
+    429: ApiErrorEnvelope;
+};
+
+export type PublicTrustSignalsToolControllerGetScanV1Error = PublicTrustSignalsToolControllerGetScanV1Errors[keyof PublicTrustSignalsToolControllerGetScanV1Errors];
+
+export type PublicTrustSignalsToolControllerGetScanV1Responses = {
+    /**
+     * ItemResponseOfTrustSignalsScanResponse
+     */
+    200: {
+        item: TrustSignalsScanResponse;
+    };
+};
+
+export type PublicTrustSignalsToolControllerGetScanV1Response = PublicTrustSignalsToolControllerGetScanV1Responses[keyof PublicTrustSignalsToolControllerGetScanV1Responses];
+
+export type PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Data = {
+    body: PtAiCrawlerCheckerRequestDto;
+    path?: never;
+    query?: never;
+    url: '/v1/tools/ai-crawler-checker';
+};
+
+export type PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Errors = {
+    400: ApiErrorEnvelope;
+    401: ApiErrorEnvelope;
+    429: ApiErrorEnvelope;
+    502: ApiErrorEnvelope;
+};
+
+export type PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Error = PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Errors[keyof PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Errors];
+
+export type PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Responses = {
+    /**
+     * ItemResponseOfAiCrawlerCheckerToolResponse
+     */
+    200: {
+        item: AiCrawlerCheckerToolResponse;
+    };
+};
+
+export type PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Response = PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Responses[keyof PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Responses];
+
+export type PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Data = {
+    body: PtSitemapVisualizerRequestDto;
+    path?: never;
+    query?: never;
+    url: '/v1/tools/sitemap-visualizer';
+};
+
+export type PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Errors = {
+    400: ApiErrorEnvelope;
+    401: ApiErrorEnvelope;
+    429: ApiErrorEnvelope;
+    502: ApiErrorEnvelope;
+};
+
+export type PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Error = PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Errors[keyof PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Errors];
+
+export type PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Responses = {
+    /**
+     * ItemResponseOfSitemapVisualizerToolResponse
+     */
+    200: {
+        item: SitemapVisualizerToolResponse;
+    };
+};
+
+export type PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Response = PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Responses[keyof PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Responses];
+
+export type PublicAgentAdoptionToolControllerCreateScanV1Data = {
+    body: PtAgentAdoptionRequestDto;
+    path?: never;
+    query?: never;
+    url: '/v1/tools/agent-adoption/scans';
+};
+
+export type PublicAgentAdoptionToolControllerCreateScanV1Errors = {
+    400: ApiErrorEnvelope;
+    401: ApiErrorEnvelope;
+    429: ApiErrorEnvelope;
+    502: ApiErrorEnvelope;
+};
+
+export type PublicAgentAdoptionToolControllerCreateScanV1Error = PublicAgentAdoptionToolControllerCreateScanV1Errors[keyof PublicAgentAdoptionToolControllerCreateScanV1Errors];
+
+export type PublicAgentAdoptionToolControllerCreateScanV1Responses = {
+    /**
+     * ItemResponseOfAgentAdoptionScanResponse
+     */
+    200: {
+        item: AgentAdoptionScanResponse;
+    };
+};
+
+export type PublicAgentAdoptionToolControllerCreateScanV1Response = PublicAgentAdoptionToolControllerCreateScanV1Responses[keyof PublicAgentAdoptionToolControllerCreateScanV1Responses];
+
+export type PublicAgentAdoptionToolControllerGetScanV1Data = {
+    body?: never;
+    path: {
+        scanId: string;
+    };
+    query?: never;
+    url: '/v1/tools/agent-adoption/scans/{scanId}';
+};
+
+export type PublicAgentAdoptionToolControllerGetScanV1Errors = {
+    401: ApiErrorEnvelope;
+    404: ApiErrorEnvelope;
+    429: ApiErrorEnvelope;
+};
+
+export type PublicAgentAdoptionToolControllerGetScanV1Error = PublicAgentAdoptionToolControllerGetScanV1Errors[keyof PublicAgentAdoptionToolControllerGetScanV1Errors];
+
+export type PublicAgentAdoptionToolControllerGetScanV1Responses = {
+    /**
+     * ItemResponseOfAgentAdoptionScanResponse
+     */
+    200: {
+        item: AgentAdoptionScanResponse;
+    };
+};
+
+export type PublicAgentAdoptionToolControllerGetScanV1Response = PublicAgentAdoptionToolControllerGetScanV1Responses[keyof PublicAgentAdoptionToolControllerGetScanV1Responses];

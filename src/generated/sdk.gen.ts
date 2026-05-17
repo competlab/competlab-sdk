@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Errors, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Responses, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Errors, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Responses, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Errors, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Responses, PublicAiVisibilityControllerGetAiVisibilityTrendV1Data, PublicAiVisibilityControllerGetAiVisibilityTrendV1Errors, PublicAiVisibilityControllerGetAiVisibilityTrendV1Responses, PublicAlertsControllerListAlertsV1Data, PublicAlertsControllerListAlertsV1Errors, PublicAlertsControllerListAlertsV1Responses, PublicAnalysisControllerGetActionPlanV1Data, PublicAnalysisControllerGetActionPlanV1Errors, PublicAnalysisControllerGetActionPlanV1Responses, PublicCompetitorsControllerGetCompetitorV1Data, PublicCompetitorsControllerGetCompetitorV1Errors, PublicCompetitorsControllerGetCompetitorV1Responses, PublicCompetitorsControllerListCompetitorsV1Data, PublicCompetitorsControllerListCompetitorsV1Errors, PublicCompetitorsControllerListCompetitorsV1Responses, PublicContentControllerGetContentChangelogV1Data, PublicContentControllerGetContentChangelogV1Errors, PublicContentControllerGetContentChangelogV1Responses, PublicContentControllerGetContentDashboardV1Data, PublicContentControllerGetContentDashboardV1Errors, PublicContentControllerGetContentDashboardV1Responses, PublicContentControllerGetContentHistoryV1Data, PublicContentControllerGetContentHistoryV1Errors, PublicContentControllerGetContentHistoryV1Responses, PublicContentControllerGetContentRunDetailV1Data, PublicContentControllerGetContentRunDetailV1Errors, PublicContentControllerGetContentRunDetailV1Responses, PublicHealthControllerGetHealthV1Data, PublicHealthControllerGetHealthV1Responses, PublicPositioningControllerGetPositioningDashboardV1Data, PublicPositioningControllerGetPositioningDashboardV1Errors, PublicPositioningControllerGetPositioningDashboardV1Responses, PublicPositioningControllerGetPositioningHistoryV1Data, PublicPositioningControllerGetPositioningHistoryV1Errors, PublicPositioningControllerGetPositioningHistoryV1Responses, PublicPositioningControllerGetPositioningRunDetailV1Data, PublicPositioningControllerGetPositioningRunDetailV1Errors, PublicPositioningControllerGetPositioningRunDetailV1Responses, PublicPricingControllerGetPricingDashboardV1Data, PublicPricingControllerGetPricingDashboardV1Errors, PublicPricingControllerGetPricingDashboardV1Responses, PublicPricingControllerGetPricingHistoryV1Data, PublicPricingControllerGetPricingHistoryV1Errors, PublicPricingControllerGetPricingHistoryV1Responses, PublicPricingControllerGetPricingRunDetailV1Data, PublicPricingControllerGetPricingRunDetailV1Errors, PublicPricingControllerGetPricingRunDetailV1Responses, PublicProjectsControllerGetProjectV1Data, PublicProjectsControllerGetProjectV1Errors, PublicProjectsControllerGetProjectV1Responses, PublicProjectsControllerListProjectsV1Data, PublicProjectsControllerListProjectsV1Errors, PublicProjectsControllerListProjectsV1Responses, PublicSchedulesControllerListSchedulesV1Data, PublicSchedulesControllerListSchedulesV1Errors, PublicSchedulesControllerListSchedulesV1Responses, PublicTechTrustControllerGetTechTrustDashboardV1Data, PublicTechTrustControllerGetTechTrustDashboardV1Errors, PublicTechTrustControllerGetTechTrustDashboardV1Responses, PublicTechTrustControllerGetTechTrustHistoryV1Data, PublicTechTrustControllerGetTechTrustHistoryV1Errors, PublicTechTrustControllerGetTechTrustHistoryV1Responses, PublicTechTrustControllerGetTechTrustRunDetailV1Data, PublicTechTrustControllerGetTechTrustRunDetailV1Errors, PublicTechTrustControllerGetTechTrustRunDetailV1Responses } from './types.gen';
+import type { PublicAgentAdoptionToolControllerCreateScanV1Data, PublicAgentAdoptionToolControllerCreateScanV1Errors, PublicAgentAdoptionToolControllerCreateScanV1Responses, PublicAgentAdoptionToolControllerGetScanV1Data, PublicAgentAdoptionToolControllerGetScanV1Errors, PublicAgentAdoptionToolControllerGetScanV1Responses, PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Data, PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Errors, PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Responses, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Errors, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Responses, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Errors, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Responses, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Errors, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Responses, PublicAiVisibilityControllerGetAiVisibilityTrendV1Data, PublicAiVisibilityControllerGetAiVisibilityTrendV1Errors, PublicAiVisibilityControllerGetAiVisibilityTrendV1Responses, PublicAlertsControllerListAlertsV1Data, PublicAlertsControllerListAlertsV1Errors, PublicAlertsControllerListAlertsV1Responses, PublicAnalysisControllerGetActionPlanV1Data, PublicAnalysisControllerGetActionPlanV1Errors, PublicAnalysisControllerGetActionPlanV1Responses, PublicCompetitorsControllerGetCompetitorV1Data, PublicCompetitorsControllerGetCompetitorV1Errors, PublicCompetitorsControllerGetCompetitorV1Responses, PublicCompetitorsControllerListCompetitorsV1Data, PublicCompetitorsControllerListCompetitorsV1Errors, PublicCompetitorsControllerListCompetitorsV1Responses, PublicContentControllerGetContentChangelogV1Data, PublicContentControllerGetContentChangelogV1Errors, PublicContentControllerGetContentChangelogV1Responses, PublicContentControllerGetContentDashboardV1Data, PublicContentControllerGetContentDashboardV1Errors, PublicContentControllerGetContentDashboardV1Responses, PublicContentControllerGetContentHistoryV1Data, PublicContentControllerGetContentHistoryV1Errors, PublicContentControllerGetContentHistoryV1Responses, PublicContentControllerGetContentRunDetailV1Data, PublicContentControllerGetContentRunDetailV1Errors, PublicContentControllerGetContentRunDetailV1Responses, PublicHealthControllerGetHealthV1Data, PublicHealthControllerGetHealthV1Responses, PublicPositioningControllerGetPositioningDashboardV1Data, PublicPositioningControllerGetPositioningDashboardV1Errors, PublicPositioningControllerGetPositioningDashboardV1Responses, PublicPositioningControllerGetPositioningHistoryV1Data, PublicPositioningControllerGetPositioningHistoryV1Errors, PublicPositioningControllerGetPositioningHistoryV1Responses, PublicPositioningControllerGetPositioningRunDetailV1Data, PublicPositioningControllerGetPositioningRunDetailV1Errors, PublicPositioningControllerGetPositioningRunDetailV1Responses, PublicPricingControllerGetPricingDashboardV1Data, PublicPricingControllerGetPricingDashboardV1Errors, PublicPricingControllerGetPricingDashboardV1Responses, PublicPricingControllerGetPricingHistoryV1Data, PublicPricingControllerGetPricingHistoryV1Errors, PublicPricingControllerGetPricingHistoryV1Responses, PublicPricingControllerGetPricingRunDetailV1Data, PublicPricingControllerGetPricingRunDetailV1Errors, PublicPricingControllerGetPricingRunDetailV1Responses, PublicProjectsControllerGetProjectV1Data, PublicProjectsControllerGetProjectV1Errors, PublicProjectsControllerGetProjectV1Responses, PublicProjectsControllerListProjectsV1Data, PublicProjectsControllerListProjectsV1Errors, PublicProjectsControllerListProjectsV1Responses, PublicSchedulesControllerListSchedulesV1Data, PublicSchedulesControllerListSchedulesV1Errors, PublicSchedulesControllerListSchedulesV1Responses, PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Data, PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Errors, PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Responses, PublicTechStackToolControllerCreateScanV1Data, PublicTechStackToolControllerCreateScanV1Errors, PublicTechStackToolControllerCreateScanV1Responses, PublicTechStackToolControllerGetScanV1Data, PublicTechStackToolControllerGetScanV1Errors, PublicTechStackToolControllerGetScanV1Responses, PublicTechTrustControllerGetTechTrustDashboardV1Data, PublicTechTrustControllerGetTechTrustDashboardV1Errors, PublicTechTrustControllerGetTechTrustDashboardV1Responses, PublicTechTrustControllerGetTechTrustHistoryV1Data, PublicTechTrustControllerGetTechTrustHistoryV1Errors, PublicTechTrustControllerGetTechTrustHistoryV1Responses, PublicTechTrustControllerGetTechTrustRunDetailV1Data, PublicTechTrustControllerGetTechTrustRunDetailV1Errors, PublicTechTrustControllerGetTechTrustRunDetailV1Responses, PublicTrustSignalsToolControllerCreateScanV1Data, PublicTrustSignalsToolControllerCreateScanV1Errors, PublicTrustSignalsToolControllerCreateScanV1Responses, PublicTrustSignalsToolControllerGetScanV1Data, PublicTrustSignalsToolControllerGetScanV1Errors, PublicTrustSignalsToolControllerGetScanV1Responses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -169,7 +169,7 @@ export class ContentIntelligence {
     /**
      * Get content changelog
      *
-     * Get paginated changelog of detected URL changes across competitor sitemaps. Shows URLs added and removed, grouped by content category. Supports filtering by `competitorId` and `category` query parameters. Useful for tracking competitor content strategy changes over time.
+     * Get paginated changelog of detected URL changes across competitor sitemaps. Each item shows numeric counts per category plus up to 3 sample URLs per category by default — safe for any token budget. Supports filtering by `competitorId` and `category` query parameters. Pass `allUrlsPerCategory=true` for the full URL list per category (warning: high-activity competitors can produce large responses; combine with filters to scope, and check the `truncated` flag in the response — when true, the byte cap fired and items/URLs were trimmed).
      */
     public static publicContentControllerGetContentChangelogV1<ThrowOnError extends boolean = false>(options: Options<PublicContentControllerGetContentChangelogV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicContentControllerGetContentChangelogV1Responses, PublicContentControllerGetContentChangelogV1Errors, ThrowOnError>({
@@ -356,6 +356,132 @@ export class Schedules {
         return (options.client ?? client).get<PublicSchedulesControllerListSchedulesV1Responses, PublicSchedulesControllerListSchedulesV1Errors, ThrowOnError>({
             security: [{ name: 'CL-API-Key', type: 'apiKey' }],
             url: '/v1/projects/{projectId}/schedules',
+            ...options
+        });
+    }
+}
+
+export class Tools {
+    /**
+     * Start an async tech-stack scan
+     *
+     * Start an asynchronous tech-stack detection scan for a public domain. Detects the frontend frameworks, hosting and CDN infrastructure, CMS, analytics and growth tools, and customer engagement services in use. Returns sub-second with `item: { id, status: "queued", createdAt, expiresAt }` — poll `GET /v1/tools/tech-stack/scans/{scanId}` until `status` is `completed` or `failed`. Most scans complete in seconds; heavy-render sites can take up to ~90 seconds. Result and error payloads are persisted for 24h, after which the scan auto-deletes and GET returns 404. No project required. Suitable for ad-hoc competitive lookups, integration into onboarding flows, and pre-sales discovery — and the only supported shape for MCP clients (Cursor / Claude Desktop hardcode 60-second tool-call timeouts).
+     */
+    public static publicTechStackToolControllerCreateScanV1<ThrowOnError extends boolean = false>(options: Options<PublicTechStackToolControllerCreateScanV1Data, ThrowOnError>) {
+        return (options.client ?? client).post<PublicTechStackToolControllerCreateScanV1Responses, PublicTechStackToolControllerCreateScanV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/tools/tech-stack/scans',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Get an async tech-stack scan by ID
+     *
+     * Get the current state of an async tech-stack scan. Returns the scan's lifecycle (`queued` / `running` / `completed` / `failed`) along with `createdAt` and `expiresAt` always, plus `startedAt` once the runner picks it up and `completedAt` once it reaches a terminal state. On `completed` the full canonical scan response is in `item.result` (categorized technology hits with evidence). On `failed` the failure details are in `item.error` with a machine-readable `code` — currently `homepage_fetch_failed` (upstream homepage fetch threw) or `scan_failed` (any other error during scan execution). Scoped to the API key's organization — cross-tenant access, never-existed IDs, expired IDs (24h TTL), and malformed IDs all return 404 `scan_not_found` with an identical envelope to prevent existence-disclosure. Typically sub-second — safe to poll on a 2–5 second interval depending on your timeout budget.
+     */
+    public static publicTechStackToolControllerGetScanV1<ThrowOnError extends boolean = false>(options: Options<PublicTechStackToolControllerGetScanV1Data, ThrowOnError>) {
+        return (options.client ?? client).get<PublicTechStackToolControllerGetScanV1Responses, PublicTechStackToolControllerGetScanV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/tools/tech-stack/scans/{scanId}',
+            ...options
+        });
+    }
+    
+    /**
+     * Start an async trust-signals scan
+     *
+     * Start an asynchronous trust-signal analysis for a public domain. Returns a tier verdict (comprehensive / substantial / moderate / minimal) with a 0-100 score and a per-category breakdown across five buyer-concern areas: enterprise readiness, third-party validation, social proof, brand authority, and risk reversal. Also surfaces suspicious patterns (e.g. unverified compliance claims, count-vs-logo mismatches, unlinked press mentions) and gaps versus tier benchmarks. Returns sub-second with `item: { id, status: "queued", createdAt, expiresAt }` — poll `GET /v1/tools/trust-signals/scans/{scanId}` until `status` is `completed` or `failed`. Most scans complete in seconds; heavy-render sites can take up to ~90 seconds. Result and error payloads are persisted for 24h, after which the scan auto-deletes and GET returns 404. No project required. Suitable for sales discovery, due-diligence flows, and competitive credibility audits — and the only supported shape for MCP clients (Cursor / Claude Desktop hardcode 60-second tool-call timeouts).
+     */
+    public static publicTrustSignalsToolControllerCreateScanV1<ThrowOnError extends boolean = false>(options: Options<PublicTrustSignalsToolControllerCreateScanV1Data, ThrowOnError>) {
+        return (options.client ?? client).post<PublicTrustSignalsToolControllerCreateScanV1Responses, PublicTrustSignalsToolControllerCreateScanV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/tools/trust-signals/scans',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Get an async trust-signals scan by ID
+     *
+     * Get the current state of an async trust-signals scan. Returns the scan's lifecycle (`queued` / `running` / `completed` / `failed`) along with `createdAt` and `expiresAt` always, plus `startedAt` once the runner picks it up and `completedAt` once it reaches a terminal state. On `completed` the full canonical scan response is in `item.result` (tier verdict, category scores, detected signals with evidence, suspicious patterns, gaps). On `failed` the failure details are in `item.error` with a machine-readable `code` — currently `homepage_fetch_failed` (upstream homepage fetch threw) or `scan_failed` (any other error during scan execution). Scoped to the API key's organization — cross-tenant access, never-existed IDs, expired IDs (24h TTL), and malformed IDs all return 404 `scan_not_found` with an identical envelope to prevent existence-disclosure. Typically sub-second — safe to poll on a 2–5 second interval depending on your timeout budget.
+     */
+    public static publicTrustSignalsToolControllerGetScanV1<ThrowOnError extends boolean = false>(options: Options<PublicTrustSignalsToolControllerGetScanV1Data, ThrowOnError>) {
+        return (options.client ?? client).get<PublicTrustSignalsToolControllerGetScanV1Responses, PublicTrustSignalsToolControllerGetScanV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/tools/trust-signals/scans/{scanId}',
+            ...options
+        });
+    }
+    
+    /**
+     * Check AI crawler accessibility for a domain
+     *
+     * Check which AI crawlers are allowed, disallowed, or unconfigured on any public domain. Inspects robots.txt for major AI bots (GPTBot, ClaudeBot, Google-Extended, PerplexityBot, and more), checks meta tags and the presence of /llms.txt, and surfaces an accessibility verdict, opt-in/opt-out strategy detection, and how the domain compares to industry peers. Optionally tailor the analysis to a specific industry. Stateless live check — no project required, no data is persisted. Suitable for AI readiness audits, content-strategy reviews, and pre-launch compliance checks.
+     */
+    public static publicAiCrawlerCheckerToolControllerDetectAiCrawlersV1<ThrowOnError extends boolean = false>(options: Options<PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Data, ThrowOnError>) {
+        return (options.client ?? client).post<PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Responses, PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/tools/ai-crawler-checker',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Analyze sitemap structure of a domain
+     *
+     * Discover and analyze the sitemap structure of any public domain. Locates sitemap.xml (or accepts an explicit URL), categorizes URLs by content type, validates structure, and surfaces freshness and depth-distribution insights with sample URLs per category. Optionally include the full URL list (off by default to keep payload bounded). Stateless live check — no project required, no data is persisted. Suitable for content-strategy audits, SEO discovery, and content-volume benchmarking.
+     */
+    public static publicSitemapVisualizerToolControllerAnalyzeSitemapV1<ThrowOnError extends boolean = false>(options: Options<PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Data, ThrowOnError>) {
+        return (options.client ?? client).post<PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Responses, PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/tools/sitemap-visualizer',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Start an async agent-adoption scan
+     *
+     * Start an asynchronous AI agent-readiness scan for a public domain. Runs 25 checks across four categories — `discoverability` (robots.txt, sitemap.xml, Link headers), `accessControl` (AI bot rules, content signals, web-bot-auth, robots-allow-all), `contentReadability` (/llms.txt, markdown negotiation, rendering strategy, page size, redirects, agents.md, cache headers), and `agentEndpoints` (OpenAPI catalog, OAuth discovery, MCP server card, A2A agent card, agent skills). Returns sub-second with `item: { id, status: "queued", createdAt, expiresAt }` — poll `GET /v1/tools/agent-adoption/scans/{scanId}` until `status` is `completed` or `failed`. Most scans complete in 35–60 seconds; slow or JS-heavy domains can take up to ~3 minutes. Result and error payloads are persisted for 24h, after which the scan auto-deletes and GET returns 404. No project required. Suitable for AI-adoption audits, agent-ready maturity assessments, and pre-launch agentic-commerce reviews — and the only supported shape for MCP clients (Cursor / Claude Desktop hardcode 60-second tool-call timeouts).
+     */
+    public static publicAgentAdoptionToolControllerCreateScanV1<ThrowOnError extends boolean = false>(options: Options<PublicAgentAdoptionToolControllerCreateScanV1Data, ThrowOnError>) {
+        return (options.client ?? client).post<PublicAgentAdoptionToolControllerCreateScanV1Responses, PublicAgentAdoptionToolControllerCreateScanV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/tools/agent-adoption/scans',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Get an async agent-adoption scan by ID
+     *
+     * Get the current state of an async agent-adoption scan. Returns the scan's lifecycle (`queued` / `running` / `completed` / `failed`) along with `createdAt` and `expiresAt` always, plus `startedAt` once the runner picks it up and `completedAt` once it reaches a terminal state. On `completed` the full canonical scan response is in `item.result` (same shape the legacy sync `/v1/tools/agent-adoption` returned). On `failed` the failure details are in `item.error` with a machine-readable `code` — currently `homepage_fetch_failed` (upstream homepage fetch threw) or `scan_failed` (any other error during scan execution). Scoped to the API key's organization — cross-tenant access, never-existed IDs, expired IDs (24h TTL), and malformed IDs all return 404 `scan_not_found` with an identical envelope to prevent existence-disclosure. Typically sub-second — safe to poll on a 2–5 second interval depending on your timeout budget.
+     */
+    public static publicAgentAdoptionToolControllerGetScanV1<ThrowOnError extends boolean = false>(options: Options<PublicAgentAdoptionToolControllerGetScanV1Data, ThrowOnError>) {
+        return (options.client ?? client).get<PublicAgentAdoptionToolControllerGetScanV1Responses, PublicAgentAdoptionToolControllerGetScanV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/tools/agent-adoption/scans/{scanId}',
             ...options
         });
     }
