@@ -211,6 +211,17 @@ export type CompetitorDetailResponse = {
     monitoredPages: MonitoredPagesResponse;
 };
 
+export type SignalsAvailableUnavailableResponse = {
+    /**
+     * Always false for this discriminator.
+     */
+    available: boolean;
+    /**
+     * Why signals are unavailable. Known sub-classes are documented; new behavioral-protection categories may be classified over time.
+     */
+    reason: 'site_uses_behavioral_protection';
+};
+
 export type SummaryCustomerResponse = {
     /**
      * Your domain
@@ -226,6 +237,10 @@ export type SummaryCustomerResponse = {
     securityScore: {
         [key: string]: unknown;
     } | null;
+    /**
+     * Honest-degradation discriminator. Present ONLY when your own domain runs behavioral protection that blocks header inspection (~1.1% of sites). When present, `securityGrade` and `securityScore` above are forced to `null` so dashboards never surface F-grade placeholder values. Absent on healthy scans (the normal path).
+     */
+    securitySignalsAvailable?: SignalsAvailableUnavailableResponse;
     /**
      * Number of trust signals detected on your domain
      */
@@ -326,6 +341,10 @@ export type SecurityHeadersResponse = {
      * Has X-Content-Type-Options header
      */
     xContentTypeOptions: boolean;
+    /**
+     * Honest-degradation discriminator. Present ONLY when the upstream homepage fetch couldn't recover response headers (~1.1% of sites running behavioral protection that blocks header inspection). When present, ALL OTHER FIELDS in this object — `grade`, `score`, `hsts`, `csp`, `xFrameOptions`, `xContentTypeOptions` — are PLACEHOLDER values (the fallback 'no headers detected' shape), NOT a real 'this site has no security headers' result. Absent on healthy scans (the normal path).
+     */
+    signalsAvailable?: SignalsAvailableUnavailableResponse;
 };
 
 export type TrustSignalCategoriesResponse = {
@@ -1982,6 +2001,17 @@ export type TechStackDetectedTechnologyResponse = {
     evidence: Array<TechStackEvidenceResponse>;
 };
 
+export type PartialDetectionResponse = {
+    /**
+     * Always false for this discriminator.
+     */
+    headersAvailable: boolean;
+    /**
+     * Why headers were unavailable. HTML matcher detection (~85% of rules) still ran; header-dependent rules (~24 rules) are absent from the response.
+     */
+    reason: 'site_uses_behavioral_protection';
+};
+
 export type TechStackToolResponse = {
     /**
      * Normalized domain, as actually requested (post-normalizeDomain)
@@ -2011,6 +2041,10 @@ export type TechStackToolResponse = {
      * ENGAGEMENT STACK category — customer support, forms, video, monitoring
      */
     engagementStack: Array<TechStackDetectedTechnologyResponse>;
+    /**
+     * Present ONLY when response headers couldn't be recovered (~1.1% of sites running behavioral protection that blocks header inspection). Detection from HTML matchers (~85% of rules) still ran and populates the three stack arrays; header-dependent tech (~24 rules) is absent. When present, missing tech should NOT be interpreted as 'site doesn't use it.'
+     */
+    partialDetection?: PartialDetectionResponse;
 };
 
 export type TechStackScanErrorResponse = {
@@ -2243,7 +2277,11 @@ export type TrustSignalsToolResponse = {
      */
     fetchedAt: string;
     /**
-     * Overall verdict — tier, score, benchmark comparison, human-readable summary
+     * Honest-degradation discriminator. Present ONLY when the upstream fetch couldn't recover response headers (~1.1% of sites running behavioral protection that blocks header inspection). When present, ALL OTHER FIELDS IN THIS RESPONSE — `verdict`, `categoryScores`, `signalsDetected`, `suspiciousPatterns`, `gapsVsBenchmark` — are PLACEHOLDER values, NOT a 'zero trust signals' result. Headers from the site couldn't be inspected; trust-signal evaluation depends on them. Absent on healthy scans (the normal path).
+     */
+    signalsAvailable?: SignalsAvailableUnavailableResponse;
+    /**
+     * Overall verdict — tier, score, benchmark comparison, human-readable summary. ⚠️ When `signalsAvailable.available === false`, these fields are PLACEHOLDER values (tier: 'minimal', score: 0) and MUST NOT be used for tier-distribution analytics or competitive ranking. Consumers MUST check `signalsAvailable` first.
      */
     verdict: TrustSignalsVerdictResponse;
     /**
@@ -3061,7 +3099,7 @@ export type AgentAdoptionFetchCountersResponse = {
      */
     success: number;
     /**
-     * 403 + 429 responses (Cloudflare WAF challenge signals)
+     * 403 + 429 responses (WAF challenge signals)
      */
     wafBlocked: number;
     /**
@@ -3074,30 +3112,30 @@ export type AgentAdoptionFetchCountersResponse = {
     failed: number;
 };
 
-export type AgentAdoptionN8nCountersResponse = {
+export type AgentAdoptionHeavyFetchCountersResponse = {
     /**
-     * Total n8n calls attempted
+     * Total heavy-fetch operations attempted
      */
     total: number;
     /**
-     * Successful n8n calls
+     * Successful heavy-fetch operations
      */
     success: number;
     /**
-     * Workflow not deployed OR Browserless 503
+     * Heavy-fetch operations the service could not complete (upstream unavailable or timed out)
      */
     unavailable: number;
 };
 
 export type AgentAdoptionCountersResponse = {
     /**
-     * Per-scan HTTP fetch counters
+     * Per-scan lightweight HTTP fetch counters
      */
     fetches: AgentAdoptionFetchCountersResponse;
     /**
-     * Per-scan n8n (Browserless-backed) call counters
+     * Per-scan heavy-fetch counters (used when the lightweight fetch is blocked or when JavaScript-rendered HTML is required)
      */
-    n8nCalls: AgentAdoptionN8nCountersResponse;
+    heavyFetchCalls: AgentAdoptionHeavyFetchCountersResponse;
 };
 
 export type AgentAdoptionMetaResponse = {
@@ -3222,6 +3260,97 @@ export type AgentAdoptionScanResponse = {
 
 export type PtAgentAdoptionRequestDto = {
     [key: string]: unknown;
+};
+
+export type FetchUrlCleanStatsResponse = {
+    /**
+     * Original HTML body size in bytes (pre-cleanup)
+     */
+    originalSize: number;
+    /**
+     * Cleaned HTML body size in bytes (post-cleanup)
+     */
+    cleanedSize: number;
+    /**
+     * Reduction percentage (0–100, one decimal place)
+     */
+    reductionPercent: number;
+    /**
+     * Original size in kilobytes (convenience)
+     */
+    originalSizeKB: number;
+    /**
+     * Cleaned size in kilobytes (convenience)
+     */
+    cleanedSizeKB: number;
+    /**
+     * Bytes saved expressed as kilobytes (convenience)
+     */
+    savedKB: number;
+};
+
+export type FetchUrlToolResponse = {
+    /**
+     * HTTP status code returned by the target after the cascade resolved
+     */
+    statusCode: number;
+    /**
+     * Response body. Present when the request had `bodyNeeded: true`.
+     */
+    body?: string;
+    /**
+     * Response headers, lower-cased keys. Present when the request had `headersNeeded: true` AND `headersAvailable` is `true`.
+     */
+    headers?: {
+        [key: string]: string;
+    };
+    /**
+     * Honest-degradation discriminator. `true` when headers were observed end-to-end; `false` when the target site uses advanced behavioral fingerprinting that prevents header access — `headers` will be absent in that case.
+     */
+    headersAvailable?: boolean;
+    /**
+     * Content-type of the resolved response. Present when the request had `bodyNeeded: true`.
+     */
+    contentType?: 'text/html' | 'text/plain' | 'application/xml' | 'application/json';
+    /**
+     * HTML cleanup reduction stats. Present when the request had `cleanHtml: true` AND the resolved content-type is `text/html`.
+     */
+    cleanStats?: FetchUrlCleanStatsResponse;
+    /**
+     * Resolved URL after any redirects
+     */
+    finalUrl: string;
+    /**
+     * End-to-end fetch duration in milliseconds
+     */
+    durationMs: number;
+};
+
+export type PtFetchUrlRequestDto = {
+    /**
+     * Target URL to fetch. Must use http:// or https:// and resolve to a public host.
+     */
+    url: string;
+    /**
+     * Include `body` and `contentType` in the response. Defaults to service-controlled value when omitted.
+     */
+    bodyNeeded?: boolean;
+    /**
+     * Include `headers` and `headersAvailable` in the response. Defaults to service-controlled value when omitted. When the target site uses advanced behavioral fingerprinting, `headersAvailable` will be `false` and `headers` will be absent.
+     */
+    headersNeeded?: boolean;
+    /**
+     * When `true` and the response content-type is `text/html`, strip HTML noise (scripts, styles, comments) while preserving text content. Significant token-cost reduction for LLM consumption — per-request reduction reported in `cleanStats`. Requires `bodyNeeded`.
+     */
+    cleanHtml?: boolean;
+    /**
+     * Caller-side timeout budget in milliseconds. Accepted range 1000–120000. Defaults to service-controlled value when omitted.
+     */
+    maxTimeoutMs?: number;
+    /**
+     * Per-request response body cap in bytes. Accepted range 1024–104857600 (1 KiB – 100 MiB). Oversize responses are rejected pre-buffer. Defaults to service-controlled value when omitted.
+     */
+    bodyMaxBytes?: number;
 };
 
 export type PublicHealthControllerGetHealthV1Data = {
@@ -4299,3 +4428,31 @@ export type PublicAgentAdoptionToolControllerGetScanV1Responses = {
 };
 
 export type PublicAgentAdoptionToolControllerGetScanV1Response = PublicAgentAdoptionToolControllerGetScanV1Responses[keyof PublicAgentAdoptionToolControllerGetScanV1Responses];
+
+export type PublicFetchUrlToolControllerFetchUrlV1Data = {
+    body: PtFetchUrlRequestDto;
+    path?: never;
+    query?: never;
+    url: '/v1/tools/fetch-url';
+};
+
+export type PublicFetchUrlToolControllerFetchUrlV1Errors = {
+    400: ApiErrorEnvelope;
+    401: ApiErrorEnvelope;
+    429: ApiErrorEnvelope;
+    502: ApiErrorEnvelope;
+    503: ApiErrorEnvelope;
+};
+
+export type PublicFetchUrlToolControllerFetchUrlV1Error = PublicFetchUrlToolControllerFetchUrlV1Errors[keyof PublicFetchUrlToolControllerFetchUrlV1Errors];
+
+export type PublicFetchUrlToolControllerFetchUrlV1Responses = {
+    /**
+     * ItemResponseOfFetchUrlToolResponse
+     */
+    200: {
+        item: FetchUrlToolResponse;
+    };
+};
+
+export type PublicFetchUrlToolControllerFetchUrlV1Response = PublicFetchUrlToolControllerFetchUrlV1Responses[keyof PublicFetchUrlToolControllerFetchUrlV1Responses];

@@ -28,6 +28,7 @@ import type {
   PtAiCrawlerCheckerRequestDto,
   PtSitemapVisualizerRequestDto,
   PtAgentAdoptionRequestDto,
+  PtFetchUrlRequestDto,
 } from './generated/types.gen';
 
 export type { Client } from './generated/client';
@@ -406,6 +407,13 @@ namespace CompetLab {
 
     aiCrawlerChecker(body: PtAiCrawlerCheckerRequestDto) {
       return GenTools.publicAiCrawlerCheckerToolControllerDetectAiCrawlersV1({
+        client: this.client,
+        body,
+      });
+    }
+
+    fetchUrl(body: PtFetchUrlRequestDto) {
+      return GenTools.publicFetchUrlToolControllerFetchUrlV1({
         client: this.client,
         body,
       });

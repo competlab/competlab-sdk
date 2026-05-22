@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![33 Methods](https://img.shields.io/badge/Methods-33-brightgreen)](#available-resources)
+[![34 Methods](https://img.shields.io/badge/Methods-34-brightgreen)](#available-resources)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-0-brightgreen)]()
 
 > Track what ChatGPT, Claude, and Gemini say about your brand — programmatically.
@@ -63,10 +63,10 @@ cl.aiVisibility     // AI visibility scores & trends
 cl.analysis         // AI-generated action plans
 cl.alerts           // Competitive change alerts
 cl.schedules        // Monitoring schedules
-cl.tools            // Free tools — sitemap, AI crawlers, tech stack, trust signals, agent adoption
+cl.tools            // Free tools — sitemap, AI crawlers, tech stack, trust signals, agent adoption, fetch URL
 ```
 
-**12 resources. 33 methods. Zero dependencies.** Uses native `fetch` — no axios, no bloat.
+**12 resources. 34 methods. Zero dependencies.** Uses native `fetch` — no axios, no bloat.
 
 ## Examples
 
@@ -129,6 +129,9 @@ Stateless utilities that work on any public domain. Sync tools return immediatel
 // Sync
 const sitemap = await cl.tools.sitemapVisualizer({ domain: 'example.com' });
 const crawlers = await cl.tools.aiCrawlerChecker({ domain: 'example.com' });
+
+// Fetch any URL with JS-rendering + bot-protection handling
+const page = await cl.tools.fetchUrl({ url: 'https://example.com', cleanHtml: true });
 
 // Async — start a scan, poll until done
 const { data } = await cl.tools.techStack.startScan({ domain: 'example.com' });
