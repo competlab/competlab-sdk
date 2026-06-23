@@ -52,18 +52,18 @@ AI Visibility is what makes CompetLab unique — no other CI platform tracks how
 ## Available Resources
 
 ```typescript
-cl.health           // API health check
-cl.projects         // List and get projects
-cl.competitors      // Monitored competitors
-cl.techTrust        // Tech stack & trust signals
-cl.content          // Content analysis & changelog
-cl.positioning      // Homepage messaging analysis
-cl.pricing          // Pricing intelligence
-cl.aiVisibility     // AI visibility scores & trends
-cl.analysis         // AI-generated action plans
-cl.alerts           // Competitive change alerts
-cl.schedules        // Monitoring schedules
-cl.tools            // Free tools — sitemap, AI crawlers, tech stack, trust signals, agent adoption, fetch URL
+cl.health            // API health check
+cl.projects          // List and get projects
+cl.competitors       // Monitored competitors
+cl.techTrust         // Tech stack & trust signals
+cl.content           // Content analysis & changelog
+cl.positioning       // Homepage messaging analysis
+cl.pricing           // Pricing intelligence
+cl.aiVisibility      // AI visibility scores & trends
+cl.strategicBriefing // Synthesized competitive briefing — what changed, what it means, what to do
+cl.alerts            // Competitive change alerts
+cl.schedules         // Monitoring schedules
+cl.tools             // Free tools — sitemap, AI crawlers, tech stack, trust signals, agent adoption, fetch URL
 ```
 
 **12 resources. 34 methods. Zero dependencies.** Uses native `fetch` — no axios, no bloat.
@@ -96,13 +96,31 @@ const trend = await cl.aiVisibility.trend('proj_abc', {
 // Weekly snapshots of your visibility score — spot drops before they cost you deals
 ```
 
-### Get a competitive action plan
+### Get a strategic briefing
 
 ```typescript
-const plan = await cl.analysis.actionPlan('proj_abc');
-// AI-generated priorities across all 5 dimensions:
-// "Your competitor added 3 trust badges you're missing — here's which ones matter"
+// The synthesized competitive read — what changed, what it means, what to do.
+// Call with no options for the cheap default — the "hub" digest (executive summary + a map of
+// which deeper sections to open next); enough to answer most questions in a single call.
+const { data } = await cl.strategicBriefing.get('proj_abc');
+
+// data.meta.availability => 'ready' | 'ready-refreshing' | 'preparing' | 'none'
+// data.item                 the requested sections (hub by default)
+// data.dimensionHealth      which deep-<dimension> analyses this edition contains
+
+// Follow a hub diagnosis pointer deeper, and pull full chart series:
+const deep = await cl.strategicBriefing.get('proj_abc', {
+  sections: ['deep-ai-visibility', 'actions'],
+  includeCharts: true,
+});
 ```
+
+> **On types:** the briefing body (`item`, `coverage`, `dimensionHealth`) is intentionally an
+> open, dynamic JSON shape rather than a fixed TypeScript type. It runs deep and evolves, and it's
+> built to be read and rendered — including by AI agents through the
+> [MCP server](https://competlab.com/developers/mcp). Branch on the strongly-typed
+> `meta.availability` / `meta.briefingDate`, and treat the body as structured JSON you narrow at
+> the point of use.
 
 ### Catch competitor pricing changes
 
@@ -159,6 +177,24 @@ Prefer AI-native access? CompetLab also offers an MCP server with 32 tools — c
 Full interactive API documentation with "Try It" panel:
 
 > [competlab.com/developers/api](https://competlab.com/developers/api)
+
+## Upgrading from v1.x
+
+**v2.0.0 is a breaking release.** `cl.analysis.actionPlan()` was removed — the underlying API
+endpoint no longer exists. Use the new **Strategic Briefing**, which synthesizes the same
+competitive intelligence (and more):
+
+```typescript
+// Before (v1.x):
+const plan = await cl.analysis.actionPlan('proj_abc');
+
+// After (v2.x):
+const { data } = await cl.strategicBriefing.get('proj_abc');
+// ...or just the prioritized action list:
+const actions = await cl.strategicBriefing.get('proj_abc', { sections: ['actions'] });
+```
+
+Full details in the [CHANGELOG](./CHANGELOG.md).
 
 ## Requirements
 

@@ -40,6 +40,10 @@ export type ProjectListItemResponse = {
      */
     id: string;
     /**
+     * Organization ID that owns this project
+     */
+    organizationId: string;
+    /**
      * Project name
      */
     name: string;
@@ -104,6 +108,10 @@ export type ProjectDetailResponse = {
      * Project ID
      */
     id: string;
+    /**
+     * Organization ID that owns this project
+     */
+    organizationId: string;
     /**
      * Project name
      */
@@ -453,63 +461,6 @@ export type TechTrustCompetitorResponse = {
     dnsInfrastructure: DnsInfrastructureResponse;
 };
 
-export type AnalysisInsightResponse = {
-    /**
-     * Insight category
-     */
-    type: 'security' | 'technology' | 'infrastructure' | 'trust' | 'robots' | 'messaging' | 'homepage' | 'pricing' | 'company' | 'content' | 'ai_visibility';
-    /**
-     * Priority level
-     */
-    priority: 'critical' | 'high' | 'medium' | 'low';
-    /**
-     * Insight title
-     */
-    title: string;
-    /**
-     * Detailed insight description
-     */
-    description: string;
-};
-
-export type AnalysisActionResponse = {
-    /**
-     * Action category
-     */
-    type: 'security' | 'technology' | 'infrastructure' | 'trust' | 'robots' | 'messaging' | 'homepage' | 'pricing' | 'company' | 'content' | 'ai_visibility';
-    /**
-     * Action title
-     */
-    title: string;
-    /**
-     * Detailed action description
-     */
-    description: string;
-    /**
-     * Implementation effort level
-     */
-    effort: 'trivial' | 'low' | 'medium' | 'high';
-    /**
-     * Expected business impact
-     */
-    impact: 'low' | 'medium' | 'high' | 'critical';
-    /**
-     * Suggested implementation timeframe
-     */
-    timeframe: string;
-};
-
-export type TechTrustAnalysisResponse = {
-    /**
-     * Competitive insights from AI analysis
-     */
-    insights: Array<AnalysisInsightResponse>;
-    /**
-     * Recommended competitive actions
-     */
-    actions: Array<AnalysisActionResponse>;
-};
-
 export type TechTrustDashboardResponse = {
     /**
      * When this data was last updated (ISO-8601)
@@ -523,10 +474,6 @@ export type TechTrustDashboardResponse = {
      * Per-competitor tech & trust data
      */
     competitors: Array<TechTrustCompetitorResponse>;
-    /**
-     * AI-generated competitive analysis, or null if no analysis available
-     */
-    analysis?: TechTrustAnalysisResponse | null;
 };
 
 export type PaginationMeta = {
@@ -825,17 +772,6 @@ export type ContentCompetitorResponse = {
     sitemapCount: number;
 };
 
-export type ContentAnalysisResponse = {
-    /**
-     * Competitive insights from content analysis
-     */
-    insights: Array<AnalysisInsightResponse>;
-    /**
-     * Recommended competitive actions
-     */
-    actions: Array<AnalysisActionResponse>;
-};
-
 export type ContentDashboardResponse = {
     /**
      * When this data was last updated (ISO-8601)
@@ -849,10 +785,6 @@ export type ContentDashboardResponse = {
      * Per-competitor content data
      */
     competitors: Array<ContentCompetitorResponse>;
-    /**
-     * AI-generated competitive analysis, or null if no analysis available
-     */
-    analysis?: ContentAnalysisResponse | null;
 };
 
 export type ContentHistoryItemResponse = {
@@ -1133,17 +1065,6 @@ export type PositioningCompetitorResponse = {
     content: PositioningCompetitorContentResponse;
 };
 
-export type PositioningAnalysisResponse = {
-    /**
-     * Competitive insights from positioning analysis
-     */
-    insights: Array<AnalysisInsightResponse>;
-    /**
-     * Recommended competitive actions
-     */
-    actions: Array<AnalysisActionResponse>;
-};
-
 export type PositioningDashboardResponse = {
     /**
      * When this data was last updated (ISO-8601)
@@ -1157,10 +1078,6 @@ export type PositioningDashboardResponse = {
      * Per-competitor positioning data
      */
     competitors: Array<PositioningCompetitorResponse>;
-    /**
-     * AI-generated competitive analysis, or null if no analysis available
-     */
-    analysis?: PositioningAnalysisResponse | null;
 };
 
 export type PositioningHistoryItemResponse = {
@@ -1273,23 +1190,33 @@ export type PricingDashboardSummaryResponse = {
      */
     customer: PricingSummaryCustomerResponse;
     /**
-     * Market average price (numeric), or null if unavailable
+     * Market average price (numeric). Null when the competitor sample is too small to compute a meaningful market average.
      */
     marketAvgPrice?: {
         [key: string]: unknown;
     } | null;
     /**
-     * Your price position as percentile (0-100, higher = more expensive)
+     * Your price position vs market average (percent; negative = below market). Null when the competitor sample is too small for a meaningful comparison.
      */
-    pricePositionPercent: number;
+    pricePositionPercent?: {
+        [key: string]: unknown;
+    } | null;
     /**
-     * Competitor with the highest price, or null if unavailable
+     * Competitor with the highest price. Null when the competitor sample is too small for a meaningful comparison.
      */
     topPriceCompetitor?: PricingSummaryPriceCompetitorResponse | null;
     /**
-     * Competitor with the lowest price, or null if unavailable
+     * Competitor with the lowest price. Null when the competitor sample is too small for a meaningful comparison.
      */
     lowestPriceCompetitor?: PricingSummaryPriceCompetitorResponse | null;
+    /**
+     * Count of competitors with parseable popular-plan pricing in this run (used to gate market-comparison fields).
+     */
+    pricingSampleSize: number;
+    /**
+     * True when the competitor pricing sample is large enough to support market-comparison framings.
+     */
+    pricingIsReliable: boolean;
     /**
      * Number of competitors offering a free plan
      */
@@ -1437,17 +1364,6 @@ export type PricingCompetitorResponse = {
     content: PricingCompetitorContentResponse;
 };
 
-export type PricingAnalysisResponse = {
-    /**
-     * Competitive insights from pricing analysis
-     */
-    insights: Array<AnalysisInsightResponse>;
-    /**
-     * Recommended competitive actions
-     */
-    actions: Array<AnalysisActionResponse>;
-};
-
 export type PricingDashboardResponse = {
     /**
      * When this data was last updated (ISO-8601)
@@ -1461,10 +1377,6 @@ export type PricingDashboardResponse = {
      * Per-competitor pricing data
      */
     competitors: Array<PricingCompetitorResponse>;
-    /**
-     * AI-generated competitive analysis, or null if no analysis available
-     */
-    analysis?: PricingAnalysisResponse | null;
 };
 
 export type PricingHistoryItemResponse = {
@@ -1665,17 +1577,6 @@ export type AiVisibilityDashboardSummaryResponse = {
     competitorRankings: Array<AiVisibilityCompetitorRankingResponse>;
 };
 
-export type AiVisibilityAnalysisResponse = {
-    /**
-     * AI-generated competitive insights aggregated from all providers
-     */
-    insights: Array<AnalysisInsightResponse>;
-    /**
-     * AI-generated recommended actions aggregated from all providers
-     */
-    actions: Array<AnalysisActionResponse>;
-};
-
 export type AiVisibilityDashboardResponse = {
     /**
      * When this data was last updated (ISO-8601)
@@ -1685,10 +1586,6 @@ export type AiVisibilityDashboardResponse = {
      * Summary statistics
      */
     summary: AiVisibilityDashboardSummaryResponse;
-    /**
-     * AI-generated analysis (null if no analysis has been run)
-     */
-    analysis?: AiVisibilityAnalysisResponse | null;
 };
 
 export type AiVisibilityHistoryItemResponse = {
@@ -1749,145 +1646,20 @@ export type AiVisibilityTrendDataPointResponse = {
      */
     gap: number;
     /**
-     * Customer AI Visibility Score (0-100)
+     * Customer AI Visibility Score (0-100). A single weighted composite across all providers — null when a provider filter is applied, since no per-provider score exists.
      */
-    customerAiScore: number;
-    /**
-     * Top competitor AI Visibility Score (0-100)
-     */
-    topCompetitorAiScore: number;
-};
-
-export type AiProvider = 'openai' | 'claude' | 'gemini';
-
-/**
- * Insight category
- */
-export type InsightType = 'security' | 'technology' | 'infrastructure' | 'trust' | 'robots' | 'messaging' | 'homepage' | 'pricing' | 'company' | 'content' | 'ai_visibility';
-
-/**
- * Priority level
- */
-export type InsightPriority = 'critical' | 'high' | 'medium' | 'low';
-
-export type ActionPlanInsightResponse = {
-    /**
-     * Insight category
-     */
-    type: InsightType;
-    /**
-     * Priority level
-     */
-    priority: InsightPriority;
-    /**
-     * Short insight title (5-10 words)
-     */
-    title: string;
-    /**
-     * Detailed insight description with specific data
-     */
-    description: string;
-    /**
-     * Supporting data point or evidence for this insight
-     */
-    evidence?: string;
-    /**
-     * Domains of competitors related to this insight
-     */
-    relatedCompetitors?: Array<string>;
-};
-
-/**
- * Implementation effort level
- */
-export type ActionEffort = 'trivial' | 'low' | 'medium' | 'high';
-
-/**
- * Expected business impact
- */
-export type ActionImpact = 'low' | 'medium' | 'high' | 'critical';
-
-export type ActionPlanActionResponse = {
-    /**
-     * Action category
-     */
-    type: InsightType;
-    /**
-     * Imperative action title (5-10 words)
-     */
-    title: string;
-    /**
-     * What to do and why
-     */
-    description: string;
-    /**
-     * Implementation effort level
-     */
-    effort: ActionEffort;
-    /**
-     * Expected business impact
-     */
-    impact: ActionImpact;
-    /**
-     * Suggested implementation timeframe
-     */
-    timeframe: string;
-    /**
-     * Why this action matters for competitive positioning
-     */
-    rationale?: string;
-};
-
-export type DimensionAnalysisStatusResponse = {
-    /**
-     * When the analysis completed (ISO-8601)
-     */
-    analysisCompletedAt: string;
-};
-
-export type ActionPlanDimensionStatusResponse = {
-    /**
-     * Tech & Trust dimension analysis status
-     */
-    techTrust?: DimensionAnalysisStatusResponse | null;
-    /**
-     * Content Intelligence dimension analysis status
-     */
-    content?: DimensionAnalysisStatusResponse | null;
-    /**
-     * Positioning dimension analysis status
-     */
-    positioning?: DimensionAnalysisStatusResponse | null;
-    /**
-     * Pricing Intelligence dimension analysis status
-     */
-    pricing?: DimensionAnalysisStatusResponse | null;
-    /**
-     * AI Visibility dimension analysis status
-     */
-    aiVisibility?: DimensionAnalysisStatusResponse | null;
-};
-
-export type ActionPlanApiResponse = {
-    /**
-     * When the most recent dimension analysis completed (ISO-8601). Null if no analysis has run yet.
-     */
-    planGeneratedAt?: {
+    customerAiScore?: {
         [key: string]: unknown;
     } | null;
     /**
-     * Competitive insights aggregated from all monitoring dimensions
+     * Top competitor AI Visibility Score (0-100). A single weighted composite across all providers — null when a provider filter is applied, since no per-provider score exists.
      */
-    insights: Array<ActionPlanInsightResponse>;
-    /**
-     * Recommended competitive actions aggregated from all monitoring dimensions
-     */
-    actions: Array<ActionPlanActionResponse>;
-    /**
-     * Per-dimension analysis completion status (null if no analysis has run for that dimension)
-     */
-    dimensionStatus: ActionPlanDimensionStatusResponse;
+    topCompetitorAiScore?: {
+        [key: string]: unknown;
+    } | null;
 };
+
+export type AiProvider = 'openai' | 'claude' | 'gemini';
 
 export type AlertListItemResponse = {
     /**
@@ -1969,6 +1741,50 @@ export type ScheduleItemResponse = {
     lastRunAt: {
         [key: string]: unknown;
     } | null;
+};
+
+export type BriefingMetaResponse = {
+    /**
+     * Edition id (the briefing run id). Null when no finished briefing exists.
+     */
+    runId?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * When this edition finished, ISO-8601. Null when no finished briefing exists. Briefings refresh roughly every 30 days.
+     */
+    briefingDate?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Availability of the briefing for this project: `ready` (a finished briefing is returned), `ready-refreshing` (a finished briefing is returned AND a newer edition is being generated right now), `preparing` (the first edition is still being generated — body is null), `none` (no briefing exists yet).
+     */
+    availability: 'ready' | 'ready-refreshing' | 'preparing' | 'none';
+};
+
+export type BriefingEnvelopeResponse = {
+    /**
+     * The requested briefing sections (any of: hub, competitors, actions, deep-<dimension>). Null when no finished briefing exists (see meta.availability).
+     */
+    item?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Edition metadata + availability.
+     */
+    meta: BriefingMetaResponse;
+    /**
+     * Methodology and honest-degradation caveats for this edition (e.g. which figures are directional, what counts as noise). Always returned regardless of requested sections — read before quoting any number. Null when no finished briefing exists.
+     */
+    coverage?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Per-dimension presence — which deep-<dimension> analyses this edition contains (present | absent). A skipped dimension reads as `absent`, never as an empty finding.
+     */
+    dimensionHealth: {
+        [key: string]: unknown;
+    };
 };
 
 export type TechStackEvidenceResponse = {
@@ -4100,36 +3916,6 @@ export type PublicAiVisibilityControllerGetAiVisibilityTrendV1Responses = {
 
 export type PublicAiVisibilityControllerGetAiVisibilityTrendV1Response = PublicAiVisibilityControllerGetAiVisibilityTrendV1Responses[keyof PublicAiVisibilityControllerGetAiVisibilityTrendV1Responses];
 
-export type PublicAnalysisControllerGetActionPlanV1Data = {
-    body?: never;
-    path: {
-        /**
-         * Project ID
-         */
-        projectId: unknown;
-    };
-    query?: never;
-    url: '/v1/projects/{projectId}/analysis/action-plan';
-};
-
-export type PublicAnalysisControllerGetActionPlanV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
-};
-
-export type PublicAnalysisControllerGetActionPlanV1Error = PublicAnalysisControllerGetActionPlanV1Errors[keyof PublicAnalysisControllerGetActionPlanV1Errors];
-
-export type PublicAnalysisControllerGetActionPlanV1Responses = {
-    /**
-     * ItemResponseOfActionPlanApiResponse
-     */
-    200: {
-        item: ActionPlanApiResponse;
-    };
-};
-
-export type PublicAnalysisControllerGetActionPlanV1Response = PublicAnalysisControllerGetActionPlanV1Responses[keyof PublicAnalysisControllerGetActionPlanV1Responses];
-
 export type PublicAlertsControllerListAlertsV1Data = {
     body?: never;
     path: {
@@ -4209,6 +3995,40 @@ export type PublicSchedulesControllerListSchedulesV1Responses = {
 };
 
 export type PublicSchedulesControllerListSchedulesV1Response = PublicSchedulesControllerListSchedulesV1Responses[keyof PublicSchedulesControllerListSchedulesV1Responses];
+
+export type PublicBriefingControllerGetStrategicBriefingV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Project ID
+         */
+        projectId: unknown;
+    };
+    query?: {
+        /**
+         * Which sections to return. Defaults to ["hub"] — the executive digest and navigation map. Pass specific sections to go deeper (e.g. a hub diagnosis pointer of `ai-visibility` maps to `deep-ai-visibility`), or `all` for the full document. Prefer deriving deep-<dimension> values from the hub diagnosis pointers rather than requesting slots blind — `dimensionHealth` tells you which exist for this edition.
+         */
+        sections?: Array<'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status' | 'all'>;
+        /**
+         * Include full chart series data. Defaults to false — charts return their title + note only (the heaviest part of a section is the chart series). Pass true for the full data series.
+         */
+        includeCharts?: boolean;
+    };
+    url: '/v1/projects/{projectId}/strategic-briefing';
+};
+
+export type PublicBriefingControllerGetStrategicBriefingV1Errors = {
+    401: ApiErrorEnvelope;
+    404: ApiErrorEnvelope;
+};
+
+export type PublicBriefingControllerGetStrategicBriefingV1Error = PublicBriefingControllerGetStrategicBriefingV1Errors[keyof PublicBriefingControllerGetStrategicBriefingV1Errors];
+
+export type PublicBriefingControllerGetStrategicBriefingV1Responses = {
+    200: BriefingEnvelopeResponse;
+};
+
+export type PublicBriefingControllerGetStrategicBriefingV1Response = PublicBriefingControllerGetStrategicBriefingV1Responses[keyof PublicBriefingControllerGetStrategicBriefingV1Responses];
 
 export type PublicTechStackToolControllerCreateScanV1Data = {
     body: PtTechStackRequestDto;

@@ -9,7 +9,7 @@ import {
   Positioning as GenPositioning,
   PricingIntelligence as GenPricing,
   AiVisibility as GenAiVisibility,
-  Analysis as GenAnalysis,
+  StrategicBriefing as GenStrategicBriefing,
   Alerts as GenAlerts,
   Schedules as GenSchedules,
   Tools as GenTools,
@@ -22,6 +22,7 @@ import type {
   PublicPricingControllerGetPricingHistoryV1Data,
   PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data,
   PublicAiVisibilityControllerGetAiVisibilityTrendV1Data,
+  PublicBriefingControllerGetStrategicBriefingV1Data,
   PublicAlertsControllerListAlertsV1Data,
   PtTechStackRequestDto,
   PtTrustSignalsRequestDto,
@@ -62,7 +63,7 @@ class CompetLab {
   readonly positioning: CompetLab.Positioning;
   readonly pricing: CompetLab.Pricing;
   readonly aiVisibility: CompetLab.AiVisibility;
-  readonly analysis: CompetLab.Analysis;
+  readonly strategicBriefing: CompetLab.StrategicBriefing;
   readonly alerts: CompetLab.Alerts;
   readonly schedules: CompetLab.Schedules;
   readonly tools: CompetLab.Tools;
@@ -102,7 +103,7 @@ class CompetLab {
     this.positioning = new CompetLab.Positioning(this.#client);
     this.pricing = new CompetLab.Pricing(this.#client);
     this.aiVisibility = new CompetLab.AiVisibility(this.#client);
-    this.analysis = new CompetLab.Analysis(this.#client);
+    this.strategicBriefing = new CompetLab.StrategicBriefing(this.#client);
     this.alerts = new CompetLab.Alerts(this.#client);
     this.schedules = new CompetLab.Schedules(this.#client);
     this.tools = new CompetLab.Tools(this.#client);
@@ -299,13 +300,14 @@ namespace CompetLab {
     }
   }
 
-  export class Analysis {
+  export class StrategicBriefing {
     constructor(private readonly client: Client) {}
 
-    actionPlan(projectId: string) {
-      return GenAnalysis.publicAnalysisControllerGetActionPlanV1({
+    get(projectId: string, query?: PublicBriefingControllerGetStrategicBriefingV1Data['query']) {
+      return GenStrategicBriefing.publicBriefingControllerGetStrategicBriefingV1({
         client: this.client,
         path: { projectId },
+        query,
       });
     }
   }
