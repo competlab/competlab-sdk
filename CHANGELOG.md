@@ -3,6 +3,24 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 2.1.0
+
+### Changed
+- **`content.dashboard()` — `summary.overallRank` is now nullable** (`number | null`, and
+  optional in the response type). It is `null` when fewer than two competitors returned
+  comparable content data, or when your own site returned no usable data to rank — instead of
+  the previous (sometimes misleading) numeric rank. **Handle the `null` case.**
+
+### Added
+- **`summary.comparableCompetitors`** on the content dashboard — the number of competitors
+  (excluding your own site) with usable content data that the rank and gap/advantage
+  comparisons were computed over. The overall rank's field size is `comparableCompetitors + 1`
+  (your own site included).
+
+> **Upgrade note:** if you read `summary.overallRank`, it can now be `null`/`undefined` — guard
+> it (e.g. `if (summary.overallRank != null) …`). Strict-TypeScript consumers will see a type
+> change here. No other surface changed.
+
 ## 2.0.0
 
 ### Breaking

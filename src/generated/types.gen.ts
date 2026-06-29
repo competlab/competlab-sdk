@@ -706,9 +706,13 @@ export type ContentDashboardSummaryResponse = {
      */
     strategicUrlGap: number;
     /**
-     * Your rank among all competitors by strategic URL count
+     * Your rank by strategic content among the sites that returned comparable content data — your own site plus `comparableCompetitors` competitors (field size = comparableCompetitors + 1). Null when fewer than two competitors had usable data, or when your own site returned no usable data to rank.
      */
-    overallRank: number;
+    overallRank?: number | null;
+    /**
+     * Competitors (excluding your own site) that returned usable content data — the sample size behind the gap and advantage comparisons. The overall rank is taken over this set plus your own site, so the rank's field size is `comparableCompetitors + 1`.
+     */
+    comparableCompetitors: number;
     /**
      * Content categories where you have zero content but competitors do
      */
