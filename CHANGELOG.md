@@ -3,6 +3,23 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 2.2.0
+
+### Changed
+- **`alerts.list()` — each alert's `context` is now always present** (`AlertListItemResponse.context`
+  changed from optional to a required field). It is an **empty object (`{}`)** when the alert carries
+  no extra context, rather than being absent. Non-breaking: reads that previously guarded
+  `alert.context?…` still compile.
+- **`context` is now keyed by the alert's canonical dimension slug** — identical to the alert's
+  `dimension` field — so you can index it directly, e.g. `alert.context[alert.dimension]`. Structure
+  varies by dimension: most carry field-level changes with `previousValue`/`currentValue` pairs;
+  **AI Visibility** carries a `scoreShift` with `scoreFrom`/`scoreTo`. (`context` stays typed as an
+  open `{ [key: string]: unknown }` — narrow it at the point of use.)
+
+> **Upgrade note:** type-only change on the alert response — no code changes required. Strict-TypeScript
+> consumers gain a guarantee (`context` is no longer `| undefined`); existing optional-chaining reads
+> keep working. No method, resource, or request-shape changed.
+
 ## 2.1.0
 
 ### Changed

@@ -1707,9 +1707,9 @@ export type AlertListItemResponse = {
      */
     alertType?: string;
     /**
-     * Dimension-specific context data with details about the detected change. Structure varies by alertType — typically includes field-level changes with previousValue/currentValue pairs.
+     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries a scoreShift with scoreFrom/scoreTo.
      */
-    context?: {
+    context: {
         [key: string]: unknown;
     };
     /**
