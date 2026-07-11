@@ -3,6 +3,32 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 2.3.0
+
+### Added
+- **Typed free-tool request bodies.** The five tool endpoints now declare their fields instead of
+  accepting a freeform object: `tools.techStack.startScan()` and `tools.trustSignals.startScan()`
+  take `{ domain }`; `tools.agentAdoption.startScan()` adds optional `debugMode` /
+  `includeFixPrompts`; `tools.sitemapVisualizer()` adds optional `sitemapUrl` / `includeUrls`;
+  `tools.aiCrawlerChecker()` adds optional `industry` (a literal union of the supported verticals).
+- **Typed alert filters.** `alerts.list()`'s `dimension` and `severity` query params are now
+  string-literal unions (`'tech-trust' | 'content' | 'positioning' | 'pricing' | 'ai-visibility'`
+  and `'critical' | 'high' | 'medium' | 'info'`) instead of `string`.
+- **Documented error codes.** Per-status error-envelope types are now generated with enum'd `code`
+  values (401 `api_key_missing` / `api_key_invalid` / `api_key_revoked` / `api_key_expired` /
+  `insufficient_scope`, 400 `invalid_parameters`, 429 `rate_limit_exceeded`, 502 `bad_gateway` /
+  `bot_protection_blocked` / `fetch_failed`, 503 `target_unreachable`).
+
+### Changed
+- Regenerated from the refreshed OpenAPI spec: request/response field descriptions cleaned up and
+  the async scan endpoints now carry coherent queued/completed examples. No runtime behavior change.
+
+> **Upgrade note:** additive and runtime-identical — every existing call keeps working unchanged
+> (`domain` was always required server-side). The tool request-body and alert-filter types are now
+> *tightened* (freeform → declared shapes; `string` → unions); strict-TypeScript consumers that were
+> passing bogus or extra properties may see a new compile error, but correct usage is unaffected. No
+> method, resource, or endpoint changed.
+
 ## 2.2.0
 
 ### Changed

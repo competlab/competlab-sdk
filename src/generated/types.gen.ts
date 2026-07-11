@@ -15,11 +15,11 @@ export type HealthResponse = {
     timestamp: string;
 };
 
-export type ApiErrorResponse = {
+export type ApiUnauthorizedErrorResponse = {
     /**
-     * Machine-readable error code in snake_case
+     * Machine-readable authentication error code.
      */
-    code: string;
+    code: 'api_key_missing' | 'api_key_invalid' | 'api_key_revoked' | 'api_key_expired' | 'insufficient_scope';
     /**
      * Human-readable error message
      */
@@ -30,8 +30,8 @@ export type ApiErrorResponse = {
     status: number;
 };
 
-export type ApiErrorEnvelope = {
-    error: ApiErrorResponse;
+export type ApiUnauthorizedErrorEnvelope = {
+    error: ApiUnauthorizedErrorResponse;
 };
 
 export type ProjectListItemResponse = {
@@ -154,6 +154,25 @@ export type ProjectDetailResponse = {
     } | null;
 };
 
+export type ApiNotFoundErrorResponse = {
+    /**
+     * Machine-readable code identifying which resource was not found.
+     */
+    code: 'project_not_found' | 'competitor_not_found' | 'run_not_found' | 'check_not_found' | 'scan_not_found';
+    /**
+     * Human-readable error message
+     */
+    message: string;
+    /**
+     * HTTP status code
+     */
+    status: number;
+};
+
+export type ApiNotFoundErrorEnvelope = {
+    error: ApiNotFoundErrorResponse;
+};
+
 export type CompetitorListItemResponse = {
     /**
      * Competitor ID
@@ -246,7 +265,7 @@ export type SummaryCustomerResponse = {
         [key: string]: unknown;
     } | null;
     /**
-     * Honest-degradation discriminator. Present ONLY when your own domain runs behavioral protection that blocks header inspection (~1.1% of sites). When present, `securityGrade` and `securityScore` above are forced to `null` so dashboards never surface F-grade placeholder values. Absent on healthy scans (the normal path).
+     * Honest-degradation discriminator. Present only when your own domain runs behavioral protection that blocks header inspection (~1.1% of sites). When present, `securityGrade` and `securityScore` above are forced to `null` so dashboards never surface F-grade placeholder values. Absent on healthy scans (the normal path).
      */
     securitySignalsAvailable?: SignalsAvailableUnavailableResponse;
     /**
@@ -350,7 +369,7 @@ export type SecurityHeadersResponse = {
      */
     xContentTypeOptions: boolean;
     /**
-     * Honest-degradation discriminator. Present ONLY when the upstream homepage fetch couldn't recover response headers (~1.1% of sites running behavioral protection that blocks header inspection). When present, ALL OTHER FIELDS in this object — `grade`, `score`, `hsts`, `csp`, `xFrameOptions`, `xContentTypeOptions` — are PLACEHOLDER values (the fallback 'no headers detected' shape), NOT a real 'this site has no security headers' result. Absent on healthy scans (the normal path).
+     * Honest-degradation discriminator. Present only when the upstream homepage fetch couldn't recover response headers (~1.1% of sites running behavioral protection that blocks header inspection). When present, all other fields in this object — `grade`, `score`, `hsts`, `csp`, `xFrameOptions`, `xContentTypeOptions` — are placeholder values (the fallback 'no headers detected' shape), not a real 'this site has no security headers' result. Absent on healthy scans (the normal path).
      */
     signalsAvailable?: SignalsAvailableUnavailableResponse;
 };
@@ -1808,7 +1827,7 @@ export type TechStackEvidenceResponse = {
 
 export type TechStackDetectedTechnologyResponse = {
     /**
-     * Canonical technology name (enum value from TechStackTechnology / GrowthStackTechnology / EngagementStackTechnology)
+     * Canonical technology name (e.g. "Next.js", "Cloudflare", "HubSpot")
      */
     name: string;
     /**
@@ -1834,11 +1853,11 @@ export type PartialDetectionResponse = {
 
 export type TechStackToolResponse = {
     /**
-     * Normalized domain, as actually requested (post-normalizeDomain)
+     * Normalized domain, as actually requested (after normalization)
      */
     domain: string;
     /**
-     * Final URL after redirects (from N8N response)
+     * Final URL after redirects
      */
     finalUrl: string;
     /**
@@ -1850,19 +1869,19 @@ export type TechStackToolResponse = {
      */
     totalTechnologies: number;
     /**
-     * TECH STACK category — hosting, CDN, frameworks, CMS, auth, payments, cookie consent
+     * Tech stack — hosting, CDN, frameworks, CMS, auth, payments, cookie consent
      */
     techStack: Array<TechStackDetectedTechnologyResponse>;
     /**
-     * GROWTH STACK category — analytics, tag managers, session recording, marketing, CRM, advertising, A/B
+     * Growth stack — analytics, tag managers, session recording, marketing, CRM, advertising, A/B
      */
     growthStack: Array<TechStackDetectedTechnologyResponse>;
     /**
-     * ENGAGEMENT STACK category — customer support, forms, video, monitoring
+     * Engagement stack — customer support, forms, video, monitoring
      */
     engagementStack: Array<TechStackDetectedTechnologyResponse>;
     /**
-     * Present ONLY when response headers couldn't be recovered (~1.1% of sites running behavioral protection that blocks header inspection). Detection from HTML matchers (~85% of rules) still ran and populates the three stack arrays; header-dependent tech (~24 rules) is absent. When present, missing tech should NOT be interpreted as 'site doesn't use it.'
+     * Present only when response headers couldn't be recovered (~1.1% of sites running behavioral protection that blocks header inspection). Detection from HTML matchers (~85% of rules) still ran and populates the three stack arrays; header-dependent tech (~24 rules) is absent. When present, missing tech should not be interpreted as 'site doesn't use it.'
      */
     partialDetection?: PartialDetectionResponse;
 };
@@ -1880,7 +1899,7 @@ export type TechStackScanErrorResponse = {
 
 export type TechStackScanResponse = {
     /**
-     * Scan ID (24-char hex Mongo ObjectId). Use to poll GET /scans/:scanId.
+     * Scan ID (24-char hex identifier). Use to poll GET /scans/:scanId.
      */
     id: string;
     /**
@@ -1904,7 +1923,7 @@ export type TechStackScanResponse = {
      */
     completedAt?: string;
     /**
-     * Full scan result. Present only when `status === "completed"`. Same shape as the legacy sync `/v1/tools/tech-stack` response.
+     * Full canonical tech-stack result. Present only when `status === "completed"`.
      */
     result?: TechStackToolResponse;
     /**
@@ -1914,12 +1933,72 @@ export type TechStackScanResponse = {
 };
 
 export type PtTechStackRequestDto = {
-    [key: string]: unknown;
+    /**
+     * Target domain to fingerprint. Accepts a bare hostname or a full URL — normalized (lowercased, scheme and path stripped) before scanning.
+     */
+    domain: string;
+};
+
+export type ApiValidationErrorResponse = {
+    /**
+     * Machine-readable error code for a rejected request payload or query.
+     */
+    code: 'invalid_parameters';
+    /**
+     * Human-readable validation message (joined when multiple fields fail).
+     */
+    message: string;
+    /**
+     * HTTP status code
+     */
+    status: number;
+};
+
+export type ApiValidationErrorEnvelope = {
+    error: ApiValidationErrorResponse;
+};
+
+export type ApiRateLimitErrorResponse = {
+    /**
+     * Machine-readable rate-limit error code.
+     */
+    code: 'rate_limit_exceeded';
+    /**
+     * Human-readable error message
+     */
+    message: string;
+    /**
+     * HTTP status code
+     */
+    status: number;
+};
+
+export type ApiRateLimitErrorEnvelope = {
+    error: ApiRateLimitErrorResponse;
+};
+
+export type ApiBadGatewayErrorResponse = {
+    /**
+     * Machine-readable code for an upstream failure while servicing the request.
+     */
+    code: 'bad_gateway' | 'bot_protection_blocked' | 'fetch_failed';
+    /**
+     * Human-readable error message
+     */
+    message: string;
+    /**
+     * HTTP status code
+     */
+    status: number;
+};
+
+export type ApiBadGatewayErrorEnvelope = {
+    error: ApiBadGatewayErrorResponse;
 };
 
 export type TrustSignalsVerdictResponse = {
     /**
-     * Tier verdict — describes homepage TRUST SIGNAL COVERAGE, not company market tier
+     * Tier verdict — describes homepage trust-signal coverage, not company market tier
      */
     tier: 'comprehensive' | 'substantial' | 'moderate' | 'minimal';
     /**
@@ -1995,7 +2074,7 @@ export type TrustSignalsEvidenceResponse = {
 
 export type TrustSignalsDetectedSignalResponse = {
     /**
-     * Canonical trust signal name (enum value from PTTrustSignal)
+     * Canonical trust signal name (e.g. "SOC 2", "Customer logos")
      */
     signal: string;
     /**
@@ -2007,7 +2086,7 @@ export type TrustSignalsDetectedSignalResponse = {
      */
     weight: number;
     /**
-     * Confidence band — reflects regex specificity, not business weight
+     * Confidence band — reflects match specificity, not business weight
      */
     confidence: 'high' | 'medium' | 'low';
     /**
@@ -2085,11 +2164,11 @@ export type TrustSignalsMetaResponse = {
 
 export type TrustSignalsToolResponse = {
     /**
-     * Normalized domain, as actually requested (post-normalizeDomain)
+     * Normalized domain, as actually requested (after normalization)
      */
     domain: string;
     /**
-     * Final URL after redirects (from N8N response)
+     * Final URL after redirects
      */
     finalUrl: string;
     /**
@@ -2097,11 +2176,11 @@ export type TrustSignalsToolResponse = {
      */
     fetchedAt: string;
     /**
-     * Honest-degradation discriminator. Present ONLY when the upstream fetch couldn't recover response headers (~1.1% of sites running behavioral protection that blocks header inspection). When present, ALL OTHER FIELDS IN THIS RESPONSE — `verdict`, `categoryScores`, `signalsDetected`, `suspiciousPatterns`, `gapsVsBenchmark` — are PLACEHOLDER values, NOT a 'zero trust signals' result. Headers from the site couldn't be inspected; trust-signal evaluation depends on them. Absent on healthy scans (the normal path).
+     * Honest-degradation discriminator. Present only when the upstream fetch couldn't recover response headers (~1.1% of sites running behavioral protection that blocks header inspection). When present, all other fields in this response — `verdict`, `categoryScores`, `signalsDetected`, `suspiciousPatterns`, `gapsVsBenchmark` — are placeholder values, not a 'zero trust signals' result. Headers from the site couldn't be inspected; trust-signal evaluation depends on them. Absent on healthy scans (the normal path).
      */
     signalsAvailable?: SignalsAvailableUnavailableResponse;
     /**
-     * Overall verdict — tier, score, benchmark comparison, human-readable summary. ⚠️ When `signalsAvailable.available === false`, these fields are PLACEHOLDER values (tier: 'minimal', score: 0) and MUST NOT be used for tier-distribution analytics or competitive ranking. Consumers MUST check `signalsAvailable` first.
+     * Overall verdict — tier, score, benchmark comparison, human-readable summary. ⚠️ When `signalsAvailable.available === false`, these fields are placeholder values (tier: 'minimal', score: 0) and must not be used for tier-distribution analytics or competitive ranking. Consumers must check `signalsAvailable` first.
      */
     verdict: TrustSignalsVerdictResponse;
     /**
@@ -2139,7 +2218,7 @@ export type TrustSignalsScanErrorResponse = {
 
 export type TrustSignalsScanResponse = {
     /**
-     * Scan ID (24-char hex Mongo ObjectId). Use to poll GET /scans/:scanId.
+     * Scan ID (24-char hex identifier). Use to poll GET /scans/:scanId.
      */
     id: string;
     /**
@@ -2163,7 +2242,7 @@ export type TrustSignalsScanResponse = {
      */
     completedAt?: string;
     /**
-     * Full scan result. Present only when `status === "completed"`. Same shape as the legacy sync `/v1/tools/trust-signals` response.
+     * Full canonical trust-signals result. Present only when `status === "completed"`.
      */
     result?: TrustSignalsToolResponse;
     /**
@@ -2173,7 +2252,10 @@ export type TrustSignalsScanResponse = {
 };
 
 export type PtTrustSignalsRequestDto = {
-    [key: string]: unknown;
+    /**
+     * Target domain to scan for trust signals. Accepts a bare hostname or a full URL — normalized (lowercased, scheme and path stripped) before scanning.
+     */
+    domain: string;
 };
 
 export type AiCrawlerCheckerCrawlerResultResponse = {
@@ -2335,7 +2417,7 @@ export type AiCrawlerCheckerRecommendationResponse = {
 
 export type AiCrawlerCheckerToolResponse = {
     /**
-     * Normalized domain, as actually analyzed (post-normalizeDomain)
+     * Normalized domain, as actually analyzed (after normalization)
      */
     domain: string;
     /**
@@ -2393,7 +2475,14 @@ export type AiCrawlerCheckerToolResponse = {
 };
 
 export type PtAiCrawlerCheckerRequestDto = {
-    [key: string]: unknown;
+    /**
+     * Target domain to check for AI-crawler accessibility. Accepts a bare hostname or a full URL — normalized (lowercased, scheme and path stripped) before checking.
+     */
+    domain: string;
+    /**
+     * Industry context used to tailor crawler recommendations and benchmarks. Defaults to "other" when omitted.
+     */
+    industry?: 'news-media' | 'arts-entertainment' | 'law-government' | 'finance-healthcare' | 'saas-tech' | 'ecommerce' | 'other';
 };
 
 export type SitemapVisualizerSitemapInfoResponse = {
@@ -2632,7 +2721,7 @@ export type SitemapVisualizerInsightsResponse = {
 
 export type SitemapVisualizerToolResponse = {
     /**
-     * Normalized domain, as actually analyzed (post-normalizeDomain)
+     * Normalized domain, as actually analyzed (after normalization)
      */
     domain: string;
     /**
@@ -2682,7 +2771,18 @@ export type SitemapVisualizerToolResponse = {
 };
 
 export type PtSitemapVisualizerRequestDto = {
-    [key: string]: unknown;
+    /**
+     * Target domain whose sitemap to analyze. Accepts a bare hostname or a full URL — normalized (lowercased, scheme and path stripped) before analysis.
+     */
+    domain: string;
+    /**
+     * Explicit sitemap URL to fetch directly, short-circuiting /sitemap.xml then robots.txt discovery. Must be a full http:// or https:// URL with a public hostname.
+     */
+    sitemapUrl?: string;
+    /**
+     * When true, include the full raw `urls[]` list in the response. Defaults to false, which returns a lean insights-only payload without the URL list.
+     */
+    includeUrls?: boolean;
 };
 
 export type AgentAdoptionScannerResponse = {
@@ -2691,7 +2791,7 @@ export type AgentAdoptionScannerResponse = {
      */
     name: string;
     /**
-     * Semver-ish version tag of the scanner emitting this response
+     * Semver-style version tag of the scanner emitting this response
      */
     version: string;
 };
@@ -2713,7 +2813,7 @@ export type AgentAdoptionNextLevelResponse = {
 
 export type AgentAdoptionFixPromptResponse = {
     /**
-     * Full paste-to-Claude-Code/Cursor remediation markdown
+     * Full copy-paste remediation prompt (Markdown) for your AI coding assistant
      */
     full: string;
 };
@@ -2838,11 +2938,11 @@ export type AgentAdoptionCheckResponse = {
         [key: string]: unknown;
     };
     /**
-     * Paste-to-Claude remediation. Emitted ONLY when request sent includeFixPrompts: true AND check is failed + scored.
+     * Copy-paste remediation prompt. Emitted only when the request sets includeFixPrompts: true and the check is failed and scored.
      */
     fixPrompt?: AgentAdoptionFixPromptResponse;
     /**
-     * Full HTTP trace. Emitted ONLY when request sent debugMode: true.
+     * Full HTTP trace. Emitted only when the request sets debugMode: true.
      */
     evidence?: Array<AgentAdoptionEvidenceResponse>;
 };
@@ -2960,11 +3060,11 @@ export type AgentAdoptionCountersResponse = {
 
 export type AgentAdoptionMetaResponse = {
     /**
-     * Count of checks that produced a result (pass/fail/neutral). Dep-skipped checks DO count.
+     * Count of checks that produced a result (pass/fail/neutral). Dependency-skipped checks are counted.
      */
     checksEvaluated: number;
     /**
-     * Count of v1 checks that did not run at all in this scan (e.g., future checks not yet implemented). Does NOT include dep-skipped checks.
+     * Count of v1 checks that did not run at all in this scan (e.g., future checks not yet implemented). Does not include dependency-skipped checks.
      */
     checksSkipped: number;
     /**
@@ -2972,7 +3072,7 @@ export type AgentAdoptionMetaResponse = {
      */
     scanDurationMs: number;
     /**
-     * Per-scan counters — fetches + n8n calls. Visible in all modes.
+     * Per-scan counters — fetches + upstream fetch-pipeline calls. Visible in all modes.
      */
     counters: AgentAdoptionCountersResponse;
 };
@@ -3003,7 +3103,7 @@ export type AgentAdoptionToolResponse = {
      */
     scannedAt: string;
     /**
-     * 0..100 integer overall score. Informational checks excluded; capped when a cluster cap verdict fires. Decorative — does NOT drive `level`.
+     * 0..100 integer overall score. Informational checks excluded; capped when a cluster cap verdict fires. Decorative — does not drive `level`.
      */
     score: number;
     /**
@@ -3045,7 +3145,7 @@ export type AgentAdoptionScanErrorResponse = {
 
 export type AgentAdoptionScanResponse = {
     /**
-     * Scan ID (24-char hex Mongo ObjectId). Use to poll GET /scans/:scanId.
+     * Scan ID (24-char hex identifier). Use to poll GET /scans/:scanId.
      */
     id: string;
     /**
@@ -3069,7 +3169,7 @@ export type AgentAdoptionScanResponse = {
      */
     completedAt?: string;
     /**
-     * Full scan result. Present only when `status === "completed"`. Same shape as the legacy sync `/v1/tools/agent-adoption` response.
+     * Full canonical agent-adoption result. Present only when `status === "completed"`.
      */
     result?: AgentAdoptionToolResponse;
     /**
@@ -3079,7 +3179,18 @@ export type AgentAdoptionScanResponse = {
 };
 
 export type PtAgentAdoptionRequestDto = {
-    [key: string]: unknown;
+    /**
+     * Target domain to scan for AI-agent readiness. Accepts a bare hostname or a full URL — normalized (lowercased, scheme and path stripped) before scanning.
+     */
+    domain: string;
+    /**
+     * When true, include the full HTTP trace (`evidence`) for every check in the response. Defaults to false.
+     */
+    debugMode?: boolean;
+    /**
+     * When true, include a copy-paste remediation prompt (`fixPrompt`) for each failed, scored check. Defaults to false.
+     */
+    includeFixPrompts?: boolean;
 };
 
 export type FetchUrlCleanStatsResponse = {
@@ -3173,6 +3284,25 @@ export type PtFetchUrlRequestDto = {
     bodyMaxBytes?: number;
 };
 
+export type ApiServiceUnavailableErrorResponse = {
+    /**
+     * Machine-readable code for a temporarily unreachable upstream target.
+     */
+    code: 'target_unreachable';
+    /**
+     * Human-readable error message
+     */
+    message: string;
+    /**
+     * HTTP status code
+     */
+    status: number;
+};
+
+export type ApiServiceUnavailableErrorEnvelope = {
+    error: ApiServiceUnavailableErrorResponse;
+};
+
 export type PublicHealthControllerGetHealthV1Data = {
     body?: never;
     path?: never;
@@ -3199,7 +3329,7 @@ export type PublicProjectsControllerListProjectsV1Data = {
 };
 
 export type PublicProjectsControllerListProjectsV1Errors = {
-    401: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
 };
 
 export type PublicProjectsControllerListProjectsV1Error = PublicProjectsControllerListProjectsV1Errors[keyof PublicProjectsControllerListProjectsV1Errors];
@@ -3228,8 +3358,8 @@ export type PublicProjectsControllerGetProjectV1Data = {
 };
 
 export type PublicProjectsControllerGetProjectV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicProjectsControllerGetProjectV1Error = PublicProjectsControllerGetProjectV1Errors[keyof PublicProjectsControllerGetProjectV1Errors];
@@ -3258,7 +3388,7 @@ export type PublicCompetitorsControllerListCompetitorsV1Data = {
 };
 
 export type PublicCompetitorsControllerListCompetitorsV1Errors = {
-    401: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
 };
 
 export type PublicCompetitorsControllerListCompetitorsV1Error = PublicCompetitorsControllerListCompetitorsV1Errors[keyof PublicCompetitorsControllerListCompetitorsV1Errors];
@@ -3291,8 +3421,8 @@ export type PublicCompetitorsControllerGetCompetitorV1Data = {
 };
 
 export type PublicCompetitorsControllerGetCompetitorV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicCompetitorsControllerGetCompetitorV1Error = PublicCompetitorsControllerGetCompetitorV1Errors[keyof PublicCompetitorsControllerGetCompetitorV1Errors];
@@ -3321,8 +3451,8 @@ export type PublicTechTrustControllerGetTechTrustDashboardV1Data = {
 };
 
 export type PublicTechTrustControllerGetTechTrustDashboardV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicTechTrustControllerGetTechTrustDashboardV1Error = PublicTechTrustControllerGetTechTrustDashboardV1Errors[keyof PublicTechTrustControllerGetTechTrustDashboardV1Errors];
@@ -3360,7 +3490,7 @@ export type PublicTechTrustControllerGetTechTrustHistoryV1Data = {
 };
 
 export type PublicTechTrustControllerGetTechTrustHistoryV1Errors = {
-    401: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
 };
 
 export type PublicTechTrustControllerGetTechTrustHistoryV1Error = PublicTechTrustControllerGetTechTrustHistoryV1Errors[keyof PublicTechTrustControllerGetTechTrustHistoryV1Errors];
@@ -3394,8 +3524,8 @@ export type PublicTechTrustControllerGetTechTrustRunDetailV1Data = {
 };
 
 export type PublicTechTrustControllerGetTechTrustRunDetailV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicTechTrustControllerGetTechTrustRunDetailV1Error = PublicTechTrustControllerGetTechTrustRunDetailV1Errors[keyof PublicTechTrustControllerGetTechTrustRunDetailV1Errors];
@@ -3424,8 +3554,8 @@ export type PublicContentControllerGetContentDashboardV1Data = {
 };
 
 export type PublicContentControllerGetContentDashboardV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicContentControllerGetContentDashboardV1Error = PublicContentControllerGetContentDashboardV1Errors[keyof PublicContentControllerGetContentDashboardV1Errors];
@@ -3463,7 +3593,7 @@ export type PublicContentControllerGetContentHistoryV1Data = {
 };
 
 export type PublicContentControllerGetContentHistoryV1Errors = {
-    401: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
 };
 
 export type PublicContentControllerGetContentHistoryV1Error = PublicContentControllerGetContentHistoryV1Errors[keyof PublicContentControllerGetContentHistoryV1Errors];
@@ -3497,8 +3627,8 @@ export type PublicContentControllerGetContentRunDetailV1Data = {
 };
 
 export type PublicContentControllerGetContentRunDetailV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicContentControllerGetContentRunDetailV1Error = PublicContentControllerGetContentRunDetailV1Errors[keyof PublicContentControllerGetContentRunDetailV1Errors];
@@ -3548,7 +3678,7 @@ export type PublicContentControllerGetContentChangelogV1Data = {
 };
 
 export type PublicContentControllerGetContentChangelogV1Errors = {
-    401: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
 };
 
 export type PublicContentControllerGetContentChangelogV1Error = PublicContentControllerGetContentChangelogV1Errors[keyof PublicContentControllerGetContentChangelogV1Errors];
@@ -3582,8 +3712,8 @@ export type PublicPositioningControllerGetPositioningDashboardV1Data = {
 };
 
 export type PublicPositioningControllerGetPositioningDashboardV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicPositioningControllerGetPositioningDashboardV1Error = PublicPositioningControllerGetPositioningDashboardV1Errors[keyof PublicPositioningControllerGetPositioningDashboardV1Errors];
@@ -3621,7 +3751,7 @@ export type PublicPositioningControllerGetPositioningHistoryV1Data = {
 };
 
 export type PublicPositioningControllerGetPositioningHistoryV1Errors = {
-    401: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
 };
 
 export type PublicPositioningControllerGetPositioningHistoryV1Error = PublicPositioningControllerGetPositioningHistoryV1Errors[keyof PublicPositioningControllerGetPositioningHistoryV1Errors];
@@ -3655,8 +3785,8 @@ export type PublicPositioningControllerGetPositioningRunDetailV1Data = {
 };
 
 export type PublicPositioningControllerGetPositioningRunDetailV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicPositioningControllerGetPositioningRunDetailV1Error = PublicPositioningControllerGetPositioningRunDetailV1Errors[keyof PublicPositioningControllerGetPositioningRunDetailV1Errors];
@@ -3685,8 +3815,8 @@ export type PublicPricingControllerGetPricingDashboardV1Data = {
 };
 
 export type PublicPricingControllerGetPricingDashboardV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicPricingControllerGetPricingDashboardV1Error = PublicPricingControllerGetPricingDashboardV1Errors[keyof PublicPricingControllerGetPricingDashboardV1Errors];
@@ -3724,7 +3854,7 @@ export type PublicPricingControllerGetPricingHistoryV1Data = {
 };
 
 export type PublicPricingControllerGetPricingHistoryV1Errors = {
-    401: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
 };
 
 export type PublicPricingControllerGetPricingHistoryV1Error = PublicPricingControllerGetPricingHistoryV1Errors[keyof PublicPricingControllerGetPricingHistoryV1Errors];
@@ -3758,8 +3888,8 @@ export type PublicPricingControllerGetPricingRunDetailV1Data = {
 };
 
 export type PublicPricingControllerGetPricingRunDetailV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicPricingControllerGetPricingRunDetailV1Error = PublicPricingControllerGetPricingRunDetailV1Errors[keyof PublicPricingControllerGetPricingRunDetailV1Errors];
@@ -3788,8 +3918,8 @@ export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data = {
 };
 
 export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Error = PublicAiVisibilityControllerGetAiVisibilityDashboardV1Errors[keyof PublicAiVisibilityControllerGetAiVisibilityDashboardV1Errors];
@@ -3827,7 +3957,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data = {
 };
 
 export type PublicAiVisibilityControllerGetAiVisibilityHistoryV1Errors = {
-    401: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
 };
 
 export type PublicAiVisibilityControllerGetAiVisibilityHistoryV1Error = PublicAiVisibilityControllerGetAiVisibilityHistoryV1Errors[keyof PublicAiVisibilityControllerGetAiVisibilityHistoryV1Errors];
@@ -3861,8 +3991,8 @@ export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data = {
 };
 
 export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Error = PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Errors[keyof PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Errors];
@@ -3904,7 +4034,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityTrendV1Data = {
 };
 
 export type PublicAiVisibilityControllerGetAiVisibilityTrendV1Errors = {
-    401: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
 };
 
 export type PublicAiVisibilityControllerGetAiVisibilityTrendV1Error = PublicAiVisibilityControllerGetAiVisibilityTrendV1Errors[keyof PublicAiVisibilityControllerGetAiVisibilityTrendV1Errors];
@@ -3940,11 +4070,11 @@ export type PublicAlertsControllerListAlertsV1Data = {
         /**
          * Filter by monitoring dimension (tech-trust, content, positioning, pricing, ai-visibility)
          */
-        dimension?: string;
+        dimension?: 'tech-trust' | 'content' | 'positioning' | 'pricing' | 'ai-visibility';
         /**
          * Filter by alert severity (critical, high, medium, info)
          */
-        severity?: string;
+        severity?: 'critical' | 'high' | 'medium' | 'info';
         /**
          * Filter by competitor ID
          */
@@ -3954,7 +4084,7 @@ export type PublicAlertsControllerListAlertsV1Data = {
 };
 
 export type PublicAlertsControllerListAlertsV1Errors = {
-    401: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
 };
 
 export type PublicAlertsControllerListAlertsV1Error = PublicAlertsControllerListAlertsV1Errors[keyof PublicAlertsControllerListAlertsV1Errors];
@@ -3984,7 +4114,7 @@ export type PublicSchedulesControllerListSchedulesV1Data = {
 };
 
 export type PublicSchedulesControllerListSchedulesV1Errors = {
-    401: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
 };
 
 export type PublicSchedulesControllerListSchedulesV1Error = PublicSchedulesControllerListSchedulesV1Errors[keyof PublicSchedulesControllerListSchedulesV1Errors];
@@ -4022,8 +4152,8 @@ export type PublicBriefingControllerGetStrategicBriefingV1Data = {
 };
 
 export type PublicBriefingControllerGetStrategicBriefingV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
 };
 
 export type PublicBriefingControllerGetStrategicBriefingV1Error = PublicBriefingControllerGetStrategicBriefingV1Errors[keyof PublicBriefingControllerGetStrategicBriefingV1Errors];
@@ -4042,10 +4172,10 @@ export type PublicTechStackToolControllerCreateScanV1Data = {
 };
 
 export type PublicTechStackToolControllerCreateScanV1Errors = {
-    400: ApiErrorEnvelope;
-    401: ApiErrorEnvelope;
-    429: ApiErrorEnvelope;
-    502: ApiErrorEnvelope;
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+    502: ApiBadGatewayErrorEnvelope;
 };
 
 export type PublicTechStackToolControllerCreateScanV1Error = PublicTechStackToolControllerCreateScanV1Errors[keyof PublicTechStackToolControllerCreateScanV1Errors];
@@ -4071,9 +4201,9 @@ export type PublicTechStackToolControllerGetScanV1Data = {
 };
 
 export type PublicTechStackToolControllerGetScanV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
-    429: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
 };
 
 export type PublicTechStackToolControllerGetScanV1Error = PublicTechStackToolControllerGetScanV1Errors[keyof PublicTechStackToolControllerGetScanV1Errors];
@@ -4097,10 +4227,10 @@ export type PublicTrustSignalsToolControllerCreateScanV1Data = {
 };
 
 export type PublicTrustSignalsToolControllerCreateScanV1Errors = {
-    400: ApiErrorEnvelope;
-    401: ApiErrorEnvelope;
-    429: ApiErrorEnvelope;
-    502: ApiErrorEnvelope;
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+    502: ApiBadGatewayErrorEnvelope;
 };
 
 export type PublicTrustSignalsToolControllerCreateScanV1Error = PublicTrustSignalsToolControllerCreateScanV1Errors[keyof PublicTrustSignalsToolControllerCreateScanV1Errors];
@@ -4126,9 +4256,9 @@ export type PublicTrustSignalsToolControllerGetScanV1Data = {
 };
 
 export type PublicTrustSignalsToolControllerGetScanV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
-    429: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
 };
 
 export type PublicTrustSignalsToolControllerGetScanV1Error = PublicTrustSignalsToolControllerGetScanV1Errors[keyof PublicTrustSignalsToolControllerGetScanV1Errors];
@@ -4152,10 +4282,10 @@ export type PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Data = {
 };
 
 export type PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Errors = {
-    400: ApiErrorEnvelope;
-    401: ApiErrorEnvelope;
-    429: ApiErrorEnvelope;
-    502: ApiErrorEnvelope;
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+    502: ApiBadGatewayErrorEnvelope;
 };
 
 export type PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Error = PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Errors[keyof PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Errors];
@@ -4179,10 +4309,10 @@ export type PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Data = {
 };
 
 export type PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Errors = {
-    400: ApiErrorEnvelope;
-    401: ApiErrorEnvelope;
-    429: ApiErrorEnvelope;
-    502: ApiErrorEnvelope;
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+    502: ApiBadGatewayErrorEnvelope;
 };
 
 export type PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Error = PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Errors[keyof PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Errors];
@@ -4206,10 +4336,10 @@ export type PublicAgentAdoptionToolControllerCreateScanV1Data = {
 };
 
 export type PublicAgentAdoptionToolControllerCreateScanV1Errors = {
-    400: ApiErrorEnvelope;
-    401: ApiErrorEnvelope;
-    429: ApiErrorEnvelope;
-    502: ApiErrorEnvelope;
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+    502: ApiBadGatewayErrorEnvelope;
 };
 
 export type PublicAgentAdoptionToolControllerCreateScanV1Error = PublicAgentAdoptionToolControllerCreateScanV1Errors[keyof PublicAgentAdoptionToolControllerCreateScanV1Errors];
@@ -4235,9 +4365,9 @@ export type PublicAgentAdoptionToolControllerGetScanV1Data = {
 };
 
 export type PublicAgentAdoptionToolControllerGetScanV1Errors = {
-    401: ApiErrorEnvelope;
-    404: ApiErrorEnvelope;
-    429: ApiErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
 };
 
 export type PublicAgentAdoptionToolControllerGetScanV1Error = PublicAgentAdoptionToolControllerGetScanV1Errors[keyof PublicAgentAdoptionToolControllerGetScanV1Errors];
@@ -4261,11 +4391,11 @@ export type PublicFetchUrlToolControllerFetchUrlV1Data = {
 };
 
 export type PublicFetchUrlToolControllerFetchUrlV1Errors = {
-    400: ApiErrorEnvelope;
-    401: ApiErrorEnvelope;
-    429: ApiErrorEnvelope;
-    502: ApiErrorEnvelope;
-    503: ApiErrorEnvelope;
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+    502: ApiBadGatewayErrorEnvelope;
+    503: ApiServiceUnavailableErrorEnvelope;
 };
 
 export type PublicFetchUrlToolControllerFetchUrlV1Error = PublicFetchUrlToolControllerFetchUrlV1Errors[keyof PublicFetchUrlToolControllerFetchUrlV1Errors];
