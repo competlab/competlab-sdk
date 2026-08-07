@@ -66,7 +66,7 @@ cl.schedules         // Monitoring schedules
 cl.tools             // Free tools — sitemap, AI crawlers, tech stack, trust signals, agent adoption, fetch URL
 ```
 
-**12 resources. 34 methods. Zero dependencies.** Uses native `fetch` — no axios, no bloat.
+**12 resources. 36 methods. Zero dependencies.** Uses native `fetch` — no axios, no bloat.
 
 ## Examples
 
@@ -87,6 +87,33 @@ const { data } = await cl.aiVisibility.dashboard('proj_abc');
 // }
 ```
 
+A rate is a share of **the answers that came back**, not of the queries sent. A model that
+answered and named nobody is a measured absence, not a gap in the data — so never read a `0`
+or an empty `mentionedBy` as "we couldn't measure."
+
+### Read what the models actually said
+
+```typescript
+// Opt in to the raw answers behind the numbers: every prompt sent, and every brand each
+// model named in rank order with its stated reasoning.
+const { data } = await cl.aiVisibility.dashboard('proj_abc', {
+  includeAnswers: true,
+  brand: 'rival.com',   // one competitor across every answer — the cheap, targeted read
+});
+
+// Also available: provider ('openai' | 'claude' | 'gemini') and promptIndex (zero-based).
+// provider and promptIndex narrow the answers array; brand does NOT — it empties the
+// `brands` list on answers that didn't name that domain, so you see the silences too.
+```
+
+The block is large — roughly 12k tokens unfiltered against ~2k with `brand=`. Read
+`summary.totalEntries` first to size it (about 200 tokens per entry).
+
+> **Attribution:** every piece of prose in that block — descriptions, ranking rationales,
+> claims — is unverified model output about the brands that model named, including third
+> parties CompetLab does not monitor. It is a record of what the model said, not CompetLab's
+> assessment. Attribute it to the named `provider`; do not republish it as fact.
+
 ### Track how your AI ranking changes over time
 
 ```typescript
@@ -104,9 +131,10 @@ const trend = await cl.aiVisibility.trend('proj_abc', {
 // which deeper sections to open next); enough to answer most questions in a single call.
 const { data } = await cl.strategicBriefing.get('proj_abc');
 
-// data.meta.availability => 'ready' | 'ready-refreshing' | 'preparing' | 'none'
-// data.item                 the requested sections (hub by default)
-// data.dimensionHealth      which deep-<dimension> analyses this edition contains
+// data.meta.status => 'running' | 'done' | 'failed' | null
+// data.item           the requested sections (hub by default) — null unless status is 'done'
+// data.contains       which sections this edition actually holds
+// data.coverage       methodology and data-quality caveats
 
 // Follow a hub diagnosis pointer deeper, and pull full chart series:
 const deep = await cl.strategicBriefing.get('proj_abc', {
@@ -115,11 +143,33 @@ const deep = await cl.strategicBriefing.get('proj_abc', {
 });
 ```
 
-> **On types:** the briefing body (`item`, `coverage`, `dimensionHealth`) is intentionally an
-> open, dynamic JSON shape rather than a fixed TypeScript type. It runs deep and evolves, and it's
-> built to be read and rendered — including by AI agents through the
+`get()` returns the **latest run in whatever state it is in**. On `running` or `failed`, `item`
+is null — but an earlier edition is usually still readable. Only `meta.status === null` means
+the project genuinely has none, so never report "no briefing available" on a null `item` alone:
+
+```typescript
+const { data } = await cl.strategicBriefing.get('proj_abc');
+
+if (!data.item && data.meta.status !== null) {
+  // This run produced nothing, but past editions may exist.
+  const { data: past } = await cl.strategicBriefing.history('proj_abc');
+  const newest = past.items.find((row) => row.status === 'done');
+
+  if (newest) {
+    const { data: edition } = await cl.strategicBriefing.edition('proj_abc', newest.runId);
+    // Same shape as get(), for that specific edition.
+  }
+}
+```
+
+A `runId` for a failed or still-running edition resolves successfully with `meta.status` set and
+`item` null — that run genuinely produced no edition, which is an answer rather than an error.
+
+> **On types:** the briefing body (`item`, `coverage`) is intentionally an open, dynamic JSON
+> shape rather than a fixed TypeScript type. It runs deep and evolves, and it's built to be read
+> and rendered — including by AI agents through the
 > [MCP server](https://competlab.com/developers/mcp). Branch on the strongly-typed
-> `meta.availability` / `meta.briefingDate`, and treat the body as structured JSON you narrow at
+> `meta.status` / `meta.briefingDate`, and treat the body as structured JSON you narrow at
 > the point of use.
 
 ### Catch competitor pricing changes

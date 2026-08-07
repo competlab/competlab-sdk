@@ -3,6 +3,32 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 2.4.0
+
+### Added
+- **Briefing editions.** `strategicBriefing.history(projectId, { page, limit })` lists past
+  editions newest first — one cheap metadata row each (`runId`, date, edition number, status,
+  headline), never briefing content. `strategicBriefing.edition(projectId, runId, { sections,
+  includeCharts })` reads one of them in full, in the same shape as `get()`. Together they close
+  a real gap: `get()` returns the latest run in whatever state it is in, so on a `running` or
+  `failed` run `item` is null while an earlier edition is usually still readable. Only
+  `meta.status === null` means the project genuinely has none.
+- **AI Visibility answers.** `aiVisibility.dashboard()` and `aiVisibility.checkDetail()` now take
+  a query argument carrying `includeAnswers`, `provider`, `brand` and `promptIndex` — the models'
+  raw answers behind the scores, with filters. `provider` and `promptIndex` narrow the answers
+  array; `brand` narrows the `brands` list inside each answer instead, so answers that did not
+  name that domain still come back with an empty list. The prose returned is unverified model
+  output about the brands that model named — attribute it to the `provider`, never to CompetLab.
+
+### Fixed
+- **README briefing example referenced fields that do not exist.** It told you to branch on
+  `meta.availability` and read `data.dimensionHealth`; neither is in the API. Corrected to
+  `meta.status` and `contains`, with the fallback-to-history path spelled out.
+
+### Changed
+- Regenerated from the refreshed OpenAPI spec (34 -> 36 operations). No breaking changes: the two
+  new query arguments are optional and the existing call signatures are unchanged.
+
 ## 2.3.0
 
 ### Added

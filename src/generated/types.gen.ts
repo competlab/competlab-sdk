@@ -60,7 +60,7 @@ export type ProjectListItemResponse = {
      */
     competitorCount: number;
     /**
-     * Most recent completed monitoring run (ISO-8601), or null if no runs yet
+     * Most recent completed monitoring run (ISO-8601), or null if nothing has completed. For `aiVisibility`, only checks that published a measurement count toward this — see `dimensions.aiVisibility.lastRunAt`.
      */
     lastMonitoredAt: {
         [key: string]: unknown;
@@ -73,7 +73,7 @@ export type ProjectListItemResponse = {
 
 export type DimensionLastRunResponse = {
     /**
-     * Timestamp of the last completed run for this dimension (ISO-8601), or null if no runs
+     * Timestamp of the last completed run for this dimension (ISO-8601), or null if there is none. For `techTrust`, `content`, `positioning` and `pricing`, null means no run has completed. For `aiVisibility` this is instead the last check that published a measurement: a cycle that ran but did not get a usable answer to every query it asked is abandoned and never moves this timestamp, so neither an unchanged value nor null proves that nothing ran. That cycle is still reported — `/ai-visibility` carries `latestCheckDataAvailable` when an earlier check has published, and `/ai-visibility/trend` reports it in `incompleteCycles`, the only surface that reports it when no check has ever published, since `/ai-visibility` then returns 404 `no_data_available`.
      */
     lastRunAt: {
         [key: string]: unknown;
@@ -129,7 +129,7 @@ export type ProjectDetailResponse = {
      */
     competitorCount: number;
     /**
-     * Most recent completed monitoring run (ISO-8601), or null if no runs yet
+     * Most recent completed monitoring run (ISO-8601), or null if nothing has completed. For `aiVisibility`, only checks that published a measurement count toward this — see `dimensions.aiVisibility.lastRunAt`.
      */
     lastMonitoredAt: {
         [key: string]: unknown;
@@ -249,6 +249,17 @@ export type SignalsAvailableUnavailableResponse = {
     reason: 'site_uses_behavioral_protection';
 };
 
+export type TechTrustUnavailableResponse = {
+    /**
+     * Always false — present only when your own domain could not be analyzed
+     */
+    available: boolean;
+    /**
+     * Why your own tech & trust profile is unmeasured this run. 'tech_trust_fetch_failed' = we couldn't reach your domain to read its security, tech, and trust signals (DNS failure, timeout, or an error response). 'tech_trust_domain_not_configured' = no valid domain is on file for your own site, so no check ran.
+     */
+    reason: 'tech_trust_fetch_failed' | 'tech_trust_domain_not_configured';
+};
+
 export type SummaryCustomerResponse = {
     /**
      * Your domain
@@ -269,21 +280,29 @@ export type SummaryCustomerResponse = {
      */
     securitySignalsAvailable?: SignalsAvailableUnavailableResponse;
     /**
-     * Number of trust signals detected on your domain
+     * Number of trust signals detected on your domain. When `techTrustAnalysisAvailable` is present, this is a placeholder 0 because your own domain couldn't be measured — NOT a real zero. Branch on `techTrustAnalysisAvailable` before using this value.
      */
     trustSignalCount: number;
     /**
-     * Number of technologies detected on your domain
+     * Number of technologies detected on your domain. When `techTrustAnalysisAvailable` is present, this is a placeholder 0 — NOT a real zero.
      */
     techStackCount: number;
     /**
-     * Number of AI bots blocked by your robots.txt
+     * Number of AI bots blocked by your robots.txt, or null exactly when `allowsAiAccess` is null — the robots.txt posture wasn't measured this run (whole domain unanalyzed, or only the robots.txt couldn't be retrieved). Never read a null as 0: '0 bots blocked' is a measured claim.
      */
-    blockedAiBotsCount: number;
+    blockedAiBotsCount: {
+        [key: string]: unknown;
+    } | null;
     /**
-     * Whether your domain allows AI crawler access
+     * Whether your domain allows AI crawler access, or null when it couldn't be measured this run — either your whole domain wasn't analyzed (accompanied by `techTrustAnalysisAvailable`) or only your robots.txt couldn't be retrieved (no discriminator accompanies it). A null with no discriminator can also arrive if the run stored no measurements at all, so treat null as unknown on its own — never only when a discriminator confirms it. Never report an AI-access posture off a null. A domain with no robots.txt at all measures as `true` — a real 'allows all crawlers' fact.
      */
-    allowsAiAccess: boolean;
+    allowsAiAccess: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Honest-degradation discriminator. Present only when your own domain couldn't be analyzed this run — see `reason`. When present, `securityGrade`, `securityScore`, `allowsAiAccess`, and `blockedAiBotsCount` are null, and `trustSignalCount` and `techStackCount` are placeholder values, not measured facts, so no you-vs-competitor gap is computed. Distinct from `securitySignalsAvailable` (headers shielded but the check ran). Absent on healthy scans (the normal path).
+     */
+    techTrustAnalysisAvailable?: TechTrustUnavailableResponse;
 };
 
 export type SummaryTopSecurityResponse = {
@@ -334,11 +353,11 @@ export type TechTrustDashboardSummaryResponse = {
      */
     topTrustCompetitor?: SummaryTopTrustResponse | null;
     /**
-     * Your security score minus top competitor score (negative = you are behind)
+     * Your security score minus top competitor score (negative = you are behind). 0 when your own security score is unmeasured (`customer.securityScore` null) — not a tie.
      */
     securityScoreGap: number;
     /**
-     * Your trust signal count minus top competitor count (negative = you are behind)
+     * Your trust signal count minus top competitor count (negative = you are behind). 0 when your own domain couldn't be measured — check `customer.techTrustAnalysisAvailable` before reading this as 'tied'.
      */
     trustSignalGap: number;
 };
@@ -423,19 +442,34 @@ export type TechnologyStackResponse = {
     totalCount: number;
 };
 
+export type RobotsTxtUnavailableResponse = {
+    /**
+     * Always false for this discriminator.
+     */
+    available: boolean;
+    /**
+     * Why the robots.txt analysis is unavailable: the robots.txt file could not be retrieved this run (network timeout or error). Distinct from a domain that genuinely has no robots.txt — that is a measured 'allows all crawlers' result and carries no discriminator.
+     */
+    reason: 'robots_fetch_failed';
+};
+
 export type RobotsTxtResponse = {
     /**
-     * Whether a robots.txt file exists
+     * Whether a robots.txt file exists. When `robotsTxtAvailable` is present, this is a placeholder `false` (the file could not be retrieved), not a measured absence.
      */
     exists: boolean;
     /**
-     * AI bots explicitly blocked in robots.txt
+     * AI bots explicitly blocked in robots.txt. When `robotsTxtAvailable` is present, this is a placeholder empty array — never read it as 'this domain allows AI crawlers'.
      */
     aiBotsBlocked: Array<string>;
     /**
      * Total number of disallow rules
      */
     totalRules: number;
+    /**
+     * Honest-degradation discriminator. Present only when the robots.txt file could not be retrieved this run (network timeout or error). When present, all other fields in this object — `exists`, `aiBotsBlocked`, `totalRules` — are placeholder values, not measured facts; do not derive any AI-access posture from them. Absent on healthy scans and on domains that genuinely have no robots.txt (a measured 'allows all crawlers' result).
+     */
+    robotsTxtAvailable?: RobotsTxtUnavailableResponse;
 };
 
 export type DnsInfrastructureResponse = {
@@ -552,25 +586,40 @@ export type TechTrustRunDetailResponse = {
     competitors: Array<TechTrustCompetitorResponse>;
 };
 
+export type ContentUnavailableResponse = {
+    /**
+     * Always false — present only when your own content could not be analyzed
+     */
+    available: boolean;
+    /**
+     * Why your own content is unmeasured this run. 'content_fetch_failed' = your sitemap couldn't be read; 'content_url_not_configured' = no sitemap is set up for your own domain.
+     */
+    reason: 'content_fetch_failed' | 'content_url_not_configured';
+};
+
 export type ContentSummaryCustomerResponse = {
     /**
      * Your domain
      */
     domain: string;
     /**
-     * Total URLs discovered across all sitemaps
+     * Total URLs discovered across all sitemaps. When `contentAnalysisAvailable` is present, this is 0 because your own sitemap couldn't be measured — NOT a real zero. Branch on `contentAnalysisAvailable` before using this value.
      */
     totalUrls: number;
     /**
-     * Strategic URLs (excludes legal/other categories)
+     * Strategic URLs (excludes legal/other categories). When `contentAnalysisAvailable` is present, this is 0 because your own sitemap couldn't be measured — NOT a real zero. Branch on `contentAnalysisAvailable` before using this value.
      */
     strategicUrls: number;
     /**
-     * URL counts broken down by content category
+     * URL counts broken down by content category. When `contentAnalysisAvailable` is present, every category count is a placeholder 0 because your own sitemap couldn't be measured — NOT real zeros. Branch on `contentAnalysisAvailable` before using these values.
      */
     categorizedCounts: {
         [key: string]: unknown;
     };
+    /**
+     * Present ONLY when your own sitemap couldn't be analyzed this run (fetch failed, or no sitemap configured). When present, `totalUrls`, `strategicUrls`, and every count in `categorizedCounts` are placeholder 0s — treat them, the strategic-URL gap, and all content gaps as UNMEASURED, not as real zeros (the gap arrays are empty and `strategicUrlGap` is 0).
+     */
+    contentAnalysisAvailable?: ContentUnavailableResponse;
 };
 
 export type ContentSummaryTopCompetitorResponse = {
@@ -721,7 +770,7 @@ export type ContentDashboardSummaryResponse = {
      */
     topCompetitor?: ContentSummaryTopCompetitorResponse | null;
     /**
-     * Your strategic URL count minus top competitor (negative = you are behind)
+     * Your strategic URL count minus top competitor (negative = you are behind). 0 when your own sitemap couldn't be measured — check `customer.contentAnalysisAvailable` before reading this as 'tied'.
      */
     strategicUrlGap: number;
     /**
@@ -766,6 +815,17 @@ export type ContentDashboardSummaryResponse = {
     totalOnTrack: number;
 };
 
+export type ContentCompetitorUnavailableResponse = {
+    /**
+     * Always false — present only when this competitor row carries no content data
+     */
+    available: boolean;
+    /**
+     * Why this competitor's content couldn't be counted this run. 'no_sitemap_published' = a measured absence — no working sitemap exists (nothing discovered, or every discovered/conventional location returns 404), so their content is invisible to sitemap-based analysis (a real fact about them, not a scan failure). 'sitemap_fetch_failed' = our fetch or parse failed this run — nothing was measured, so no verdict about the competitor's content may be derived from this row. On the dashboard this reflects the latest known fetch state — a newer run's in-flight failure can briefly surface here until that run completes; in run-detail responses the reason is scoped to that run.
+     */
+    reason: 'no_sitemap_published' | 'sitemap_fetch_failed';
+};
+
 export type ContentCompetitorResponse = {
     /**
      * Competitor domain
@@ -776,13 +836,17 @@ export type ContentCompetitorResponse = {
      */
     isOwn: boolean;
     /**
-     * Total URLs discovered across all sitemaps for this competitor
+     * Total URLs discovered across all sitemaps for this competitor, or null exactly when `contentDataAvailable` is present (no readable sitemap this run). Never read a null as 0: '0 URLs' is a measured claim about a readable sitemap.
      */
-    totalUrls: number;
+    totalUrls: {
+        [key: string]: unknown;
+    } | null;
     /**
-     * Strategic URLs (excludes legal/other categories)
+     * Strategic URLs (excludes legal/other categories), or null exactly when `contentDataAvailable` is present.
      */
-    strategicUrls: number;
+    strategicUrls: {
+        [key: string]: unknown;
+    } | null;
     /**
      * URL counts by content category, or null if categorization unavailable
      */
@@ -790,9 +854,13 @@ export type ContentCompetitorResponse = {
         [key: string]: unknown;
     } | null;
     /**
-     * Number of sitemaps discovered for this competitor
+     * Number of READABLE sitemaps this run for this competitor (0 when `contentDataAvailable` is present)
      */
     sitemapCount: number;
+    /**
+     * Honest-degradation discriminator (per-competitor). Present only when NO sitemap could be read for this competitor this run — see `reason` for whether that is a measured absence (they publish no sitemap) or our fetch failure. When present, `totalUrls` and `strategicUrls` are null and `categorizedCounts` is null — do not derive any content verdict (e.g. 'competitor has no blog') from this row. Absent whenever at least one sitemap was read (the normal path). On the dashboard, rows reflect the latest known state per sitemap, so a fetch failure in a newer, still-running run can briefly mark a row unavailable until that run completes; run-detail rows are scoped to their own run.
+     */
+    contentDataAvailable?: ContentCompetitorUnavailableResponse;
 };
 
 export type ContentDashboardResponse = {
@@ -891,39 +959,56 @@ export type ContentChangelogItemResponse = {
     };
 };
 
+export type PositioningMessagingUnavailableResponse = {
+    /**
+     * Always false for this discriminator.
+     */
+    available: boolean;
+    /**
+     * Why your homepage messaging couldn't be scored. 'homepage_fetch_failed' = we couldn't retrieve your homepage this run; 'homepage_url_not_configured' = no homepage URL is set for your own domain.
+     */
+    reason: 'homepage_fetch_failed' | 'homepage_url_not_configured';
+};
+
 export type PositioningSummaryCustomerResponse = {
     /**
      * Your domain
      */
     domain: string;
     /**
-     * Messaging strength score (0-100) based on homepage completeness
+     * Messaging strength score (0-100) based on homepage completeness. `null` when your own homepage couldn't be analyzed this run (see `messagingAnalysisAvailable`) — do not report a messaging score or you-vs-competitor ranking in that case.
      */
-    messagingStrengthScore: number;
+    messagingStrengthScore: {
+        [key: string]: unknown;
+    } | null;
     /**
-     * Whether your headline includes specific metrics or numbers
+     * Whether your headline includes specific metrics or numbers. Placeholder `false` when `messagingAnalysisAvailable` is present — not a measured fact.
      */
     hasSpecificHeadline: boolean;
     /**
-     * Whether your CTA is strong and specific (not just 'Get Started')
+     * Whether your CTA is strong and specific (not just 'Get Started'). Placeholder `false` when `messagingAnalysisAvailable` is present — not a measured fact.
      */
     hasStrongCta: boolean;
     /**
-     * Whether pricing is shown on your homepage
+     * Whether pricing is shown on your homepage. Placeholder `false` when `messagingAnalysisAvailable` is present — not a measured fact.
      */
     showsPricing: boolean;
     /**
-     * Whether you offer a free trial
+     * Whether you offer a free trial. Placeholder `false` when `messagingAnalysisAvailable` is present — not a measured fact.
      */
     hasFreeTrial: boolean;
     /**
-     * Your primary CTA text
+     * Your primary CTA text. Placeholder `""` when `messagingAnalysisAvailable` is present — not a measured CTA.
      */
     primaryCta: string;
     /**
-     * Your main headline
+     * Your main headline. Placeholder `""` when `messagingAnalysisAvailable` is present — not a measured headline.
      */
     mainHeadline: string;
+    /**
+     * Availability flag for your own homepage messaging. Present ONLY when your own homepage couldn't be analyzed this run (fetch failed, or no homepage URL configured). When present, `messagingStrengthScore` is `null`, `messagingScoreGap` is `0`, `hasSpecificHeadline`/`hasStrongCta`/`showsPricing`/`hasFreeTrial` are placeholder `false`, `primaryCta`/`mainHeadline` are placeholder `""` (not measured facts), and your own cells in the comparison widgets — `ctaComparison.yourCta`, `pricingComparison.youShowPrice`, `pricingComparison.youHaveFreeTrial` — are `null` (those objects carry no discriminator of their own; the null is the 'unmeasured' signal there). Do not report a messaging score, a ranking, a headline/CTA/pricing-visibility/free-trial claim, or a you-vs-competitor verdict. Absent on healthy runs (the normal path).
+     */
+    messagingAnalysisAvailable?: PositioningMessagingUnavailableResponse;
 };
 
 export type PositioningSummaryTopCompetitorResponse = {
@@ -947,9 +1032,11 @@ export type PositioningSummaryTopCompetitorResponse = {
 
 export type PositioningCtaComparisonResponse = {
     /**
-     * Your primary CTA text
+     * Your primary CTA text, or null when your own homepage couldn't be analyzed this run (see `customer.messagingAnalysisAvailable`) — never report a 'no primary CTA' finding or a your-CTA-vs-competitor comparison off a null. A measured homepage with no CTA is an empty string, not null.
      */
-    yourCta: string;
+    yourCta: {
+        [key: string]: unknown;
+    } | null;
     /**
      * Strongest competitor's CTA text
      */
@@ -970,13 +1057,17 @@ export type PositioningPricingComparisonResponse = {
      */
     competitorsWithFreeTrial: number;
     /**
-     * Whether you show pricing on your homepage
+     * Whether you show pricing on your homepage, or null when your own homepage couldn't be analyzed this run (see `customer.messagingAnalysisAvailable`) — never report a pricing-transparency posture off a null. A measured homepage that genuinely shows no pricing is false, not null.
      */
-    youShowPrice: boolean;
+    youShowPrice: {
+        [key: string]: unknown;
+    } | null;
     /**
-     * Whether you offer a free trial
+     * Whether you offer a free trial, or null when your own homepage couldn't be analyzed this run (see `customer.messagingAnalysisAvailable`) — never report a free-trial claim off a null. A measured homepage with genuinely no free trial is false, not null.
      */
-    youHaveFreeTrial: boolean;
+    youHaveFreeTrial: {
+        [key: string]: unknown;
+    } | null;
 };
 
 export type PositioningDashboardSummaryResponse = {
@@ -1137,15 +1228,32 @@ export type PositioningRunDetailResponse = {
     competitors: Array<PositioningCompetitorResponse>;
 };
 
+export type PricingUnavailableResponse = {
+    /**
+     * Always false for this discriminator.
+     */
+    available: boolean;
+    /**
+     * Why your own pricing couldn't be analyzed. 'pricing_fetch_failed' = we couldn't retrieve your pricing page this run; 'pricing_url_not_configured' = no pricing URL is set for your own domain.
+     */
+    reason: 'pricing_fetch_failed' | 'pricing_url_not_configured';
+};
+
 export type PricingSummaryCustomerResponse = {
     /**
      * Your domain
      */
     domain: string;
     /**
-     * Your popular plan price (numeric), or null if unavailable
+     * Your popular plan price (numeric amount), or null if unavailable. Check `popularPlanCurrency` before rendering a currency symbol next to it — this amount is in whatever currency your pricing page uses, not necessarily USD.
      */
     popularPlanPrice?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Currency of `popularPlanPrice` as read off your pricing page — 'USD' / 'EUR' / 'GBP', or the verbatim currency symbol for other currencies. Null when no currency could be detected on the page, or on data recorded before currency capture existed — never treat null as USD.
+     */
+    popularPlanCurrency?: {
         [key: string]: unknown;
     } | null;
     /**
@@ -1179,9 +1287,13 @@ export type PricingSummaryCustomerResponse = {
      */
     hasEnterprisePricing: boolean;
     /**
-     * Number of pricing tiers
+     * Number of pricing tiers. Placeholder `0` when `pricingAnalysisAvailable` is present — not a measured tier count.
      */
     tierCount: number;
+    /**
+     * Availability flag for your own pricing. Present ONLY when your own pricing couldn't be analyzed this run (fetch failed, or no pricing URL configured). When present, `popularPlanPrice` is `null`, `hasFreePlan`/`hasFreeTrial`/`hasEnterprisePricing` are placeholder `false`, `tierCount` is placeholder `0`, `freeTrialDuration` is placeholder `null` (not measured facts), and `pricePositionPercent` + the gap flags (`hasFreeTierGap`, `hasEnterpriseGap`) do not reflect your pricing — do not report a price, a market position, a free/enterprise tier status, a tier count, or a gap verdict. Absent on healthy runs (the normal path).
+     */
+    pricingAnalysisAvailable?: PricingUnavailableResponse;
 };
 
 export type PricingSummaryPriceCompetitorResponse = {
@@ -1213,31 +1325,37 @@ export type PricingDashboardSummaryResponse = {
      */
     customer: PricingSummaryCustomerResponse;
     /**
-     * Market average price (numeric). Null when the competitor sample is too small to compute a meaningful market average.
+     * Market average price (numeric, in `marketCurrency`). Only comparable competitor prices are averaged: fixed monthly recurring amounts sharing `marketCurrency` — your own price is never included. Usage-based prices (per-GB, per-request, hourly), one-time prices, and prices in other currencies are never averaged (no currency conversion is ever performed). Null when fewer than 3 comparable competitor prices exist — treat null as 'not enough comparable market data', never as zero.
      */
     marketAvgPrice?: {
         [key: string]: unknown;
     } | null;
     /**
-     * Your price position vs market average (percent; negative = below market). Null when the competitor sample is too small for a meaningful comparison.
+     * The currency all market figures are computed in — the majority currency among comparable competitor prices (a tie prefers your own). It sets `marketAvgPrice`, `pricePositionPercent`, `topPriceCompetitor`, `lowestPriceCompetitor`, and which prices count toward `pricingSampleSize`. Prices in other currencies stay visible on their rows but are excluded. Null when no comparable competitor price exists, or on data recorded before currency capture existed.
+     */
+    marketCurrency?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Your price position vs market average (percent; negative = below market). Null when `marketAvgPrice` is null, and ALSO null whenever your own price isn't comparable to the market — different currency (no conversion is ever performed) or non-monthly pricing. Treat null as 'no comparable position', never as 0%.
      */
     pricePositionPercent?: {
         [key: string]: unknown;
     } | null;
     /**
-     * Competitor with the highest price. Null when the competitor sample is too small for a meaningful comparison.
+     * Competitor with the highest comparable price (fixed monthly, in `marketCurrency`). Descriptive, not a market verdict: present at any sample size — caption it with `pricingSampleSize`. Null when no comparable competitor price exists. Data recorded before this change stored null whenever `pricingIsReliable` was false.
      */
     topPriceCompetitor?: PricingSummaryPriceCompetitorResponse | null;
     /**
-     * Competitor with the lowest price. Null when the competitor sample is too small for a meaningful comparison.
+     * Competitor with the lowest comparable price (fixed monthly, in `marketCurrency`). Same semantics as `topPriceCompetitor` — descriptive at any sample size, null when no comparable competitor price exists.
      */
     lowestPriceCompetitor?: PricingSummaryPriceCompetitorResponse | null;
     /**
-     * Count of competitors with parseable popular-plan pricing in this run (used to gate market-comparison fields).
+     * Number of competitor prices comparable enough to aggregate: fixed monthly recurring amounts in `marketCurrency`, your own domain always excluded. This is the honest denominator behind `marketAvgPrice`. Competitors with usage-based, one-time, or other-currency pricing don't count here — their pricing model is still visible on their rows. On data recorded before this change, this counted any numeric price regardless of unit or currency.
      */
     pricingSampleSize: number;
     /**
-     * True when the competitor pricing sample is large enough to support market-comparison framings.
+     * True when `pricingSampleSize` >= 3 — enough comparable competitor prices for market-average and position claims. When false, `marketAvgPrice` and `pricePositionPercent` are null and `hasPriceGap` is false; `topPriceCompetitor` / `lowestPriceCompetitor` remain as descriptive data points.
      */
     pricingIsReliable: boolean;
     /**
@@ -1364,6 +1482,17 @@ export type PricingCompetitorContentResponse = {
     promotionDetails: string;
 };
 
+export type PricingCompetitorUnavailableResponse = {
+    /**
+     * Always false — present only when this row carries no pricing data
+     */
+    available: boolean;
+    /**
+     * Why this row has no pricing data. 'no_page_found' = we didn't find a pricing page for this competitor — they may simply not publish one; if you know the URL, adding it in competitor settings enables this check. 'fetch_failed_their_side' = their pricing page didn't respond to this check (blocked, errored, or timed out) — nothing was measured. 'fetch_failed_our_side' = a temporary problem on our side stopped this check — nothing was measured, and it says nothing about the competitor. Never turn any of these reasons into a pricing claim: a row carrying one has no price, plan, or tier facts to quote.
+     */
+    reason: 'no_page_found' | 'fetch_failed_their_side' | 'fetch_failed_our_side';
+};
+
 export type PricingCompetitorResponse = {
     /**
      * Competitor domain
@@ -1374,17 +1503,25 @@ export type PricingCompetitorResponse = {
      */
     isOwn: boolean;
     /**
-     * Pricing page URL that was analyzed
+     * Pricing page URL that was analyzed, or null exactly when `pricingDataAvailable` is present (no pricing data on this row).
      */
-    pricingUrl: string;
+    pricingUrl: {
+        [key: string]: unknown;
+    } | null;
     /**
-     * How the pricing page was located
+     * How the pricing page was located, or null exactly when `pricingDataAvailable` is present.
      */
-    pricingLocationType: string;
+    pricingLocationType: {
+        [key: string]: unknown;
+    } | null;
     /**
-     * Extracted pricing page content
+     * Extracted pricing page content, or null exactly when `pricingDataAvailable` is present. A null here means this competitor's pricing is unmeasured — never 'they offer no pricing'.
      */
-    content: PricingCompetitorContentResponse;
+    content: PricingCompetitorContentResponse | null;
+    /**
+     * Present ONLY when this row has no pricing data — `reason` says why. When present, `pricingUrl`, `pricingLocationType`, and `content` are null: branch on this field before quoting any price, plan, or pricing fact from the row. Absent on measured rows, including every response from before this field existed. On the dashboard, competitor rows keep their most recent successful read, so this marker appears only for a competitor never read successfully — its `reason` reflects the latest completed check. Your own row is different: it always reflects the latest completed check, success or failure. In run-detail responses the marker is scoped to that run.
+     */
+    pricingDataAvailable?: PricingCompetitorUnavailableResponse;
 };
 
 export type PricingDashboardResponse = {
@@ -1397,7 +1534,7 @@ export type PricingDashboardResponse = {
      */
     summary: PricingDashboardSummaryResponse;
     /**
-     * Per-competitor pricing data
+     * Per-competitor pricing data. Every competitor tracked by the project appears, your own domain included — rows without pricing data carry `pricingDataAvailable` saying why instead of being dropped. Competitor rows show the most recent successful read (which may predate the latest run); your own row reflects the latest completed check.
      */
     competitors: Array<PricingCompetitorResponse>;
 };
@@ -1431,7 +1568,7 @@ export type PricingRunDetailResponse = {
      */
     summary: PricingDashboardSummaryResponse;
     /**
-     * Per-competitor pricing data for this run
+     * Per-competitor pricing data for this run. Every competitor this run attempted appears — rows the run could not measure carry `pricingDataAvailable` saying why instead of being dropped.
      */
     competitors: Array<PricingCompetitorResponse>;
 };
@@ -1444,7 +1581,7 @@ export type AiVisibilityProviderMetricResponse = {
         [key: string]: unknown;
     } | null;
     /**
-     * Whether the customer was mentioned by this provider
+     * Whether this provider's counted answers named the customer. `false` means the customer was not named in the answers this check counted for this provider — it is not proof that the provider was asked and stayed silent. Under the full-coverage gate a check publishes only if every query it asked returned a usable answer, and there `false` is a MEASURED absence. Checks published before that gate stay published and can have counted fewer answers than they asked queries, so an answer that never arrived could have carried a mention. This response does not expose the queries-sent figure, so a caller cannot tell which kind of check this is. Report `false` as 'not mentioned in the answers we have from this provider'; never as 'this AI does not mention you'.
      */
     mentioned: boolean;
     /**
@@ -1468,13 +1605,32 @@ export type AiVisibilityPerProviderResponse = {
     gemini: AiVisibilityProviderMetricResponse;
 };
 
+export type AiVisibilityPerPromptResponse = {
+    /**
+     * Zero-based index of this prompt, matching `promptIndex` on `answers[]` and the `promptIndex` filter.
+     */
+    promptIndex: number;
+    /**
+     * Short label for the prompt, truncated to 80 characters, falling back to a ONE-BASED `Prompt N` placeholder when no text was captured — so `promptIndex: 0` labels as 'Prompt 1'. Quote the label to a human and the index to this API; do not read a number out of the label and pass it as `promptIndex`. A display label, not the prompt — the full text is on `answers[].promptText`, and the project's current prompts are on the project endpoint.
+     */
+    promptLabel: string;
+    /**
+     * Models that named the customer for this prompt. A model is listed only when it genuinely ranked them, so this is safe to read positively. Reading it negatively needs the usual care: a model missing from the list did not name the customer in the answers this check counted — under the full-coverage gate that is a measured absence, but on a check published before that gate it could be an answer that never arrived.
+     */
+    mentionedBy: Array<'openai' | 'claude' | 'gemini'>;
+    /**
+     * 0-100 weighted position score for this prompt, averaged over the models whose answers this check counted — never over a fixed 3. Higher is better, and it rewards top positions steeply rather than linearly, so it is not a rank and not a percentage of anything. `mentionedBy` is the tell for reading a `0`: non-empty means the score is real. If `mentionedBy` is empty and you need certainty, fetch `includeAnswers=true&promptIndex=<n>` — a prompt that was answered and did not rank the customer has entries in `answers`, while one that was never measured is in `unansweredQueries`.
+     */
+    score: number;
+};
+
 export type AiVisibilityCustomerMetricsResponse = {
     /**
      * Customer domain
      */
     domain: string;
     /**
-     * Mention rate as percentage (mentions / total queries * 100)
+     * Mention rate as a percentage: mentions / `totalQueries` * 100. The divisor is this check's own ANSWER count — the queries that came back with a usable answer — never a fixed 9. Under the full-coverage gate (a check publishes only if every query it asked returned a usable answer) that equals 3 AI providers x the project's prompt count; checks published before that gate stay published and can have counted fewer answers than they asked queries, and the queries-sent figure is not on this response. So this is a share of the answers counted, never a share of the queries asked — do not report it as 'mentioned in X% of AI queries'.
      */
     mentionRate: number;
     /**
@@ -1484,7 +1640,7 @@ export type AiVisibilityCustomerMetricsResponse = {
         [key: string]: unknown;
     } | null;
     /**
-     * Total number of mentions across all queries
+     * Number of this check's counted ANSWERS that mentioned the customer, out of `totalQueries`. Not out of the queries sent — that figure is not on this response.
      */
     mentionCount: number;
     /**
@@ -1495,6 +1651,10 @@ export type AiVisibilityCustomerMetricsResponse = {
      * Per-provider breakdown
      */
     perProvider: AiVisibilityPerProviderResponse;
+    /**
+     * How the customer did on each of the project's prompts individually, across the models that answered. The cheap way to answer 'which of my questions am I losing on' — a few small rows, no need to request the raw answers block. Present only on checks that recorded how many prompts they asked: older checks stored a fixed three rows whatever the project actually ran, so those are omitted rather than published as prompts that may never have existed. Absent therefore means 'not available for this check', never 'this project has no prompts' — and the array length is this check's real prompt count wherever it is present.
+     */
+    perPrompt?: Array<AiVisibilityPerPromptResponse>;
 };
 
 export type AiVisibilityTopCompetitorResponse = {
@@ -1507,7 +1667,7 @@ export type AiVisibilityTopCompetitorResponse = {
      */
     name: string;
     /**
-     * Top competitor mention rate percentage
+     * Top competitor mention rate percentage. Same divisor as `customer.mentionRate` — the answers this check counted, not the queries sent.
      */
     mentionRate: number;
     /**
@@ -1556,17 +1716,21 @@ export type AiVisibilityCompetitorRankingResponse = {
         [key: string]: unknown;
     } | null;
     /**
-     * Total mentions across all queries
+     * Total mentions across the answers this check counted.
      */
     mentionCount: number;
     /**
-     * Mention rate as percentage
+     * Mention rate as percentage. Same divisor as `customer.mentionRate` — the answers this check counted, not the queries sent.
      */
     mentionRate: number;
     /**
      * AI Visibility Score (0-100)
      */
     aiScore: number;
+    /**
+     * Whether this domain is one the project currently monitors, as opposed to one an AI named on its own. Resolved against the project's CURRENT competitor list, so on a historical check it describes today's roster and not the roster at the time of that check — it is not a fact about the check. The customer's own row is always `true`; see `isOwn` to identify it.
+     */
+    isTracked: boolean;
 };
 
 export type AiVisibilityDashboardSummaryResponse = {
@@ -1587,11 +1751,11 @@ export type AiVisibilityDashboardSummaryResponse = {
      */
     totalCompetitorsFound: number;
     /**
-     * Total queries executed (3 prompts x 3 providers = 9)
+     * Answers this check counted — the queries that came back with a usable answer. Despite the field name this is NOT the number of queries sent; that figure is not on this response and cannot be derived from it. This is the divisor of every rate and score here. Under the full-coverage gate the two are equal (3 AI providers x the project's prompt count); checks published before that gate stay published and can have counted fewer answers than they asked queries, so this can be lower than what that check sent. Never describe this number as the queries asked. When `latestCheckDataAvailable` is present, this count describes the earlier check the other fields came from. `0` means the check predates the recorded count: it is a placeholder, not a measurement — do not divide by it or quote it, and treat `customer.mentionRate`, `customer.aiScore`, `mentionRateGap`, `topCompetitor.mentionRate` and every `competitorRankings[].mentionRate` and `.aiScore` as placeholders too.
      */
     totalQueries: number;
     /**
-     * Total brand entries across all query results
+     * Total brand entries across this check's counted answers. Also the size preview for `includeAnswers=true`: an entry serializes to roughly 200 tokens, so a 60-entry check runs around 12k tokens unfiltered, while `brand=` returns about one entry per answer and lands nearer 2k.
      */
     totalEntries: number;
     /**
@@ -1600,16 +1764,227 @@ export type AiVisibilityDashboardSummaryResponse = {
     competitorRankings: Array<AiVisibilityCompetitorRankingResponse>;
 };
 
+export type AiVisibilityLatestCheckUnavailableResponse = {
+    /**
+     * Always false. This object exists only to say the most recent check produced nothing publishable.
+     */
+    available: boolean;
+    /**
+     * Why the most recent check produced nothing. `incomplete_coverage` — we did not end up with a usable answer for every query it asked.
+     */
+    reason: 'incomplete_coverage';
+    /**
+     * Answers that did come back usable in that check. NOT a visibility figure — a check can be fully covered and still score zero.
+     */
+    measuredAnswers: number;
+    /**
+     * Answers that check asked for: 3 AI providers x the project's prompt count. The shortfall (expectedAnswers - measuredAnswers) is what did not arrive.
+     */
+    expectedAnswers: number;
+};
+
+export type AiVisibilityAnswerDifferentiationResponse = {
+    /**
+     * The axis the model framed this brand as competing on.
+     */
+    axis: 'technology' | 'price' | 'service' | 'speed' | 'scale';
+    /**
+     * What the model said sets this brand apart, in its own words. The model's claim, not a verified fact.
+     */
+    uniqueValue: string;
+};
+
+export type AiVisibilityAnswerMessagingResponse = {
+    /**
+     * Keywords the model associated with this brand (up to 5).
+     */
+    keywords: Array<string>;
+    /**
+     * Claims the model offered as evidence for this brand — certifications, customer counts, awards. The model asserts these; it does not source them and CompetLab does not verify them.
+     */
+    credibilitySignals: Array<string>;
+    /**
+     * Differentiation claims the model attributed to this brand (up to 3). The model's claims about the brand, not verified facts.
+     */
+    differentiationClaims: Array<string>;
+};
+
+export type AiVisibilityAnswerBrandResponse = {
+    /**
+     * Position in this model's ranked answer — 1 means named first. This is the rank among the brands recorded for this answer: brands are de-duplicated by domain before storage, so it is the position as recorded rather than necessarily the ordinal the model itself emitted. Stable under filtering — narrowing by `provider`, `brand` or `promptIndex` never renumbers it.
+     */
+    rank: number;
+    /**
+     * Brand name as the model wrote it.
+     */
+    name: string;
+    /**
+     * Brand domain, normalized.
+     */
+    domain: string;
+    /**
+     * One-sentence description of the brand, in the model's own words.
+     */
+    description: string;
+    /**
+     * The model's stated reason for placing this brand where it did. The single most useful field here for understanding WHY a ranking looks the way it does — and the model's reasoning, not a verified fact.
+     */
+    rankingRationale: string;
+    /**
+     * How warmly the model spoke about this brand in this answer.
+     */
+    sentiment: 'highly_recommended' | 'recommended' | 'mentioned' | 'alternative';
+    /**
+     * The role this brand played in the answer.
+     */
+    mentionContext: 'direct_recommendation' | 'comparison' | 'alternative' | 'niche_fit';
+    /**
+     * Who the model said this brand is for.
+     */
+    targetAudience: string;
+    /**
+     * The price tier the model placed this brand in.
+     */
+    pricingSignal: 'free' | 'budget' | 'mid_range' | 'premium' | 'enterprise' | 'unknown';
+    /**
+     * 0-1. How confidently this brand's position could be read out of the model's answer. It is not a measure of whether the model's ranking is correct.
+     */
+    positionConfidence: number;
+    /**
+     * Features the model highlighted for this brand (max 5).
+     */
+    features: Array<string>;
+    /**
+     * How the model framed this brand's differentiation.
+     */
+    differentiation: AiVisibilityAnswerDifferentiationResponse;
+    /**
+     * The messaging the model associated with this brand.
+     */
+    messaging: AiVisibilityAnswerMessagingResponse;
+};
+
+export type AiVisibilityAnswerResponse = {
+    /**
+     * Which AI produced this answer.
+     */
+    provider: 'openai' | 'claude' | 'gemini';
+    /**
+     * Zero-based index of the project prompt this answer belongs to. The same index the summary's per-prompt breakdown uses. Stable under filtering.
+     */
+    promptIndex: number;
+    /**
+     * The exact prompt sent to the model — one of the project's own AI prompts.
+     */
+    promptText: string;
+    /**
+     * Brands this model named, in the order it ranked them. Every answer in this array arrived — a query that produced nothing is not here at all, it is in `unansweredQueries`. So an EMPTY list is a measurement, never missing data: under a `brand` filter it means this model answered this question and did not name that domain, which is a real competitive finding and often the most actionable row in the response. Unfiltered it would mean the model named nobody at all. Report an empty list as 'this model answered and did not name them'; NEVER as 'no data', 'we could not measure', or a query that failed.
+     */
+    brands: Array<AiVisibilityAnswerBrandResponse>;
+};
+
+export type AiVisibilityUnansweredQueryResponse = {
+    /**
+     * Which AI this query was sent to.
+     */
+    provider: 'openai' | 'claude' | 'gemini';
+    /**
+     * Zero-based index of the project prompt this query was sent for.
+     */
+    promptIndex: number;
+    /**
+     * The exact prompt that was sent.
+     */
+    promptText: string;
+    /**
+     * `no_usable_answer` — we sent this query and did not end up with an answer we could use. It names no actor and makes no claim about the prompt or the model. Report it as 'no usable answer from this provider for this prompt — not counted'. NEVER report it as 'not mentioned', '0 mentions' or 'didn't appear', and never attach 'failed' to the prompt, which the customer authored. This query is excluded from every count and rate on this response.
+     */
+    reason: 'no_usable_answer';
+};
+
+export type AiVisibilityProviderStatusResponse = {
+    /**
+     * Whether this model produced a result record for this check. `false` means nothing came back from it at all. `true` does NOT mean it answered usefully: a model can be asked and have every one of its queries come back unusable, which appears here as `reported: true` with `answersCounted: 0`. Read the pair. `answersCounted: 0` means we got no usable answer from this model — NEVER that it answered and named nobody. Those queries are listed in `unansweredQueries`.
+     */
+    reported: boolean;
+    /**
+     * When this model finished (ISO-8601). Null when it never reported.
+     */
+    completedAt?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Queries to this model that came back with an answer we could use. This is the discriminator to read `reported` and `brandsNamed` against.
+     */
+    answersCounted: number;
+    /**
+     * Brand entries this model named across the answers that came back, counting a brand once per answer it appears in. `0` beside `answersCounted: 0` means this model produced no usable answer — not that it named nobody. Only `0` beside a non-zero `answersCounted` means it answered and named nobody.
+     */
+    brandsNamed: number;
+};
+
+export type AiVisibilityProviderStatusMapResponse = {
+    /**
+     * OpenAI (ChatGPT)
+     */
+    openai: AiVisibilityProviderStatusResponse;
+    /**
+     * Anthropic (Claude)
+     */
+    claude: AiVisibilityProviderStatusResponse;
+    /**
+     * Google (Gemini)
+     */
+    gemini: AiVisibilityProviderStatusResponse;
+};
+
+export type AiVisibilityAnswerCoverageResponse = {
+    /**
+     * Queries this check sent: 3 AI providers x the number of prompts the project was running when it ran. Prompt count is customer config, so this figure is read from the check and is never fixed — do not assume 9, even though a project running the current default of 3 prompts produces 9.
+     */
+    queriesSent: number;
+    /**
+     * Queries that came back with an answer we could use. The shortfall (`queriesSent` - `answersCounted`) is what did not arrive. On a check published under the full-coverage gate that shortfall equals the length of `unansweredQueries`; on older checks it can exceed it, because a model that failed before answering anything recorded no query slots to list. Trust the shortfall, not the array length. NEVER present these two numbers as a fraction: this dimension's headline metric is already an n-of-N over the same denominator, so '8 of 9' gets read as a visibility rate. State them as separate facts that cannot be divided by each other — "We sent all 9 queries, but 1 answer didn't come back." Always computed over the whole check, never over a filtered view.
+     */
+    answersCounted: number;
+};
+
 export type AiVisibilityDashboardResponse = {
     /**
-     * When this data was last updated (ISO-8601)
+     * When the data below was measured (ISO-8601). This is the completion time of the check the summary comes from, which is NOT necessarily the most recent cycle — see `latestCheckDataAvailable`.
      */
     lastUpdatedAt: string;
     /**
      * Summary statistics
      */
     summary: AiVisibilityDashboardSummaryResponse;
+    /**
+     * Present ONLY when the project's most recent check was abandoned as incomplete: it did not get a usable answer for every query it asked, so it was never scored. When present, every other field in this response comes from an EARLIER check, and `lastUpdatedAt` is older than the most recent check attempted. Absent when the most recent check published normally — and absent, too, when an older check fell short but a later one has since published, because that failure has been superseded. An abandoned check is never retried into a score: a new check runs automatically, and the caller may also trigger one immediately. When describing this state, NEVER phrase it as a fraction — this dimension's own metric is a count of queries, so "1 of 9" and "8 of 9" both get read as a visibility rate. State the two numbers as separate facts that cannot be divided by each other: "We sent all 9 queries, but 1 answer didn't come back." If `expectedAnswers` is 0 the check predates the recorded query count and there is no honest sentence to build — say the check did not complete and give no numbers.
+     */
+    latestCheckDataAvailable?: AiVisibilityLatestCheckUnavailableResponse;
+    /**
+     * The models' answers for this check — one entry per query that came back with an answer we could use. Present ONLY when the request set `includeAnswers=true`; absent otherwise, never an empty array standing in for 'not requested'. Narrowed by `provider` and `promptIndex` when those are set — those also narrow the matching entries of `unansweredQueries`. `brand` narrows DIFFERENTLY: it reduces the `brands` list inside each answer and never this array, so every answer the check counted is still here and the ones that did not name that domain arrive with an empty `brands`. `brand` narrows `unansweredQueries` not at all, because a query that produced no answer could have named anyone. No filter changes anything else: every number under `summary` is stored, computed over the whole check, and is never recomputed for a filtered view. ATTRIBUTION: every piece of prose in this block — descriptions, ranking rationales, audiences, claims — is unverified model output about the brands that model named, including third parties CompetLab does not monitor. It is a record of what the model said, not CompetLab's assessment of those brands. Attribute it to the named `provider`; do not republish it as fact.
+     */
+    answers?: Array<AiVisibilityAnswerResponse>;
+    /**
+     * Queries this check sent that produced no usable answer. Present ONLY when `includeAnswers=true`. Carried in their own array rather than mixed into `answers` so that `answers.length` always means answers counted and can never be read as queries sent. An empty array means every query this check sent came back — which is the normal case, because a check is only scored when it got a usable answer to every query it asked. It can be non-empty on checks published before that rule existed. These queries are excluded from every count and rate on this response. Never pair this array's length with `summary.totalQueries` as a fraction. `totalQueries` counts answers, this counts queries that produced none, and adding them recovers the queries sent — but '8 of 9' beside this dimension's headline metric gets read as a visibility rate. State them as separate facts that cannot be divided by each other.
+     */
+    unansweredQueries?: Array<AiVisibilityUnansweredQueryResponse>;
+    /**
+     * Per-model reporting status for this check: which of the three models returned data, when, and how much. Present ONLY when `includeAnswers=true`. It carries no visibility judgement, and it is NOT narrowed by the filters — it always describes all three models across the whole check, so a filtered response still says what the full picture was.
+     */
+    providerStatus?: AiVisibilityProviderStatusMapResponse;
+    /**
+     * How many queries this check sent, and how many came back. Present ONLY when `includeAnswers=true` AND the check recorded the number it sent. Absent on checks written before that count was recorded — there the figure is genuinely unknown and must not be inferred, least of all from the length of `answers`. Always describes the whole check, never a filtered view. Report the two numbers as separate facts, never as a fraction — see `answersCounted`.
+     */
+    answerCoverage?: AiVisibilityAnswerCoverageResponse;
+    /**
+     * True when the answers payload hit the response size cap and whole answers were dropped from the end of `answers`. Individual `brands` lists are never partially truncated — a half-truncated ranked list would be a wrong list, not a short one. `summary`, `providerStatus` and `answerCoverage` are never affected. Narrow the response with `provider`, `brand` or `promptIndex` to get a complete view. Present ONLY when `includeAnswers=true`.
+     */
+    answersTruncated?: boolean;
 };
+
+export type AiProvider = 'openai' | 'claude' | 'gemini';
 
 export type AiVisibilityHistoryItemResponse = {
     /**
@@ -1636,13 +2011,48 @@ export type AiVisibilityCheckDetailResponse = {
      */
     completedAt: string;
     /**
-     * Check summary statistics
+     * Check summary statistics, including this check's per-competitor rankings under `summary.competitorRankings`.
      */
     summary: AiVisibilityDashboardSummaryResponse;
     /**
-     * Per-competitor AI visibility rankings for this check
+     * The models' answers for this check — one entry per query that came back with an answer we could use. Present ONLY when the request set `includeAnswers=true`; absent otherwise, never an empty array standing in for 'not requested'. Narrowed by `provider` and `promptIndex` when those are set — those also narrow the matching entries of `unansweredQueries`. `brand` narrows DIFFERENTLY: it reduces the `brands` list inside each answer and never this array, so every answer the check counted is still here and the ones that did not name that domain arrive with an empty `brands`. `brand` narrows `unansweredQueries` not at all, because a query that produced no answer could have named anyone. No filter changes anything else: every number under `summary` is stored, computed over the whole check, and is never recomputed for a filtered view. ATTRIBUTION: every piece of prose in this block — descriptions, ranking rationales, audiences, claims — is unverified model output about the brands that model named, including third parties CompetLab does not monitor. It is a record of what the model said, not CompetLab's assessment of those brands. Attribute it to the named `provider`; do not republish it as fact.
      */
-    competitors: Array<AiVisibilityCompetitorRankingResponse>;
+    answers?: Array<AiVisibilityAnswerResponse>;
+    /**
+     * Queries this check sent that produced no usable answer. Present ONLY when `includeAnswers=true`. Carried in their own array rather than mixed into `answers` so that `answers.length` always means answers counted and can never be read as queries sent. An empty array means every query this check sent came back — which is the normal case, because a check is only scored when it got a usable answer to every query it asked. It can be non-empty on checks published before that rule existed. These queries are excluded from every count and rate on this response. Never pair this array's length with `summary.totalQueries` as a fraction. `totalQueries` counts answers, this counts queries that produced none, and adding them recovers the queries sent — but '8 of 9' beside this dimension's headline metric gets read as a visibility rate. State them as separate facts that cannot be divided by each other.
+     */
+    unansweredQueries?: Array<AiVisibilityUnansweredQueryResponse>;
+    /**
+     * Per-model reporting status for this check: which of the three models returned data, when, and how much. Present ONLY when `includeAnswers=true`. It carries no visibility judgement, and it is NOT narrowed by the filters — it always describes all three models across the whole check, so a filtered response still says what the full picture was.
+     */
+    providerStatus?: AiVisibilityProviderStatusMapResponse;
+    /**
+     * How many queries this check sent, and how many came back. Present ONLY when `includeAnswers=true` AND the check recorded the number it sent. Absent on checks written before that count was recorded — there the figure is genuinely unknown and must not be inferred, least of all from the length of `answers`. Always describes the whole check, never a filtered view. Report the two numbers as separate facts, never as a fraction — see `answersCounted`.
+     */
+    answerCoverage?: AiVisibilityAnswerCoverageResponse;
+    /**
+     * True when the answers payload hit the response size cap and whole answers were dropped from the end of `answers`. Individual `brands` lists are never partially truncated — a half-truncated ranked list would be a wrong list, not a short one. `summary`, `providerStatus` and `answerCoverage` are never affected. Narrow the response with `provider`, `brand` or `promptIndex` to get a complete view. Present ONLY when `includeAnswers=true`.
+     */
+    answersTruncated?: boolean;
+};
+
+export type AiVisibilityIncompleteCycleResponse = {
+    /**
+     * When the cycle started (ISO-8601). It has no completion time to report.
+     */
+    date: string;
+    /**
+     * Why this cycle produced no point. `incomplete_coverage` — we did not end up with a usable answer for every query it asked. Absent on cycles recorded before this was stored; absence means the reason was not recorded, never that there wasn't one.
+     */
+    reason?: 'incomplete_coverage';
+    /**
+     * Answers that came back usable in this cycle. Not a visibility figure — a cycle can be fully covered and score zero.
+     */
+    measuredAnswers: number;
+    /**
+     * Answers the cycle asked for: 3 AI providers x the project's prompt count at the time.
+     */
+    expectedAnswers: number;
 };
 
 export type AiVisibilityTrendDataPointResponse = {
@@ -1681,8 +2091,6 @@ export type AiVisibilityTrendDataPointResponse = {
         [key: string]: unknown;
     } | null;
 };
-
-export type AiProvider = 'openai' | 'claude' | 'gemini';
 
 export type AlertListItemResponse = {
     /**
@@ -1766,48 +2174,140 @@ export type ScheduleItemResponse = {
     } | null;
 };
 
+/**
+ * Lifecycle status of this run.
+ *
+ * - `running` — being generated now; see `progress`. `item` is null, but an earlier edition is usually still readable via `GET /strategic-briefing/history`. Never report that no briefing exists without checking there first.
+ * - `done` — finished; `item`, `coverage` and `contains` are populated.
+ * - `failed` — this attempt ended without producing an edition. `item` is null; earlier editions remain readable via `GET /strategic-briefing/history`. **A failed run does not resume the ~30-day cycle** — surface it rather than waiting it out.
+ * - `null` — this project has never had a briefing run at all. This is the only value that means the project genuinely has nothing.
+ */
+export type BriefingRunStatus = 'running' | 'done' | 'failed';
+
+/**
+ * Coarse activity label for the run in flight. `researching` gathers evidence per dimension, `verifying` cross-checks it, `composing` writes the edition. Treat it as a label, not a progress percentage.
+ */
+export type BriefingProgressStep = 'researching' | 'verifying' | 'composing';
+
+export type BriefingProgressResponse = {
+    /**
+     * Coarse activity label for the run in flight. `researching` gathers evidence per dimension, `verifying` cross-checks it, `composing` writes the edition. Treat it as a label, not a progress percentage.
+     */
+    step: BriefingProgressStep;
+    /**
+     * When this run started, ISO-8601 UTC.
+     */
+    startedAt: string;
+    /**
+     * When this progress snapshot was last refreshed, ISO-8601 UTC. Updates roughly once a minute while a run is in flight, so a gap of more than ~10 minutes from the current time suggests a stalled run. A single missed update is not a signal.
+     */
+    updatedAt: string;
+};
+
 export type BriefingMetaResponse = {
     /**
-     * Edition id (the briefing run id). Null when no finished briefing exists.
+     * Id of this briefing run — also the id of the edition it produced, if it finished. Pass it to `/strategic-briefing/history/{runId}` to fetch this run again later. Null only when the project has never had a briefing run.
      */
-    runId?: {
-        [key: string]: unknown;
-    } | null;
+    runId?: string | null;
     /**
-     * When this edition finished, ISO-8601. Null when no finished briefing exists. Briefings refresh roughly every 30 days.
+     * Lifecycle status of this run.
+     *
+     * - `running` — being generated now; see `progress`. `item` is null, but an earlier edition is usually still readable via `GET /strategic-briefing/history`. Never report that no briefing exists without checking there first.
+     * - `done` — finished; `item`, `coverage` and `contains` are populated.
+     * - `failed` — this attempt ended without producing an edition. `item` is null; earlier editions remain readable via `GET /strategic-briefing/history`. **A failed run does not resume the ~30-day cycle** — surface it rather than waiting it out.
+     * - `null` — this project has never had a briefing run at all. This is the only value that means the project genuinely has nothing.
      */
-    briefingDate?: {
-        [key: string]: unknown;
-    } | null;
+    status?: BriefingRunStatus | null;
     /**
-     * Availability of the briefing for this project: `ready` (a finished briefing is returned), `ready-refreshing` (a finished briefing is returned AND a newer edition is being generated right now), `preparing` (the first edition is still being generated — body is null), `none` (no briefing exists yet).
+     * 1-indexed ordinal of this edition among the project's published editions — the first briefing is 1, the next is 2. Counts finished editions only, so it never skips. Null unless `status` is `done`. A display value: address editions by `runId`.
      */
-    availability: 'ready' | 'ready-refreshing' | 'preparing' | 'none';
+    editionNumber?: number | null;
+    /**
+     * When this run started, ISO-8601 UTC. Where a run was re-attempted this is the latest attempt's start, so it is the right anchor for elapsed duration.
+     */
+    startedAt?: string | null;
+    /**
+     * When this run reached a terminal state, ISO-8601 UTC — for a `done` run, the edition's publication date. Null while `running`. A project's next briefing is scheduled roughly 30 days after its last **successful** one.
+     */
+    briefingDate?: string | null;
+    /**
+     * In-flight telemetry. Non-null only while `status` is `running` AND at least one progress update has landed (roughly a minute in). Always null on a `done` or `failed` run. Null is normal, not an error. A run typically finishes in about 90 minutes and a healthy one can take up to ~2 hours, so budget rather than polling tightly.
+     */
+    progress?: BriefingProgressResponse | null;
 };
+
+/**
+ * Manifest of what this edition actually holds — every section it contains, whether or not you requested it. Values are exactly the tokens the `sections` parameter accepts, so you can pass one straight back. Use it to decide what to fetch next rather than requesting slots blind: a section absent from this list does not exist for this edition, and requesting it is not an error — the key is simply missing from `item`. Null whenever `meta.status` is not `done`. That means *this run* holds no content — **not** that the project has no editions; check `GET /strategic-briefing/history`.
+ */
+export type BriefingSectionName = 'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status';
 
 export type BriefingEnvelopeResponse = {
     /**
-     * The requested briefing sections (any of: hub, competitors, actions, deep-<dimension>). Null when no finished briefing exists (see meta.availability).
+     * State of the briefing run this response describes. Branch on `meta.status`. Always present.
+     */
+    meta: BriefingMetaResponse;
+    /**
+     * The requested briefing sections, keyed by section name. Controlled by the `sections` query parameter, which defaults to `["hub"]`. Free-form — each section is a generated block array. **Null unless `meta.status` is `done`**: a run that is still generating, or that failed, has no content of its own. That says nothing about whether the project has a briefing — an earlier edition is usually still readable via `GET /strategic-briefing/history`.
      */
     item?: {
         [key: string]: unknown;
     } | null;
     /**
-     * Edition metadata + availability.
-     */
-    meta: BriefingMetaResponse;
-    /**
-     * Methodology and honest-degradation caveats for this edition (e.g. which figures are directional, what counts as noise). Always returned regardless of requested sections — read before quoting any number. Null when no finished briefing exists.
+     * Methodology and data-quality caveats for this edition — which figures are directional, what counts as noise, which sources were unavailable. Returned regardless of which sections were requested; read it before quoting any number. Null whenever `meta.status` is not `done`, and when a finished edition carries no coverage block. Null here means *this run* has no content — **not** that the project has no briefing; an earlier edition may still be readable via `GET /strategic-briefing/history`.
      */
     coverage?: {
         [key: string]: unknown;
     } | null;
     /**
-     * Per-dimension presence — which deep-<dimension> analyses this edition contains (present | absent). A skipped dimension reads as `absent`, never as an empty finding.
+     * Manifest of what this edition actually holds — every section it contains, whether or not you requested it. Values are exactly the tokens the `sections` parameter accepts, so you can pass one straight back. Use it to decide what to fetch next rather than requesting slots blind: a section absent from this list does not exist for this edition, and requesting it is not an error — the key is simply missing from `item`. Null whenever `meta.status` is not `done`. That means *this run* holds no content — **not** that the project has no editions; check `GET /strategic-briefing/history`.
      */
-    dimensionHealth: {
-        [key: string]: unknown;
-    };
+    contains?: Array<BriefingSectionName> | null;
+};
+
+export type BriefingHistoryItemResponse = {
+    /**
+     * Id of this run. Pass it to `/strategic-briefing/history/{runId}` to read the edition in full.
+     */
+    runId: string;
+    /**
+     * 1-indexed ordinal among the project's published editions, oldest first. Null for a run that never produced one (`running` or `failed`).
+     */
+    editionNumber?: number | null;
+    /**
+     * When the run that produced this edition finished, ISO-8601 UTC. Null for a run that has not finished. To DISPLAY an edition's date prefer `documentDate` — that is the date the edition itself carries, and it is what the edition's own header shows.
+     */
+    briefingDate?: string | null;
+    /**
+     * The date this edition carries in its own header, as the edition states it. Prefer it over `briefingDate` when showing a date to a person: a run that starts before midnight and finishes after it would otherwise be listed under one date and open showing another. Null for a run that produced no edition, and for an edition that records no date of its own — fall back to `briefingDate` there.
+     */
+    documentDate?: string | null;
+    /**
+     * Lifecycle status of this run. `failed` and `running` rows are returned too — a gap between two editions is explained rather than left unexplained.
+     */
+    status: 'running' | 'done' | 'failed';
+    /**
+     * This edition's one-line headline verdict — the single sentence summarising what it concluded. Present so you can pick which edition to open without fetching each one. Null for a run that produced no edition, and for any edition that carries no headline.
+     */
+    headline?: string | null;
+};
+
+export type ApiValidationErrorResponse = {
+    /**
+     * Machine-readable error code for a rejected request payload or query. `invalid_parameters` — a query parameter or body field failed validation. `invalid_run_id` — a path parameter naming a run is not a well-formed identifier.
+     */
+    code: 'invalid_parameters' | 'invalid_run_id';
+    /**
+     * Human-readable validation message (joined when multiple fields fail).
+     */
+    message: string;
+    /**
+     * HTTP status code
+     */
+    status: number;
+};
+
+export type ApiValidationErrorEnvelope = {
+    error: ApiValidationErrorResponse;
 };
 
 export type TechStackEvidenceResponse = {
@@ -1937,25 +2437,6 @@ export type PtTechStackRequestDto = {
      * Target domain to fingerprint. Accepts a bare hostname or a full URL — normalized (lowercased, scheme and path stripped) before scanning.
      */
     domain: string;
-};
-
-export type ApiValidationErrorResponse = {
-    /**
-     * Machine-readable error code for a rejected request payload or query.
-     */
-    code: 'invalid_parameters';
-    /**
-     * Human-readable validation message (joined when multiple fields fail).
-     */
-    message: string;
-    /**
-     * HTTP status code
-     */
-    status: number;
-};
-
-export type ApiValidationErrorEnvelope = {
-    error: ApiValidationErrorResponse;
 };
 
 export type ApiRateLimitErrorResponse = {
@@ -3913,7 +4394,24 @@ export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data = {
          */
         projectId: unknown;
     };
-    query?: never;
+    query?: {
+        /**
+         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large: roughly 12k tokens for a typical 3-prompt check and up to about 21k at the 5-prompt ceiling, against roughly 2k with `brand=`. Read `summary.totalEntries` to size it first (about 200 tokens per entry). The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
+         */
+        includeAnswers?: boolean;
+        /**
+         * Return only this model's answers. Requires `includeAnswers=true`. Does not change any number under `summary`, and does not narrow `providerStatus`.
+         */
+        provider?: AiProvider;
+        /**
+         * Return only the entries for this domain, across every answer. Requires `includeAnswers=true`. Matches `brands[].domain`, case-insensitively; brand NAMES are the model's own wording and vary between answers, so they are never matched. EVERY answer is still returned — the ones that did not name this domain come back with an empty `brands`, because 'this model answered and did not name them' is a finding, not an absence of data. A query that produced no answer at all is in `unansweredQueries` instead and asserts nothing about anyone. Ranks are unaffected: an entry keeps the position it held in the full answer. This is the cheapest way to ask where a competitor wins and where they are invisible.
+         */
+        brand?: string;
+        /**
+         * Return only the answers for this prompt, across every model. Requires `includeAnswers=true`. Zero-based, matching the per-prompt index used elsewhere in this dimension.
+         */
+        promptIndex?: number;
+    };
     url: '/v1/projects/{projectId}/ai-visibility';
 };
 
@@ -3969,6 +4467,10 @@ export type PublicAiVisibilityControllerGetAiVisibilityHistoryV1Responses = {
     200: {
         items: Array<AiVisibilityHistoryItemResponse>;
         pagination: PaginationMeta;
+        /**
+         * True when the page exceeded the response size cap and whole entries were dropped from the end of `items`. `pagination.total` still reports the true number of checks, so a withheld entry is distinguishable from one that does not exist — but `pagination.hasMore` does NOT account for dropped rows, so paging forward on `hasMore` alone would skip them silently. Lower `limit` and re-request this page instead.
+         */
+        truncated: boolean;
     };
 };
 
@@ -3986,7 +4488,24 @@ export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data = {
          */
         projectId: unknown;
     };
-    query?: never;
+    query?: {
+        /**
+         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large: roughly 12k tokens for a typical 3-prompt check and up to about 21k at the 5-prompt ceiling, against roughly 2k with `brand=`. Read `summary.totalEntries` to size it first (about 200 tokens per entry). The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
+         */
+        includeAnswers?: boolean;
+        /**
+         * Return only this model's answers. Requires `includeAnswers=true`. Does not change any number under `summary`, and does not narrow `providerStatus`.
+         */
+        provider?: AiProvider;
+        /**
+         * Return only the entries for this domain, across every answer. Requires `includeAnswers=true`. Matches `brands[].domain`, case-insensitively; brand NAMES are the model's own wording and vary between answers, so they are never matched. EVERY answer is still returned — the ones that did not name this domain come back with an empty `brands`, because 'this model answered and did not name them' is a finding, not an absence of data. A query that produced no answer at all is in `unansweredQueries` instead and asserts nothing about anyone. Ranks are unaffected: an entry keeps the position it held in the full answer. This is the cheapest way to ask where a competitor wins and where they are invisible.
+         */
+        brand?: string;
+        /**
+         * Return only the answers for this prompt, across every model. Requires `includeAnswers=true`. Zero-based, matching the per-prompt index used elsewhere in this dimension.
+         */
+        promptIndex?: number;
+    };
     url: '/v1/projects/{projectId}/ai-visibility/history/{checkId}';
 };
 
@@ -4045,6 +4564,10 @@ export type PublicAiVisibilityControllerGetAiVisibilityTrendV1Responses = {
      */
     200: {
         items: Array<AiVisibilityTrendDataPointResponse>;
+        /**
+         * Monitoring cycles inside the requested window that produced no data point, because we did not get a usable answer to every query they asked. Reported here rather than omitted so a gap in the line is distinguishable from a period when nothing was scheduled. Empty for a window with no such cycles, and empty for windows predating this field — an empty array never means "we know there were no gaps".
+         */
+        incompleteCycles: Array<AiVisibilityIncompleteCycleResponse>;
     };
 };
 
@@ -4140,11 +4663,11 @@ export type PublicBriefingControllerGetStrategicBriefingV1Data = {
     };
     query?: {
         /**
-         * Which sections to return. Defaults to ["hub"] — the executive digest and navigation map. Pass specific sections to go deeper (e.g. a hub diagnosis pointer of `ai-visibility` maps to `deep-ai-visibility`), or `all` for the full document. Prefer deriving deep-<dimension> values from the hub diagnosis pointers rather than requesting slots blind — `dimensionHealth` tells you which exist for this edition.
+         * Which sections to return. Defaults to ["hub"] — the executive digest and navigation map. Pass specific sections to go deeper (e.g. a hub diagnosis pointer of `ai-visibility` maps to `deep-ai-visibility`), or `all` for the full document. Prefer deriving deep-<dimension> values from the hub diagnosis pointers rather than requesting slots blind — the response's `contains` array lists exactly which sections exist for this edition, in this same vocabulary.
          */
         sections?: Array<'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status' | 'all'>;
         /**
-         * Include full chart series data. Defaults to false — charts return their title + note only (the heaviest part of a section is the chart series). Pass true for the full data series.
+         * Include full chart series data. Defaults to false — each chart returns its title and note only, with no underlying numbers. Pass true for the full series.
          */
         includeCharts?: boolean;
     };
@@ -4163,6 +4686,84 @@ export type PublicBriefingControllerGetStrategicBriefingV1Responses = {
 };
 
 export type PublicBriefingControllerGetStrategicBriefingV1Response = PublicBriefingControllerGetStrategicBriefingV1Responses[keyof PublicBriefingControllerGetStrategicBriefingV1Responses];
+
+export type PublicBriefingControllerGetStrategicBriefingHistoryV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Project ID
+         */
+        projectId: unknown;
+    };
+    query?: {
+        /**
+         * Page number (1-indexed)
+         */
+        page?: number;
+        /**
+         * Number of items per page
+         */
+        limit?: number;
+    };
+    url: '/v1/projects/{projectId}/strategic-briefing/history';
+};
+
+export type PublicBriefingControllerGetStrategicBriefingHistoryV1Errors = {
+    401: ApiUnauthorizedErrorEnvelope;
+};
+
+export type PublicBriefingControllerGetStrategicBriefingHistoryV1Error = PublicBriefingControllerGetStrategicBriefingHistoryV1Errors[keyof PublicBriefingControllerGetStrategicBriefingHistoryV1Errors];
+
+export type PublicBriefingControllerGetStrategicBriefingHistoryV1Responses = {
+    /**
+     * PaginatedResponseOfBriefingHistoryItemResponse
+     */
+    200: {
+        items: Array<BriefingHistoryItemResponse>;
+        pagination: PaginationMeta;
+    };
+};
+
+export type PublicBriefingControllerGetStrategicBriefingHistoryV1Response = PublicBriefingControllerGetStrategicBriefingHistoryV1Responses[keyof PublicBriefingControllerGetStrategicBriefingHistoryV1Responses];
+
+export type PublicBriefingControllerGetStrategicBriefingEditionV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Briefing run ID, from `meta.runId` or a history row
+         */
+        runId: string;
+        /**
+         * Project ID
+         */
+        projectId: unknown;
+    };
+    query?: {
+        /**
+         * Which sections to return. Defaults to ["hub"] — the executive digest and navigation map. Pass specific sections to go deeper (e.g. a hub diagnosis pointer of `ai-visibility` maps to `deep-ai-visibility`), or `all` for the full document. Prefer deriving deep-<dimension> values from the hub diagnosis pointers rather than requesting slots blind — the response's `contains` array lists exactly which sections exist for this edition, in this same vocabulary.
+         */
+        sections?: Array<'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status' | 'all'>;
+        /**
+         * Include full chart series data. Defaults to false — each chart returns its title and note only, with no underlying numbers. Pass true for the full series.
+         */
+        includeCharts?: boolean;
+    };
+    url: '/v1/projects/{projectId}/strategic-briefing/history/{runId}';
+};
+
+export type PublicBriefingControllerGetStrategicBriefingEditionV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+};
+
+export type PublicBriefingControllerGetStrategicBriefingEditionV1Error = PublicBriefingControllerGetStrategicBriefingEditionV1Errors[keyof PublicBriefingControllerGetStrategicBriefingEditionV1Errors];
+
+export type PublicBriefingControllerGetStrategicBriefingEditionV1Responses = {
+    200: BriefingEnvelopeResponse;
+};
+
+export type PublicBriefingControllerGetStrategicBriefingEditionV1Response = PublicBriefingControllerGetStrategicBriefingEditionV1Responses[keyof PublicBriefingControllerGetStrategicBriefingEditionV1Responses];
 
 export type PublicTechStackToolControllerCreateScanV1Data = {
     body: PtTechStackRequestDto;

@@ -23,6 +23,10 @@ import type {
   PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data,
   PublicAiVisibilityControllerGetAiVisibilityTrendV1Data,
   PublicBriefingControllerGetStrategicBriefingV1Data,
+  PublicBriefingControllerGetStrategicBriefingHistoryV1Data,
+  PublicBriefingControllerGetStrategicBriefingEditionV1Data,
+  PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data,
+  PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data,
   PublicAlertsControllerListAlertsV1Data,
   PtTechStackRequestDto,
   PtTrustSignalsRequestDto,
@@ -269,10 +273,14 @@ namespace CompetLab {
   export class AiVisibility {
     constructor(private readonly client: Client) {}
 
-    dashboard(projectId: string) {
+    dashboard(
+      projectId: string,
+      query?: PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data['query'],
+    ) {
       return GenAiVisibility.publicAiVisibilityControllerGetAiVisibilityDashboardV1({
         client: this.client,
         path: { projectId },
+        query,
       });
     }
 
@@ -284,10 +292,15 @@ namespace CompetLab {
       });
     }
 
-    checkDetail(projectId: string, checkId: string) {
+    checkDetail(
+      projectId: string,
+      checkId: string,
+      query?: PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data['query'],
+    ) {
       return GenAiVisibility.publicAiVisibilityControllerGetAiVisibilityCheckDetailV1({
         client: this.client,
         path: { projectId, checkId },
+        query,
       });
     }
 
@@ -307,6 +320,29 @@ namespace CompetLab {
       return GenStrategicBriefing.publicBriefingControllerGetStrategicBriefingV1({
         client: this.client,
         path: { projectId },
+        query,
+      });
+    }
+
+    history(
+      projectId: string,
+      query?: PublicBriefingControllerGetStrategicBriefingHistoryV1Data['query'],
+    ) {
+      return GenStrategicBriefing.publicBriefingControllerGetStrategicBriefingHistoryV1({
+        client: this.client,
+        path: { projectId },
+        query,
+      });
+    }
+
+    edition(
+      projectId: string,
+      runId: string,
+      query?: PublicBriefingControllerGetStrategicBriefingEditionV1Data['query'],
+    ) {
+      return GenStrategicBriefing.publicBriefingControllerGetStrategicBriefingEditionV1({
+        client: this.client,
+        path: { projectId, runId },
         query,
       });
     }
