@@ -34,21 +34,100 @@ import type {
   PtSitemapVisualizerRequestDto,
   PtAgentAdoptionRequestDto,
   PtFetchUrlRequestDto,
+  ApiUnauthorizedErrorResponse,
+  ApiNotFoundErrorResponse,
+  ApiValidationErrorResponse,
+  ApiRateLimitErrorResponse,
+  ApiBadGatewayErrorResponse,
+  ApiServiceUnavailableErrorResponse,
+  TechStackScanErrorResponse,
+  TrustSignalsScanErrorResponse,
+  AgentAdoptionScanErrorResponse,
 } from './generated/types.gen';
 
 export type { Client } from './generated/client';
 export type * from './generated/types.gen';
 
+/**
+ * Every error code the API documents, derived from the generated types rather than
+ * listed here.
+ *
+ * Deliberately not hand-written. A literal list is a copy of a contract, and a copy
+ * drifts silently — this one was already three codes short of what the API emits
+ * before the spec caught up. Regenerating now updates it on its own.
+ */
+export type CompetLabApiErrorCode =
+  | ApiUnauthorizedErrorResponse['code']
+  | ApiNotFoundErrorResponse['code']
+  | ApiValidationErrorResponse['code']
+  | ApiRateLimitErrorResponse['code']
+  | ApiBadGatewayErrorResponse['code']
+  | ApiServiceUnavailableErrorResponse['code']
+  | TechStackScanErrorResponse['code']
+  | TrustSignalsScanErrorResponse['code']
+  | AgentAdoptionScanErrorResponse['code'];
+
+/** Codes the SDK raises itself, when the failure never produced an API error envelope. */
+export type CompetLabClientErrorCode = 'network_error' | 'http_error' | 'unknown_error';
+
+/**
+ * The documented codes, while still accepting an undocumented one.
+ *
+ * The `(string & {})` arm is deliberate. A closed union would be a type that lies
+ * the day the API adds a code — it cannot refuse to arrive at runtime just because
+ * this union hasn't been regenerated. This way the known codes autocomplete and a
+ * new one still type-checks.
+ */
+export type CompetLabErrorCode = CompetLabApiErrorCode | CompetLabClientErrorCode | (string & {});
+
+/** Longest error message the SDK will carry; HTML error pages are otherwise unbounded. */
+const MAX_ERROR_MESSAGE = 500;
+
+const truncate = (text: string): string =>
+  text.length > MAX_ERROR_MESSAGE ? `${text.slice(0, MAX_ERROR_MESSAGE)}…` : text;
+
 export class CompetLabError extends Error {
   readonly status: number;
-  readonly code: string;
+  readonly code: CompetLabErrorCode;
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: CompetLabErrorCode, message: string) {
     super(message);
     this.name = 'CompetLabError';
     this.status = status;
     this.code = code;
   }
+}
+
+/**
+ * `null` means we did not measure it — never zero, never empty, never "no".
+ * A measured `0` or `false` is reported as itself and is a real finding.
+ *
+ * These exist because `??`, `||` and a bare truthiness test all read `null` as
+ * "fall through to a default", and TypeScript accepts every one of them. A single
+ * `?? 0` puts back exactly the placeholder the API stopped sending.
+ */
+
+/** True when the value was actually measured. Narrows away `null` and `undefined`. */
+export function isMeasured<T>(value: T | null | undefined): value is T {
+  return value !== null && value !== undefined;
+}
+
+/**
+ * True only for a measured affirmative. Use instead of `if (value)` wherever the
+ * truthy branch states a claim, so an unmeasured `null` cannot reach it.
+ */
+export function isMeasuredTrue(value: boolean | null | undefined): boolean {
+  return value === true;
+}
+
+/**
+ * True only for a measured negative — we looked, and the answer was no.
+ *
+ * The one most easily got wrong: `!value` is also true for `null`, so a bare
+ * negation reads "we didn't measure it" as "they don't have it".
+ */
+export function isMeasuredFalse(value: boolean | null | undefined): boolean {
+  return value === false;
 }
 
 export interface CompetLabOptions {
@@ -91,11 +170,32 @@ class CompetLab {
           apiErr.message ?? 'An unknown error occurred',
         );
       }
-      // Network error or unparseable response
+
+      // A body that isn't JSON at all — an ingress HTML page, a plain-text 502.
+      // The whole document would otherwise become the message.
+      if (typeof _error === 'string') {
+        return new CompetLabError(
+          response?.status ?? 0,
+          'http_error',
+          truncate(_error) || `HTTP ${response?.status ?? 0}`,
+        );
+      }
+
+      // Valid JSON, but not our envelope — a proxy or gateway answering instead of
+      // the API. `String(obj)` here would produce the literal '[object Object]'.
+      if (_error && typeof _error === 'object' && !(_error instanceof Error)) {
+        return new CompetLabError(
+          response?.status ?? 0,
+          'http_error',
+          truncate(JSON.stringify(_error)),
+        );
+      }
+
+      // The request never produced a response: DNS, TLS, timeout, abort.
       return new CompetLabError(
         response?.status ?? 0,
         'network_error',
-        _error instanceof Error ? _error.message : String(_error),
+        _error instanceof Error ? _error.message : truncate(String(_error)),
       );
     });
 
@@ -119,7 +219,10 @@ namespace CompetLab {
     constructor(private readonly client: Client) {}
 
     check() {
-      return GenHealth.publicHealthControllerGetHealthV1({ client: this.client });
+      return GenHealth.publicHealthControllerGetHealthV1({
+        client: this.client,
+        throwOnError: true,
+      });
     }
   }
 
@@ -129,12 +232,14 @@ namespace CompetLab {
     list() {
       return GenProjects.publicProjectsControllerListProjectsV1({
         client: this.client,
+        throwOnError: true,
       });
     }
 
     get(projectId: string) {
       return GenProjects.publicProjectsControllerGetProjectV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
       });
     }
@@ -146,6 +251,7 @@ namespace CompetLab {
     list(projectId: string) {
       return GenCompetitors.publicCompetitorsControllerListCompetitorsV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
       });
     }
@@ -153,6 +259,7 @@ namespace CompetLab {
     get(projectId: string, competitorId: string) {
       return GenCompetitors.publicCompetitorsControllerGetCompetitorV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId, competitorId },
       });
     }
@@ -164,6 +271,7 @@ namespace CompetLab {
     dashboard(projectId: string) {
       return GenTechTrust.publicTechTrustControllerGetTechTrustDashboardV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
       });
     }
@@ -171,6 +279,7 @@ namespace CompetLab {
     history(projectId: string, query?: PublicTechTrustControllerGetTechTrustHistoryV1Data['query']) {
       return GenTechTrust.publicTechTrustControllerGetTechTrustHistoryV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
         query,
       });
@@ -179,6 +288,7 @@ namespace CompetLab {
     runDetail(projectId: string, runId: string) {
       return GenTechTrust.publicTechTrustControllerGetTechTrustRunDetailV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId, runId },
       });
     }
@@ -190,6 +300,7 @@ namespace CompetLab {
     dashboard(projectId: string) {
       return GenContent.publicContentControllerGetContentDashboardV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
       });
     }
@@ -197,6 +308,7 @@ namespace CompetLab {
     history(projectId: string, query?: PublicContentControllerGetContentHistoryV1Data['query']) {
       return GenContent.publicContentControllerGetContentHistoryV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
         query,
       });
@@ -205,6 +317,7 @@ namespace CompetLab {
     runDetail(projectId: string, runId: string) {
       return GenContent.publicContentControllerGetContentRunDetailV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId, runId },
       });
     }
@@ -212,6 +325,7 @@ namespace CompetLab {
     changelog(projectId: string, query?: PublicContentControllerGetContentChangelogV1Data['query']) {
       return GenContent.publicContentControllerGetContentChangelogV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
         query,
       });
@@ -224,6 +338,7 @@ namespace CompetLab {
     dashboard(projectId: string) {
       return GenPositioning.publicPositioningControllerGetPositioningDashboardV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
       });
     }
@@ -231,6 +346,7 @@ namespace CompetLab {
     history(projectId: string, query?: PublicPositioningControllerGetPositioningHistoryV1Data['query']) {
       return GenPositioning.publicPositioningControllerGetPositioningHistoryV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
         query,
       });
@@ -239,6 +355,7 @@ namespace CompetLab {
     runDetail(projectId: string, runId: string) {
       return GenPositioning.publicPositioningControllerGetPositioningRunDetailV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId, runId },
       });
     }
@@ -250,6 +367,7 @@ namespace CompetLab {
     dashboard(projectId: string) {
       return GenPricing.publicPricingControllerGetPricingDashboardV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
       });
     }
@@ -257,6 +375,7 @@ namespace CompetLab {
     history(projectId: string, query?: PublicPricingControllerGetPricingHistoryV1Data['query']) {
       return GenPricing.publicPricingControllerGetPricingHistoryV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
         query,
       });
@@ -265,6 +384,7 @@ namespace CompetLab {
     runDetail(projectId: string, runId: string) {
       return GenPricing.publicPricingControllerGetPricingRunDetailV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId, runId },
       });
     }
@@ -279,6 +399,7 @@ namespace CompetLab {
     ) {
       return GenAiVisibility.publicAiVisibilityControllerGetAiVisibilityDashboardV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
         query,
       });
@@ -287,6 +408,7 @@ namespace CompetLab {
     history(projectId: string, query?: PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data['query']) {
       return GenAiVisibility.publicAiVisibilityControllerGetAiVisibilityHistoryV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
         query,
       });
@@ -299,6 +421,7 @@ namespace CompetLab {
     ) {
       return GenAiVisibility.publicAiVisibilityControllerGetAiVisibilityCheckDetailV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId, checkId },
         query,
       });
@@ -307,6 +430,7 @@ namespace CompetLab {
     trend(projectId: string, query?: PublicAiVisibilityControllerGetAiVisibilityTrendV1Data['query']) {
       return GenAiVisibility.publicAiVisibilityControllerGetAiVisibilityTrendV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
         query,
       });
@@ -319,6 +443,7 @@ namespace CompetLab {
     get(projectId: string, query?: PublicBriefingControllerGetStrategicBriefingV1Data['query']) {
       return GenStrategicBriefing.publicBriefingControllerGetStrategicBriefingV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
         query,
       });
@@ -330,6 +455,7 @@ namespace CompetLab {
     ) {
       return GenStrategicBriefing.publicBriefingControllerGetStrategicBriefingHistoryV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
         query,
       });
@@ -342,6 +468,7 @@ namespace CompetLab {
     ) {
       return GenStrategicBriefing.publicBriefingControllerGetStrategicBriefingEditionV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId, runId },
         query,
       });
@@ -354,6 +481,7 @@ namespace CompetLab {
     list(projectId: string, query?: PublicAlertsControllerListAlertsV1Data['query']) {
       return GenAlerts.publicAlertsControllerListAlertsV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
         query,
       });
@@ -366,6 +494,7 @@ namespace CompetLab {
     list(projectId: string) {
       return GenSchedules.publicSchedulesControllerListSchedulesV1({
         client: this.client,
+        throwOnError: true,
         path: { projectId },
       });
     }
@@ -377,6 +506,7 @@ namespace CompetLab {
     startScan(body: PtTechStackRequestDto) {
       return GenTools.publicTechStackToolControllerCreateScanV1({
         client: this.client,
+        throwOnError: true,
         body,
       });
     }
@@ -384,6 +514,7 @@ namespace CompetLab {
     getScan(scanId: string) {
       return GenTools.publicTechStackToolControllerGetScanV1({
         client: this.client,
+        throwOnError: true,
         path: { scanId },
       });
     }
@@ -395,6 +526,7 @@ namespace CompetLab {
     startScan(body: PtTrustSignalsRequestDto) {
       return GenTools.publicTrustSignalsToolControllerCreateScanV1({
         client: this.client,
+        throwOnError: true,
         body,
       });
     }
@@ -402,6 +534,7 @@ namespace CompetLab {
     getScan(scanId: string) {
       return GenTools.publicTrustSignalsToolControllerGetScanV1({
         client: this.client,
+        throwOnError: true,
         path: { scanId },
       });
     }
@@ -413,6 +546,7 @@ namespace CompetLab {
     startScan(body: PtAgentAdoptionRequestDto) {
       return GenTools.publicAgentAdoptionToolControllerCreateScanV1({
         client: this.client,
+        throwOnError: true,
         body,
       });
     }
@@ -420,6 +554,7 @@ namespace CompetLab {
     getScan(scanId: string) {
       return GenTools.publicAgentAdoptionToolControllerGetScanV1({
         client: this.client,
+        throwOnError: true,
         path: { scanId },
       });
     }
@@ -439,6 +574,7 @@ namespace CompetLab {
     sitemapVisualizer(body: PtSitemapVisualizerRequestDto) {
       return GenTools.publicSitemapVisualizerToolControllerAnalyzeSitemapV1({
         client: this.client,
+        throwOnError: true,
         body,
       });
     }
@@ -446,6 +582,7 @@ namespace CompetLab {
     aiCrawlerChecker(body: PtAiCrawlerCheckerRequestDto) {
       return GenTools.publicAiCrawlerCheckerToolControllerDetectAiCrawlersV1({
         client: this.client,
+        throwOnError: true,
         body,
       });
     }
@@ -453,6 +590,7 @@ namespace CompetLab {
     fetchUrl(body: PtFetchUrlRequestDto) {
       return GenTools.publicFetchUrlToolControllerFetchUrlV1({
         client: this.client,
+        throwOnError: true,
         body,
       });
     }

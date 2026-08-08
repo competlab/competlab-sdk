@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![34 Methods](https://img.shields.io/badge/Methods-34-brightgreen)](#available-resources)
+[![36 Methods](https://img.shields.io/badge/Methods-36-brightgreen)](#available-resources)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-0-brightgreen)]()
 
 > Track what ChatGPT, Claude, and Gemini say about your brand — programmatically.
@@ -27,7 +27,8 @@ npm install @competlab/sdk
 ```typescript
 import CompetLab from '@competlab/sdk';
 
-const cl = new CompetLab({ apiKey: process.env.COMPETLAB_API_KEY });
+// The SDK does not read environment variables for you — pass the key explicitly.
+const cl = new CompetLab({ apiKey: process.env.COMPETLAB_API_KEY! });
 
 // See how 3 AI systems rank your brand vs competitors
 const visibility = await cl.aiVisibility.dashboard('proj_abc');
@@ -218,9 +219,69 @@ Same shape applies to `cl.tools.trustSignals.{startScan,getScan}` and `cl.tools.
 
 ## MCP Server
 
-Prefer AI-native access? CompetLab also offers an MCP server with 32 tools — connect Claude Code, Cursor, or VS Code directly.
+Prefer AI-native access? CompetLab also offers an MCP server with 35 tools — connect Claude Code, Cursor, or VS Code directly.
 
 > [competlab.com/developers/mcp](https://competlab.com/developers/mcp)
+
+## Reading the data: `null` means unmeasured
+
+**`null` means we did not measure it — never zero, never empty, never "no".** A measured `0` or
+`false` is reported as itself and is a real finding.
+
+Monitoring the open web fails in ordinary ways: a site times out, blocks our crawler, or has no
+pricing page. When that happens the field is `null`, and a sibling `…Available` object usually
+says why.
+
+This matters more than it looks, because the obvious ways to read a value all convert a `null`
+back into the placeholder the API deliberately stopped sending — and TypeScript accepts every
+one of them:
+
+```typescript
+const { data } = await cl.pricing.dashboard('proj_abc');
+const you = data.item.summary.customer; // hasFreePlan: boolean | null, tierCount: number | null
+
+if (!you.hasFreePlan) { /* WRONG — also true when we never checked */ }
+const tiers = you.tierCount ?? 0; //     WRONG — invents a measured zero
+```
+
+Use the exported guards instead:
+
+```typescript
+import CompetLab, { isMeasured, isMeasuredTrue, isMeasuredFalse } from '@competlab/sdk';
+
+if (isMeasuredFalse(you.hasFreePlan)) {
+  // We looked, and you genuinely have no free plan. Safe to state as a finding.
+}
+
+if (isMeasured(you.tierCount)) {
+  console.log(`${you.tierCount} tiers`); // narrowed to number, no cast needed
+}
+```
+
+## Error handling
+
+Every method throws `CompetLabError` on failure — there is no error field on the result, so
+`data` is always present when the call returns.
+
+```typescript
+import CompetLab, { CompetLabError } from '@competlab/sdk';
+
+try {
+  const { data } = await cl.projects.get('proj_abc');
+  console.log(data.item.name);
+} catch (err) {
+  if (err instanceof CompetLabError) {
+    console.error(err.status, err.code, err.message); // 404 'project_not_found' '...'
+    if (err.code === 'rate_limit_exceeded') { /* back off and retry */ }
+  }
+  throw err;
+}
+```
+
+`code` autocompletes to the documented values (`api_key_invalid`, `project_not_found`,
+`rate_limit_exceeded`, …) while still accepting a code the API adds later. Failures that never
+reached the API carry `network_error` (DNS, TLS, timeout) or `http_error` (a gateway or proxy
+answered instead of the API).
 
 ## API Reference
 
@@ -255,7 +316,7 @@ Full details in the [CHANGELOG](./CHANGELOG.md).
 
 | Issue | Fix |
 |-------|-----|
-| `api_key_missing` error | Ensure you're passing the key via `apiKey` option or `COMPETLAB_API_KEY` env var |
+| `api_key_missing` error | Pass the key via the `apiKey` option. The SDK reads no environment variables — if you keep it in `COMPETLAB_API_KEY`, read it yourself and pass it in |
 | `api_key_invalid` error | Keys must start with `cl_live_` and be exactly 40 characters |
 | `fetch is not defined` | Requires Node.js 20+ (uses native `fetch`) |
 | TypeScript type errors after update | Run `npm install @competlab/sdk@latest` and restart your TS server |
@@ -263,7 +324,7 @@ Full details in the [CHANGELOG](./CHANGELOG.md).
 ## Links
 
 - [REST API Reference](https://competlab.com/developers/api)
-- [MCP Server](https://competlab.com/developers/mcp) (AI-native access with 32 tools)
+- [MCP Server](https://competlab.com/developers/mcp) (AI-native access with 35 tools)
 - [GitHub — MCP Server](https://github.com/competlab/competlab-mcp-server)
 - [Privacy Policy](https://competlab.com/privacy-policy)
 - [Start Free Trial](https://app.competlab.com/register)

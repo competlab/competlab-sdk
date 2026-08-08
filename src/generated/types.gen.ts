@@ -62,9 +62,7 @@ export type ProjectListItemResponse = {
     /**
      * Most recent completed monitoring run (ISO-8601), or null if nothing has completed. For `aiVisibility`, only checks that published a measurement count toward this — see `dimensions.aiVisibility.lastRunAt`.
      */
-    lastMonitoredAt: {
-        [key: string]: unknown;
-    } | null;
+    lastMonitoredAt: string | null;
     /**
      * Project creation date (ISO-8601)
      */
@@ -75,9 +73,7 @@ export type DimensionLastRunResponse = {
     /**
      * Timestamp of the last completed run for this dimension (ISO-8601), or null if there is none. For `techTrust`, `content`, `positioning` and `pricing`, null means no run has completed. For `aiVisibility` this is instead the last check that published a measurement: a cycle that ran but did not get a usable answer to every query it asked is abandoned and never moves this timestamp, so neither an unchanged value nor null proves that nothing ran. That cycle is still reported — `/ai-visibility` carries `latestCheckDataAvailable` when an earlier check has published, and `/ai-visibility/trend` reports it in `incompleteCycles`, the only surface that reports it when no check has ever published, since `/ai-visibility` then returns 404 `no_data_available`.
      */
-    lastRunAt: {
-        [key: string]: unknown;
-    } | null;
+    lastRunAt: string | null;
 };
 
 export type DimensionFreshnessResponse = {
@@ -131,9 +127,7 @@ export type ProjectDetailResponse = {
     /**
      * Most recent completed monitoring run (ISO-8601), or null if nothing has completed. For `aiVisibility`, only checks that published a measurement count toward this — see `dimensions.aiVisibility.lastRunAt`.
      */
-    lastMonitoredAt: {
-        [key: string]: unknown;
-    } | null;
+    lastMonitoredAt: string | null;
     /**
      * Project creation date (ISO-8601)
      */
@@ -143,22 +137,20 @@ export type ProjectDetailResponse = {
      */
     dimensions: DimensionFreshnessResponse;
     /**
-     * AI monitoring prompt texts
+     * The project's 3 AI monitoring prompt texts — the questions put to each model. Always exactly 3; a project cannot be created or edited to hold any other number.
      */
     prompts: Array<string>;
     /**
      * When prompts were last modified (ISO-8601), or null if never changed
      */
-    promptsLastChangedAt: {
-        [key: string]: unknown;
-    } | null;
+    promptsLastChangedAt: string | null;
 };
 
 export type ApiNotFoundErrorResponse = {
     /**
-     * Machine-readable code identifying which resource was not found.
+     * Machine-readable code identifying which resource was not found. The last two are NOT missing resources and must not be reported as one: `run_not_summarized` — the run exists and completed, but produced no published summary, which is a different fact from `run_not_found`; `no_data_available` — the project has no published data for this dimension yet.
      */
-    code: 'project_not_found' | 'competitor_not_found' | 'run_not_found' | 'check_not_found' | 'scan_not_found';
+    code: 'project_not_found' | 'competitor_not_found' | 'run_not_found' | 'check_not_found' | 'scan_not_found' | 'run_not_summarized' | 'no_data_available';
     /**
      * Human-readable error message
      */
@@ -200,15 +192,11 @@ export type MonitoredPagesResponse = {
     /**
      * Homepage URL, or null if not identified
      */
-    homepage: {
-        [key: string]: unknown;
-    } | null;
+    homepage: string | null;
     /**
      * Pricing page URL, or null if not identified
      */
-    pricing: {
-        [key: string]: unknown;
-    } | null;
+    pricing: string | null;
 };
 
 export type CompetitorDetailResponse = {
@@ -237,6 +225,11 @@ export type CompetitorDetailResponse = {
      */
     monitoredPages: MonitoredPagesResponse;
 };
+
+/**
+ * Your security grade, or null if check failed
+ */
+export type SecurityGrade = 'A' | 'B' | 'C' | 'D' | 'F';
 
 export type SignalsAvailableUnavailableResponse = {
     /**
@@ -268,39 +261,33 @@ export type SummaryCustomerResponse = {
     /**
      * Your security grade, or null if check failed
      */
-    securityGrade: 'A' | 'B' | 'C' | 'D' | 'F';
+    securityGrade: SecurityGrade | null;
     /**
      * Your security score (0-100), or null if check failed
      */
-    securityScore: {
-        [key: string]: unknown;
-    } | null;
+    securityScore: number | null;
     /**
      * Honest-degradation discriminator. Present only when your own domain runs behavioral protection that blocks header inspection (~1.1% of sites). When present, `securityGrade` and `securityScore` above are forced to `null` so dashboards never surface F-grade placeholder values. Absent on healthy scans (the normal path).
      */
     securitySignalsAvailable?: SignalsAvailableUnavailableResponse;
     /**
-     * Number of trust signals detected on your domain. When `techTrustAnalysisAvailable` is present, this is a placeholder 0 because your own domain couldn't be measured — NOT a real zero. Branch on `techTrustAnalysisAvailable` before using this value.
+     * Number of trust signals detected on your homepage, or null when your own domain couldn't be analyzed this run. A `0` is a MEASURED finding — we read your homepage and found none of the signals we look for — so never read a null as 0. Still measured (not null) on a shielded check: trust signals come from the HTML, so they survive a `securitySignalsAvailable` degradation.
      */
-    trustSignalCount: number;
+    trustSignalCount: number | null;
     /**
-     * Number of technologies detected on your domain. When `techTrustAnalysisAvailable` is present, this is a placeholder 0 — NOT a real zero.
+     * Number of technologies detected on your domain, or null when your own domain couldn't be analyzed this run. A `0` is a measured finding; never read a null as 0. Survives a shielded check like `trustSignalCount`, but not on the same terms: when `securitySignalsAvailable` is present this count is a FLOOR rather than a total, because your hosting and CDN could not be detected either (both are read from the same blocked response headers). Trust signals come wholly from the HTML and are unaffected. See `competitors[].technologyStack.partialDetection` for the full membership of what went unlooked-for.
      */
-    techStackCount: number;
+    techStackCount: number | null;
     /**
      * Number of AI bots blocked by your robots.txt, or null exactly when `allowsAiAccess` is null — the robots.txt posture wasn't measured this run (whole domain unanalyzed, or only the robots.txt couldn't be retrieved). Never read a null as 0: '0 bots blocked' is a measured claim.
      */
-    blockedAiBotsCount: {
-        [key: string]: unknown;
-    } | null;
+    blockedAiBotsCount: number | null;
     /**
      * Whether your domain allows AI crawler access, or null when it couldn't be measured this run — either your whole domain wasn't analyzed (accompanied by `techTrustAnalysisAvailable`) or only your robots.txt couldn't be retrieved (no discriminator accompanies it). A null with no discriminator can also arrive if the run stored no measurements at all, so treat null as unknown on its own — never only when a discriminator confirms it. Never report an AI-access posture off a null. A domain with no robots.txt at all measures as `true` — a real 'allows all crawlers' fact.
      */
-    allowsAiAccess: {
-        [key: string]: unknown;
-    } | null;
+    allowsAiAccess: boolean | null;
     /**
-     * Honest-degradation discriminator. Present only when your own domain couldn't be analyzed this run — see `reason`. When present, `securityGrade`, `securityScore`, `allowsAiAccess`, and `blockedAiBotsCount` are null, and `trustSignalCount` and `techStackCount` are placeholder values, not measured facts, so no you-vs-competitor gap is computed. Distinct from `securitySignalsAvailable` (headers shielded but the check ran). Absent on healthy scans (the normal path).
+     * Honest-degradation discriminator. Present only when your own domain couldn't be analyzed this run — see `reason`. When present, EVERY metric in this object is null — `securityGrade`, `securityScore`, `trustSignalCount`, `techStackCount`, `allowsAiAccess`, `blockedAiBotsCount` — and so are `securityScoreGap` and `trustSignalGap`. Nothing here is a measured fact; the nulls say that on their own, and this field records why. Only `domain` remains populated, and only when a domain was on file. Distinct from `securitySignalsAvailable`, which is a PARTIAL degradation: there the check ran and only the header-derived numbers are unknown, so the trust and tech counts stay measured. Absent on healthy scans (the normal path).
      */
     techTrustAnalysisAvailable?: TechTrustUnavailableResponse;
 };
@@ -313,7 +300,7 @@ export type SummaryTopSecurityResponse = {
     /**
      * Their security grade
      */
-    securityGrade: 'A' | 'B' | 'C' | 'D' | 'F';
+    securityGrade: SecurityGrade;
     /**
      * Their security score (0-100)
      */
@@ -349,72 +336,72 @@ export type TechTrustDashboardSummaryResponse = {
      */
     topSecurityCompetitor?: SummaryTopSecurityResponse | null;
     /**
-     * Competitor with the most trust signals, or null if no competitors checked
+     * Competitor with the highest trust-signal count, or null if no competitors were checked. Ties are broken alphabetically by domain, so a `trustSignalCount` of `0` here means every competitor was measured and none publishes a single trust signal — a real finding, not a missing one. Don't describe this domain as leading unless its count is actually higher than the others'.
      */
     topTrustCompetitor?: SummaryTopTrustResponse | null;
     /**
-     * Your security score minus top competitor score (negative = you are behind). 0 when your own security score is unmeasured (`customer.securityScore` null) — not a tie.
+     * Your security score minus the top competitor's (negative = you are behind), or null when there is no comparison to make: your own score is unmeasured (whole domain unanalyzed, or headers shielded — the score is header-derived), or no competitor was scored at all. A `0` means genuinely tied. Was a forced `0` before, which read as 'tied' either way.
      */
-    securityScoreGap: number;
+    securityScoreGap: number | null;
     /**
-     * Your trust signal count minus top competitor count (negative = you are behind). 0 when your own domain couldn't be measured — check `customer.techTrustAnalysisAvailable` before reading this as 'tied'.
+     * Your trust signal count minus the top competitor's (negative = you are behind), or null when there is no comparison to make: your own domain was unanalyzed, or no competitor was checked at all. A field of competitors all measured at zero is a real comparison and yields a real number — your own count, positive — not a null. A `0` means genuinely tied. Unlike `securityScoreGap`, this survives a shielded check — trust signals come from the HTML.
      */
-    trustSignalGap: number;
+    trustSignalGap: number | null;
 };
 
 export type SecurityHeadersResponse = {
     /**
-     * Overall security grade
+     * Overall security grade, or null when this site runs behavioral protection that blocked header inspection (see signalsAvailable). A null is not an F.
      */
-    grade: 'A' | 'B' | 'C' | 'D' | 'F';
+    grade: SecurityGrade | null;
     /**
-     * Security score (0-100)
+     * Security score (0-100), or null when headers could not be inspected. Never read a null as 0 — the stored fallback really was a 0, which is why this is nulled at the boundary rather than passed through.
      */
-    score: number;
+    score: number | null;
     /**
-     * Has HTTP Strict Transport Security header
+     * Has the HTTP Strict Transport Security header, or null when headers could not be inspected. A measured false means the header is genuinely absent.
      */
-    hsts: boolean;
+    hsts: boolean | null;
     /**
-     * Has Content Security Policy header
+     * Has the Content Security Policy header, or null when headers could not be inspected. A measured false means the header is genuinely absent.
      */
-    csp: boolean;
+    csp: boolean | null;
     /**
-     * Has X-Frame-Options header
+     * Has the X-Frame-Options header, or null when headers could not be inspected. A measured false means the header is genuinely absent.
      */
-    xFrameOptions: boolean;
+    xFrameOptions: boolean | null;
     /**
-     * Has X-Content-Type-Options header
+     * Has the X-Content-Type-Options header, or null when headers could not be inspected. A measured false means the header is genuinely absent.
      */
-    xContentTypeOptions: boolean;
+    xContentTypeOptions: boolean | null;
     /**
-     * Honest-degradation discriminator. Present only when the upstream homepage fetch couldn't recover response headers (~1.1% of sites running behavioral protection that blocks header inspection). When present, all other fields in this object — `grade`, `score`, `hsts`, `csp`, `xFrameOptions`, `xContentTypeOptions` — are placeholder values (the fallback 'no headers detected' shape), not a real 'this site has no security headers' result. Absent on healthy scans (the normal path).
+     * Honest-degradation discriminator. Present only when the upstream homepage fetch couldn't recover response headers (~1.1% of sites running behavioral protection that blocks header inspection). When present, every other field in this object — `grade`, `score`, `hsts`, `csp`, `xFrameOptions`, `xContentTypeOptions` — is null. This is not a 'no security headers' result and not an F grade; the headers were unreadable, which is a property of their bot protection, not of their security. Absent on healthy scans (the normal path).
      */
     signalsAvailable?: SignalsAvailableUnavailableResponse;
 };
 
 export type TrustSignalCategoriesResponse = {
     /**
-     * Number of compliance signals (SOC2, ISO27001, HIPAA, GDPR, CCPA)
+     * Compliance signals detected, out of 5 looked for: SOC 2, ISO 27001, HIPAA, GDPR, CCPA. A 0 means none of those specific signals was found — it is not a general statement about the site's privacy or compliance posture, and no other signal may be inferred from it. Evidence strength differs within the category, so a positive count needs care too: SOC 2, ISO 27001 and HIPAA match a rendered trust badge, but GDPR and CCPA are page-wide text matches, so a consent banner or a footer link registers one. Report a GDPR/CCPA hit as "the page mentions it", never as a compliance posture. The privacy-regime signals here are US and EU only — LGPD, PIPEDA, PDPA and similar are not detected — though SOC 2 and ISO 27001 are held worldwide, so this is not a US/EU-only list.
      */
     compliance: number;
     /**
-     * Number of review platform badges (G2, Capterra, Trustpilot, etc.)
+     * Review-platform badges detected, out of 6 looked for: G2, Capterra, Trustpilot, Gartner, TrustRadius, GetApp. Regional review platforms outside this list are not detected, so a 0 is not evidence that a vendor has no reviews.
      */
     reviews: number;
     /**
-     * Number of social proof signals (customer logos, counts, case studies)
+     * Social-proof signals detected, out of 5 looked for: Customer Logos, Customer Count, Case Studies, Money Back Guarantee, Free Trial. A 0 means none of those five was found on the homepage; it is not a statement about whether the vendor has customers.
      */
     socialProof: number;
     /**
-     * Number of certifications
+     * Certifications detected, out of 8 looked for: PCI DSS, FedRAMP, ISO 9001, ISO 14001, SOC 1, SOC 3, NIST, HITRUST. A 0 means none of those badges was DISPLAYED on the homepage — a vendor may hold any of them without publishing it, so this is never evidence that they lack a certification.
      */
     certifications: number;
 };
 
 export type TrustSignalsResponse = {
     /**
-     * Total number of trust signals detected
+     * Total trust signals detected on this domain, out of 24 we look for across the four categories below. These are signals published on the HOMEPAGE — a vendor may hold a certification without displaying it, so this measures visible trust-building, not the underlying facts. Distinct from the standalone trust-signals scan tool, which uses its own wider taxonomy and its own categories.
      */
     totalCount: number;
     /**
@@ -423,23 +410,38 @@ export type TrustSignalsResponse = {
     categories: TrustSignalCategoriesResponse;
 };
 
+export type TechStackPartialDetectionResponse = {
+    /**
+     * Always false for this discriminator.
+     */
+    headersAvailable: boolean;
+    /**
+     * Why the technology detection was partial: this site runs behavioral protection that blocked inspection of its response headers. Sixteen of our eighteen detectors read the page HTML and ran normally — the two that need headers are hosting and CDN, and these thirteen technologies became undetectable: Vercel, Netlify, AWS, Heroku, GitHub Pages, DigitalOcean, Render, Cloudflare, Fastly, Akamai, CloudFront, Bunny CDN, KeyCDN. Railway and Fly.io stay detectable because they also leave HTML traces.
+     */
+    reason: 'site_uses_behavioral_protection';
+};
+
 export type TechnologyStackResponse = {
     /**
-     * Core technology stack (frameworks, languages, infrastructure)
+     * Core technology stack (frameworks, languages, infrastructure). When `partialDetection` is present this list is real but incomplete — hosting and CDN could not be detected on this domain, so read it as 'at least these', never as the full picture.
      */
     tech: Array<string>;
     /**
-     * Growth and marketing tools (analytics, ads, SEO)
+     * Growth and marketing tools (analytics, ads, SEO). Detected from the page HTML, so this list is complete even when `partialDetection` is present.
      */
     growth: Array<string>;
     /**
-     * Customer engagement tools (chat, support, CRM)
+     * Customer engagement tools (chat, support, CRM). Detected from the page HTML, so this list is complete even when `partialDetection` is present.
      */
     engagement: Array<string>;
     /**
-     * Total number of technologies detected
+     * Total number of technologies detected. When `partialDetection` is present this is a FLOOR, not a total — the real figure is this number plus however many hosting and CDN technologies we could not look for. Never compare it against another domain's count, or quote it as 'N technologies against your M', while that marker is set.
      */
     totalCount: number;
+    /**
+     * Honest-degradation discriminator. Present only when this site's behavioral protection blocked inspection of its response headers (~1.1% of sites). Every technology listed above is a real detection and stays trustworthy — this is a partial measurement, not a failed one, which is why nothing in this object is null. What is missing is the hosting and CDN categories: thirteen technologies (Vercel, Netlify, AWS, Heroku, GitHub Pages, DigitalOcean, Render, Cloudflare, Fastly, Akamai, CloudFront, Bunny CDN, KeyCDN) are only detectable from response headers, and none of them could be looked for. A technology's absence from this block is therefore NOT evidence the site does not use it, and "no CDN" or "no managed hosting" must never be inferred or reported. Absent on healthy scans, which is the normal path.
+     */
+    partialDetection?: TechStackPartialDetectionResponse;
 };
 
 export type RobotsTxtUnavailableResponse = {
@@ -455,32 +457,51 @@ export type RobotsTxtUnavailableResponse = {
 
 export type RobotsTxtResponse = {
     /**
-     * Whether a robots.txt file exists. When `robotsTxtAvailable` is present, this is a placeholder `false` (the file could not be retrieved), not a measured absence.
+     * Whether a robots.txt file exists, or null when the file could not be retrieved this run (see robotsTxtAvailable). A measured `false` — no discriminator alongside — is a real 'no robots.txt, so it allows all crawlers' finding and carries no marker.
      */
-    exists: boolean;
+    exists: boolean | null;
     /**
-     * AI bots explicitly blocked in robots.txt. When `robotsTxtAvailable` is present, this is a placeholder empty array — never read it as 'this domain allows AI crawlers'.
+     * AI bots explicitly blocked in robots.txt, or null when the file could not be retrieved. An empty ARRAY means we read the file and it blocks no AI bots — a real finding; a null means we never read it. Never derive an AI-access posture from a null.
      */
-    aiBotsBlocked: Array<string>;
+    aiBotsBlocked: Array<string> | null;
     /**
-     * Total number of disallow rules
+     * Total number of disallow rules, or null when the file could not be retrieved. A measured 0 means we read the file and it disallows nothing.
      */
-    totalRules: number;
+    totalRules: number | null;
     /**
-     * Honest-degradation discriminator. Present only when the robots.txt file could not be retrieved this run (network timeout or error). When present, all other fields in this object — `exists`, `aiBotsBlocked`, `totalRules` — are placeholder values, not measured facts; do not derive any AI-access posture from them. Absent on healthy scans and on domains that genuinely have no robots.txt (a measured 'allows all crawlers' result).
+     * Honest-degradation discriminator. Present only when the robots.txt file could not be retrieved this run (network timeout or error). When present, every other field in this object — `exists`, `aiBotsBlocked`, `totalRules` — is null, so no AI-access posture can be derived from them. Absent on healthy scans AND on domains that genuinely have no robots.txt: that is a measured 'allows all crawlers' result, and it arrives as `exists: false` with no marker.
      */
     robotsTxtAvailable?: RobotsTxtUnavailableResponse;
 };
 
+export type DnsLookupUnavailableResponse = {
+    /**
+     * Always false for this discriminator.
+     */
+    available: boolean;
+    /**
+     * Why this provider is unknown: the DNS query for it never resolved this run (timeout, refused, or the resolver was unreachable), so nothing was measured. Distinct from a domain that publishes no such records, or publishes records we don't attribute to a provider we track — both of those are measured results and carry no discriminator.
+     */
+    reason: 'dns_lookup_failed';
+};
+
 export type DnsInfrastructureResponse = {
     /**
-     * Email service provider
+     * Email service provider read from the domain's MX records, or null when the MX lookup didn't resolve this run (see `emailProviderAvailable`). 'Unknown' with no marker beside it is a MEASURED result and means one of two real things: the domain publishes no MX records, or it publishes records we don't attribute to any provider we track. Either way it is a fact about them — so 'Unknown' may be reported as 'no recognised email provider', while a null may not.
      */
-    emailProvider: string;
+    emailProvider: string | null;
     /**
-     * DNS hosting provider
+     * DNS hosting provider read from the domain's NS records, or null when the NS lookup didn't resolve this run (see `dnsProviderAvailable`). Same reading rule as `emailProvider`: an unmarked 'Unknown' is measured, a null is not. Note this is the authoritative DNS host, not a CDN — a domain fronted by a CDN can still resolve through a different nameserver provider.
      */
-    dnsProvider: string;
+    dnsProvider: string | null;
+    /**
+     * Honest-degradation discriminator for the MX lookup. Present only when that query never resolved this run (timeout, refused, or the resolver was unreachable). When present, `emailProvider` is null and no email-infrastructure claim may be made about this domain — not 'they use no business email', not 'their provider changed'. Absent on healthy scans, absent when the domain simply publishes no MX records (a measured result), and absent on data recorded before this marker existed, where absence means measured.
+     */
+    emailProviderAvailable?: DnsLookupUnavailableResponse;
+    /**
+     * Honest-degradation discriminator for the NS lookup. Same semantics as `emailProviderAvailable`, applied to `dnsProvider`, and independent of it — one lookup can fail while the other succeeds, so check the marker belonging to the field you are about to quote.
+     */
+    dnsProviderAvailable?: DnsLookupUnavailableResponse;
 };
 
 export type TechTrustCompetitorResponse = {
@@ -599,25 +620,25 @@ export type ContentUnavailableResponse = {
 
 export type ContentSummaryCustomerResponse = {
     /**
-     * Your domain
+     * Your domain. Unlike every other field here it is not nulled when nothing was measured, because it stays a known fact — it comes from your project's own configuration, not from the sitemap check. The one exception is a project with no own-domain entry on file at all, where there is no domain to report and this carries the literal placeholder `unknown`. That string is a marker, never a domain: don't render it, resolve it, or describe it as a site.
      */
     domain: string;
     /**
-     * Total URLs discovered across all sitemaps. When `contentAnalysisAvailable` is present, this is 0 because your own sitemap couldn't be measured — NOT a real zero. Branch on `contentAnalysisAvailable` before using this value.
+     * Total URLs discovered across all your sitemaps, or null when your own sitemap couldn't be analyzed this run. A `0` is a MEASURED finding — a sitemap we read that lists nothing — so never read a null as 0.
      */
-    totalUrls: number;
+    totalUrls: number | null;
     /**
-     * Strategic URLs (excludes legal/other categories). When `contentAnalysisAvailable` is present, this is 0 because your own sitemap couldn't be measured — NOT a real zero. Branch on `contentAnalysisAvailable` before using this value.
+     * Strategic URLs (excludes legal/other categories), or null when your own sitemap couldn't be analyzed this run. A `0` is a measured finding and the honest floor of the content comparison; a null means we never read the sitemap.
      */
-    strategicUrls: number;
+    strategicUrls: number | null;
     /**
-     * URL counts broken down by content category. When `contentAnalysisAvailable` is present, every category count is a placeholder 0 because your own sitemap couldn't be measured — NOT real zeros. Branch on `contentAnalysisAvailable` before using these values.
+     * URL counts per content category, or null when your own sitemap couldn't be analyzed this run. Nulled as a whole rather than returned all-zero, because an all-zero map reads as "measured, and every category is empty" — a much stronger claim than "we couldn't look". The keys are the 11 categories we classify into: blog, docs, tools, landing, caseStudies, comparison, integrations, changelog, webinars, legal, other. A category absent from the map has zero URLs; a category present with 0 was measured as empty. Note this map is WIDER than the set the gap analysis evaluates: Legal, Other are counted here but never assessed for gaps, advantages or on-track status, so a category with a count here and no entry in `criticalGaps` / `advantages` / `onTrack` may simply never have been a candidate. `strategicUrls` is the sum over the 9 evaluated ones, not over this whole map.
      */
     categorizedCounts: {
-        [key: string]: unknown;
-    };
+        [key: string]: number;
+    } | null;
     /**
-     * Present ONLY when your own sitemap couldn't be analyzed this run (fetch failed, or no sitemap configured). When present, `totalUrls`, `strategicUrls`, and every count in `categorizedCounts` are placeholder 0s — treat them, the strategic-URL gap, and all content gaps as UNMEASURED, not as real zeros (the gap arrays are empty and `strategicUrlGap` is 0).
+     * Present ONLY when your own sitemap couldn't be analyzed this run (fetch failed, or no sitemap configured) — see `reason`. When present, every metric in this object is null, `strategicUrlGap` is null, and all four gap lists (`criticalGaps`, `significantGaps`, `advantages`, `onTrack`) and their four count siblings are null. Nothing here is a measured fact; the nulls say so on their own, and this field records why. Only `domain` remains populated — and where no domain was on file it holds the literal placeholder `unknown` rather than being omitted, so treat that exact string as 'no domain', not as a site name. This flag is a sufficient reason for those eight nulls but NOT a necessary one: they are also null when your own sitemap read fine and no competitor returned usable data (`comparableCompetitors` is 0), with this flag absent — so never conclude from a null gap list alone that YOUR check failed. Note too the difference between a null list and an empty one: `[]` means we compared and found none, which is a real finding.
      */
     contentAnalysisAvailable?: ContentUnavailableResponse;
 };
@@ -628,7 +649,7 @@ export type ContentSummaryTopCompetitorResponse = {
      */
     domain: string;
     /**
-     * Their strategic URL count
+     * Their strategic URL count. A 0 here is a measurement, not a missing value: every competitor we read was read successfully and none publishes a strategic page. Report it as a leader with zero — usually the customer's largest lead — never as 'no data' or 'no competitor'.
      */
     strategicUrls: number;
 };
@@ -766,13 +787,13 @@ export type ContentDashboardSummaryResponse = {
      */
     customer: ContentSummaryCustomerResponse;
     /**
-     * Competitor with the most strategic URLs, or null if no competitors checked
+     * Competitor with the most strategic URLs, or null when no competitor returned usable content data this run — that is the only thing null means here, and it never means the competitors have none. A competitor leading with `strategicUrls: 0` is the opposite case and is a real result: everyone was measured and nobody publishes a strategic page.
      */
     topCompetitor?: ContentSummaryTopCompetitorResponse | null;
     /**
-     * Your strategic URL count minus top competitor (negative = you are behind). 0 when your own sitemap couldn't be measured — check `customer.contentAnalysisAvailable` before reading this as 'tied'.
+     * Your strategic URL count minus the top competitor's (negative = you are behind), or null when there is no comparison to make: your own sitemap was unmeasured, or no competitor returned usable content data. A 0 means genuinely level. Was a forced 0 before, which read as 'level with them' either way. A gap equal to your own count is what a measured field of zeros produces — your largest possible lead, and a finding to report rather than an anomaly to explain away.
      */
-    strategicUrlGap: number;
+    strategicUrlGap: number | null;
     /**
      * Your rank by strategic content among the sites that returned comparable content data — your own site plus `comparableCompetitors` competitors (field size = comparableCompetitors + 1). Null when fewer than two competitors had usable data, or when your own site returned no usable data to rank.
      */
@@ -782,37 +803,37 @@ export type ContentDashboardSummaryResponse = {
      */
     comparableCompetitors: number;
     /**
-     * Content categories where you have zero content but competitors do
+     * Content categories where you have zero content but competitors do. Only the 9 strategic categories are evaluated here: Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars. Legal, Other are counted in `categorizedCounts` but never assessed, so their absence from this list is not a verdict about them. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
      */
-    criticalGaps: Array<ContentCriticalGapResponse>;
+    criticalGaps: Array<ContentCriticalGapResponse> | null;
     /**
-     * Content categories where you are significantly behind (>50%)
+     * Content categories where you are significantly behind (>50%). Only the 9 strategic categories are evaluated here: Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars. Legal, Other are counted in `categorizedCounts` but never assessed, so their absence from this list is not a verdict about them. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
      */
-    significantGaps: Array<ContentSignificantGapResponse>;
+    significantGaps: Array<ContentSignificantGapResponse> | null;
     /**
-     * Content categories where you lead all competitors
+     * Content categories where you lead all competitors. Only the 9 strategic categories are evaluated here: Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars. Legal, Other are counted in `categorizedCounts` but never assessed, so their absence from this list is not a verdict about them. A category missing from this list either wasn't evaluated or wasn't led — check it against that set before reporting either. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding. A null here in particular must NOT be read as leading in none.
      */
-    advantages: Array<ContentAdvantageResponse>;
+    advantages: Array<ContentAdvantageResponse> | null;
     /**
-     * Content categories where you are competitive (within threshold)
+     * Content categories where you are competitive (within threshold). Only the 9 strategic categories are evaluated here: Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars. Legal, Other are counted in `categorizedCounts` but never assessed, so their absence from this list is not a verdict about them. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
      */
-    onTrack: Array<ContentOnTrackResponse>;
+    onTrack: Array<ContentOnTrackResponse> | null;
     /**
-     * Total number of critical content gaps
+     * Total number of critical content gaps, out of the 9 strategic categories evaluated. Derived from the list above, so the two are always consistent — including when both are null. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
      */
-    totalCriticalGaps: number;
+    totalCriticalGaps: number | null;
     /**
-     * Total number of significant content gaps
+     * Total number of significant content gaps, out of the 9 strategic categories evaluated. Derived from the list above, so the two are always consistent. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
      */
-    totalSignificantGaps: number;
+    totalSignificantGaps: number | null;
     /**
-     * Total number of content advantages
+     * Total number of content advantages, out of the 9 strategic categories evaluated. Derived from the list above, so the two are always consistent. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
      */
-    totalAdvantages: number;
+    totalAdvantages: number | null;
     /**
-     * Total number of on-track categories
+     * Total number of on-track categories, out of the 9 strategic categories evaluated. Derived from the list above, so the two are always consistent. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
      */
-    totalOnTrack: number;
+    totalOnTrack: number | null;
 };
 
 export type ContentCompetitorUnavailableResponse = {
@@ -838,20 +859,16 @@ export type ContentCompetitorResponse = {
     /**
      * Total URLs discovered across all sitemaps for this competitor, or null exactly when `contentDataAvailable` is present (no readable sitemap this run). Never read a null as 0: '0 URLs' is a measured claim about a readable sitemap.
      */
-    totalUrls: {
-        [key: string]: unknown;
-    } | null;
+    totalUrls: number | null;
     /**
      * Strategic URLs (excludes legal/other categories), or null exactly when `contentDataAvailable` is present.
      */
-    strategicUrls: {
-        [key: string]: unknown;
-    } | null;
+    strategicUrls: number | null;
     /**
      * URL counts by content category, or null if categorization unavailable
      */
     categorizedCounts?: {
-        [key: string]: unknown;
+        [key: string]: number;
     } | null;
     /**
      * Number of READABLE sitemaps this run for this competitor (0 when `contentDataAvailable` is present)
@@ -978,35 +995,33 @@ export type PositioningSummaryCustomerResponse = {
     /**
      * Messaging strength score (0-100) based on homepage completeness. `null` when your own homepage couldn't be analyzed this run (see `messagingAnalysisAvailable`) — do not report a messaging score or you-vs-competitor ranking in that case.
      */
-    messagingStrengthScore: {
-        [key: string]: unknown;
-    } | null;
+    messagingStrengthScore: number | null;
     /**
-     * Whether your headline includes specific metrics or numbers. Placeholder `false` when `messagingAnalysisAvailable` is present — not a measured fact.
+     * Whether your headline includes specific metrics or numbers, or null when your own homepage couldn't be analyzed this run. A measured `false` is REAL — we read the page and the headline is generic — so never report a null as a generic headline.
      */
-    hasSpecificHeadline: boolean;
+    hasSpecificHeadline: boolean | null;
     /**
-     * Whether your CTA is strong and specific (not just 'Get Started'). Placeholder `false` when `messagingAnalysisAvailable` is present — not a measured fact.
+     * Whether your CTA is strong and specific (not just 'Get Started'), or null when your homepage was unmeasured. A measured `false` is a real finding.
      */
-    hasStrongCta: boolean;
+    hasStrongCta: boolean | null;
     /**
-     * Whether pricing is shown on your homepage. Placeholder `false` when `messagingAnalysisAvailable` is present — not a measured fact.
+     * Whether pricing is shown on your homepage, or null when it was unmeasured. A measured `false` is a real finding.
      */
-    showsPricing: boolean;
+    showsPricing: boolean | null;
     /**
-     * Whether you offer a free trial. Placeholder `false` when `messagingAnalysisAvailable` is present — not a measured fact.
+     * Whether you offer a free trial, or null when your homepage was unmeasured. A measured `false` is a real finding.
      */
-    hasFreeTrial: boolean;
+    hasFreeTrial: boolean | null;
     /**
-     * Your primary CTA text. Placeholder `""` when `messagingAnalysisAvailable` is present — not a measured CTA.
+     * Your primary CTA text, or null when your homepage was unmeasured. Note the distinction: a measured empty string means we read the page and there IS no call to action — a real finding — while null means we never read it.
      */
-    primaryCta: string;
+    primaryCta: string | null;
     /**
-     * Your main headline. Placeholder `""` when `messagingAnalysisAvailable` is present — not a measured headline.
+     * Your main headline, or null when your homepage was unmeasured. A measured empty string is a real finding.
      */
-    mainHeadline: string;
+    mainHeadline: string | null;
     /**
-     * Availability flag for your own homepage messaging. Present ONLY when your own homepage couldn't be analyzed this run (fetch failed, or no homepage URL configured). When present, `messagingStrengthScore` is `null`, `messagingScoreGap` is `0`, `hasSpecificHeadline`/`hasStrongCta`/`showsPricing`/`hasFreeTrial` are placeholder `false`, `primaryCta`/`mainHeadline` are placeholder `""` (not measured facts), and your own cells in the comparison widgets — `ctaComparison.yourCta`, `pricingComparison.youShowPrice`, `pricingComparison.youHaveFreeTrial` — are `null` (those objects carry no discriminator of their own; the null is the 'unmeasured' signal there). Do not report a messaging score, a ranking, a headline/CTA/pricing-visibility/free-trial claim, or a you-vs-competitor verdict. Absent on healthy runs (the normal path).
+     * Availability flag for your own homepage messaging. Present ONLY when your own homepage couldn't be analyzed this run (fetch failed, or no homepage URL configured) — see `reason`. When present, EVERY metric in this object is null, `messagingScoreGap` is null, and your own cells in the comparison widgets (`ctaComparison.yourCta`, `pricingComparison.youShowPrice`, `pricingComparison.youHaveFreeTrial`) are null too. Nothing here is a measured fact; the nulls say so on their own, and this field records why. Only `domain` remains populated. Absent on healthy runs (the normal path).
      */
     messagingAnalysisAvailable?: PositioningMessagingUnavailableResponse;
 };
@@ -1034,9 +1049,7 @@ export type PositioningCtaComparisonResponse = {
     /**
      * Your primary CTA text, or null when your own homepage couldn't be analyzed this run (see `customer.messagingAnalysisAvailable`) — never report a 'no primary CTA' finding or a your-CTA-vs-competitor comparison off a null. A measured homepage with no CTA is an empty string, not null.
      */
-    yourCta: {
-        [key: string]: unknown;
-    } | null;
+    yourCta: string | null;
     /**
      * Strongest competitor's CTA text
      */
@@ -1059,15 +1072,11 @@ export type PositioningPricingComparisonResponse = {
     /**
      * Whether you show pricing on your homepage, or null when your own homepage couldn't be analyzed this run (see `customer.messagingAnalysisAvailable`) — never report a pricing-transparency posture off a null. A measured homepage that genuinely shows no pricing is false, not null.
      */
-    youShowPrice: {
-        [key: string]: unknown;
-    } | null;
+    youShowPrice: boolean | null;
     /**
      * Whether you offer a free trial, or null when your own homepage couldn't be analyzed this run (see `customer.messagingAnalysisAvailable`) — never report a free-trial claim off a null. A measured homepage with genuinely no free trial is false, not null.
      */
-    youHaveFreeTrial: {
-        [key: string]: unknown;
-    } | null;
+    youHaveFreeTrial: boolean | null;
 };
 
 export type PositioningDashboardSummaryResponse = {
@@ -1096,9 +1105,9 @@ export type PositioningDashboardSummaryResponse = {
      */
     pricingComparison: PositioningPricingComparisonResponse;
     /**
-     * Your messaging score minus top competitor score (negative = you are behind)
+     * Your messaging score minus the top competitor's (negative = you are behind), or null when there is no comparison to make: your own homepage was unmeasured, or no competitor was scored. A 0 means genuinely level. Was a forced 0, which read as 'level' either way.
      */
-    messagingScoreGap: number;
+    messagingScoreGap: number | null;
 };
 
 export type PositioningCompetitorContentResponse = {
@@ -1241,57 +1250,51 @@ export type PricingUnavailableResponse = {
 
 export type PricingSummaryCustomerResponse = {
     /**
-     * Your domain
+     * Your domain. Unlike every other field here it is not nulled when nothing was measured, because it stays a known fact — it is read from your project's own configuration, not from the pricing check. The one exception is a project with no own-domain entry on file at all, where there is no domain to report and this carries the literal placeholder `unknown`. That string is a marker, never a domain: don't render it, resolve it, or describe it as a site.
      */
     domain: string;
     /**
-     * Your popular plan price (numeric amount), or null if unavailable. Check `popularPlanCurrency` before rendering a currency symbol next to it — this amount is in whatever currency your pricing page uses, not necessarily USD.
+     * Your popular plan price (numeric amount), or null if unavailable. Check `popularPlanCurrency` before rendering a currency symbol next to it — this amount is in whatever currency your pricing page uses, not necessarily USD — and `popularPlanUnit` before describing it, since it may be priced per seat rather than flat.
      */
-    popularPlanPrice?: {
-        [key: string]: unknown;
-    } | null;
+    popularPlanPrice?: number | null;
     /**
      * Currency of `popularPlanPrice` as read off your pricing page — 'USD' / 'EUR' / 'GBP', or the verbatim currency symbol for other currencies. Null when no currency could be detected on the page, or on data recorded before currency capture existed — never treat null as USD.
      */
-    popularPlanCurrency?: {
-        [key: string]: unknown;
-    } | null;
+    popularPlanCurrency?: string | null;
+    /**
+     * The licensed unit your popular plan price is quoted in — 'flat' for a plain monthly amount, or 'per-seat' / 'per-license' / similar for per-unit monthly licensing. Null when your price isn't a comparable monthly amount at all (usage-based, one-time, or unreadable), and absent on data recorded before unit capture existed — never treat either as 'flat'. Compare it with `marketPricingUnit`: when the two differ, `pricePositionPercent` is null because a per-seat price and a flat price are not the same kind of number, however similar the figures look.
+     */
+    popularPlanUnit?: string | null;
     /**
      * Your popular plan name, or null if unavailable
      */
-    popularPlanName?: {
-        [key: string]: unknown;
-    } | null;
+    popularPlanName?: string | null;
     /**
      * Your pricing model type, or null if unavailable
      */
-    pricingModel?: {
-        [key: string]: unknown;
-    } | null;
+    pricingModel?: string | null;
     /**
-     * Whether you offer a free plan
+     * Whether you offer a permanent free plan, or null if your own pricing wasn't measured this run. `false` is a measured finding — we read your pricing page and there is no free plan. Never report a null as 'no free plan'.
      */
-    hasFreePlan: boolean;
+    hasFreePlan: boolean | null;
     /**
-     * Whether you offer a free trial
+     * Whether you offer a free trial, or null if your own pricing wasn't measured this run. `false` is a measured finding.
      */
-    hasFreeTrial: boolean;
+    hasFreeTrial: boolean | null;
     /**
-     * Free trial duration, or null if not offered
+     * Free trial duration, or null if not offered or not measured
      */
-    freeTrialDuration?: {
-        [key: string]: unknown;
-    } | null;
+    freeTrialDuration?: string | null;
     /**
-     * Whether you offer enterprise/custom pricing
+     * Whether you offer enterprise/custom pricing, or null if your own pricing wasn't measured this run. `false` is a measured finding.
      */
-    hasEnterprisePricing: boolean;
+    hasEnterprisePricing: boolean | null;
     /**
-     * Number of pricing tiers. Placeholder `0` when `pricingAnalysisAvailable` is present — not a measured tier count.
+     * Number of pricing tiers, or null if your own pricing wasn't measured this run. Never read a null as 0 — '0 tiers' is a claim about your pricing page, not about whether we reached it.
      */
-    tierCount: number;
+    tierCount: number | null;
     /**
-     * Availability flag for your own pricing. Present ONLY when your own pricing couldn't be analyzed this run (fetch failed, or no pricing URL configured). When present, `popularPlanPrice` is `null`, `hasFreePlan`/`hasFreeTrial`/`hasEnterprisePricing` are placeholder `false`, `tierCount` is placeholder `0`, `freeTrialDuration` is placeholder `null` (not measured facts), and `pricePositionPercent` + the gap flags (`hasFreeTierGap`, `hasEnterpriseGap`) do not reflect your pricing — do not report a price, a market position, a free/enterprise tier status, a tier count, or a gap verdict. Absent on healthy runs (the normal path).
+     * Availability flag for your own pricing. Present ONLY when your own pricing couldn't be analyzed this run (fetch failed, or no pricing URL configured) — see `reason`. When present, every pricing metric in this object is `null`, and so are `pricePositionPercent` and all three gap flags (`hasPriceGap`, `hasFreeTierGap`, `hasEnterpriseGap`). Nothing here is a measured fact: report no price, market position, tier status, tier count or gap verdict. Only `domain` remains populated — and where no domain was on file it holds the literal placeholder `unknown` rather than being omitted, so treat that exact string as 'no domain', not as a site name. Note this flag is a sufficient reason for those nulls, never a necessary one: `hasPriceGap` and the market figures also null on a market too thin or too mixed to compare, with this flag absent. Absent on healthy runs (the normal path).
      */
     pricingAnalysisAvailable?: PricingUnavailableResponse;
 };
@@ -1325,37 +1328,35 @@ export type PricingDashboardSummaryResponse = {
      */
     customer: PricingSummaryCustomerResponse;
     /**
-     * Market average price (numeric, in `marketCurrency`). Only comparable competitor prices are averaged: fixed monthly recurring amounts sharing `marketCurrency` — your own price is never included. Usage-based prices (per-GB, per-request, hourly), one-time prices, and prices in other currencies are never averaged (no currency conversion is ever performed). Null when fewer than 3 comparable competitor prices exist — treat null as 'not enough comparable market data', never as zero.
+     * Market average price (numeric, in `marketCurrency`, per `marketPricingUnit`). Only comparable competitor prices are averaged: fixed monthly recurring amounts sharing BOTH that currency and that licensed unit — your own price is never included. Usage-based prices (per-GB, per-request, hourly), one-time prices, prices in other currencies, and prices in a different licensed unit are never averaged; no currency conversion and no unit mixing is ever performed, so a per-seat price and a flat monthly price never land in the same average. Null when fewer than 3 comparable competitor prices exist — treat null as 'not enough comparable market data', never as zero. Always quote it with its unit: '$59 per seat per month' and '$59 per month' are different claims. Data recorded before unit grouping existed carries no `marketPricingUnit` and its average may mix units — check for that field's absence before quoting a historical figure.
      */
-    marketAvgPrice?: {
-        [key: string]: unknown;
-    } | null;
+    marketAvgPrice?: number | null;
     /**
-     * The currency all market figures are computed in — the majority currency among comparable competitor prices (a tie prefers your own). It sets `marketAvgPrice`, `pricePositionPercent`, `topPriceCompetitor`, `lowestPriceCompetitor`, and which prices count toward `pricingSampleSize`. Prices in other currencies stay visible on their rows but are excluded. Null when no comparable competitor price exists, or on data recorded before currency capture existed.
+     * The currency all market figures are computed in — the majority currency among comparable competitor prices (a tie prefers your own). Together with `marketPricingUnit` it sets `marketAvgPrice`, `pricePositionPercent`, `topPriceCompetitor`, `lowestPriceCompetitor`, and which prices count toward `pricingSampleSize`. Prices in other currencies stay visible on their rows but are excluded. Null when no comparable competitor price exists, or on data recorded before currency capture existed.
      */
-    marketCurrency?: {
-        [key: string]: unknown;
-    } | null;
+    marketCurrency?: string | null;
     /**
-     * Your price position vs market average (percent; negative = below market). Null when `marketAvgPrice` is null, and ALSO null whenever your own price isn't comparable to the market — different currency (no conversion is ever performed) or non-monthly pricing. Treat null as 'no comparable position', never as 0%.
+     * The licensed unit all market figures are computed in — 'flat' for plain monthly amounts, or 'per-seat' / 'per-license' / similar for per-unit monthly licensing. It is the majority unit among the comparable competitor prices already sharing `marketCurrency` (a tie prefers your own), and it is the second half of what makes a market figure comparable: competitors pricing in a different unit stay visible on their rows but are excluded from every market figure, because averaging '$15 per seat per month' with '$475 per month' describes no market that exists. Null when no comparable competitor price exists. ABSENT on data recorded before unit grouping existed — on that data the market figures were averaged across mixed units, so the absence of this field is your signal not to quote them as a like-for-like market price.
      */
-    pricePositionPercent?: {
-        [key: string]: unknown;
-    } | null;
+    marketPricingUnit?: string | null;
     /**
-     * Competitor with the highest comparable price (fixed monthly, in `marketCurrency`). Descriptive, not a market verdict: present at any sample size — caption it with `pricingSampleSize`. Null when no comparable competitor price exists. Data recorded before this change stored null whenever `pricingIsReliable` was false.
+     * Your price position vs market average (percent; negative = below market). Null when `marketAvgPrice` is null, and ALSO null whenever your own price isn't comparable to the market — a different currency (no conversion is ever performed), a different licensed unit (compare `popularPlanUnit` with `marketPricingUnit`), or non-monthly pricing. Treat null as 'no comparable position', never as 0%.
+     */
+    pricePositionPercent?: number | null;
+    /**
+     * Competitor with the highest comparable price (fixed monthly, in `marketCurrency`, per `marketPricingUnit`). Descriptive, not a market verdict: present at any sample size — caption it with `pricingSampleSize`. Null when no comparable competitor price exists. A competitor priced in another currency or another unit may well charge more and still not appear here. Data recorded before this change stored null whenever `pricingIsReliable` was false.
      */
     topPriceCompetitor?: PricingSummaryPriceCompetitorResponse | null;
     /**
-     * Competitor with the lowest comparable price (fixed monthly, in `marketCurrency`). Same semantics as `topPriceCompetitor` — descriptive at any sample size, null when no comparable competitor price exists.
+     * Competitor with the lowest comparable price (fixed monthly, in `marketCurrency`, per `marketPricingUnit`). Same semantics as `topPriceCompetitor` — descriptive at any sample size, null when no comparable competitor price exists.
      */
     lowestPriceCompetitor?: PricingSummaryPriceCompetitorResponse | null;
     /**
-     * Number of competitor prices comparable enough to aggregate: fixed monthly recurring amounts in `marketCurrency`, your own domain always excluded. This is the honest denominator behind `marketAvgPrice`. Competitors with usage-based, one-time, or other-currency pricing don't count here — their pricing model is still visible on their rows. On data recorded before this change, this counted any numeric price regardless of unit or currency.
+     * Number of competitor prices comparable enough to aggregate: fixed monthly recurring amounts sharing both `marketCurrency` and `marketPricingUnit`, your own domain always excluded. This is the honest denominator behind `marketAvgPrice`. Competitors with usage-based, one-time, other-currency, or other-unit pricing don't count here — their pricing model is still visible on their rows, and a low number here usually means the market prices in several different ways rather than that we failed to read it. On data recorded before this change, this counted any numeric price regardless of unit or currency.
      */
     pricingSampleSize: number;
     /**
-     * True when `pricingSampleSize` >= 3 — enough comparable competitor prices for market-average and position claims. When false, `marketAvgPrice` and `pricePositionPercent` are null and `hasPriceGap` is false; `topPriceCompetitor` / `lowestPriceCompetitor` remain as descriptive data points.
+     * True when `pricingSampleSize` >= 3 — enough comparable competitor prices for market-average and position claims. When false, `marketAvgPrice`, `pricePositionPercent` and `hasPriceGap` are all null: there is no market average to sit above, so there is no verdict either. `topPriceCompetitor` / `lowestPriceCompetitor` remain as descriptive data points.
      */
     pricingIsReliable: boolean;
     /**
@@ -1375,17 +1376,17 @@ export type PricingDashboardSummaryResponse = {
      */
     activePromotionCount: number;
     /**
-     * Whether a significant price gap exists vs market
+     * Whether you sit 20%+ above the market average. `false` means measured, with no gap. Null in three cases, all of them 'we couldn't make the comparison': your own pricing wasn't measured this run; `pricingIsReliable` is false (too few comparable competitor prices to establish a market average); or `pricePositionPercent` is null because your own price isn't comparable to the market — a different currency, a different licensed unit, or usage-based rather than a fixed monthly amount. That is a WIDER set of null conditions than the other two gap flags carry, so check this field's own list rather than assuming all three null together. Never read a null as 'no gap'.
      */
-    hasPriceGap: boolean;
+    hasPriceGap: boolean | null;
     /**
-     * Whether competitors offer free tier but you don't
+     * Whether at least half of your tracked competitors offer a free tier and you don't. `false` means measured, with no gap. Null when either side of the comparison is missing — those are its only two null conditions: your own pricing wasn't measured this run, or no competitor was measured at all (with no market there is no majority to be behind). It does NOT null on a thin comparable-price sample, because free-tier availability doesn't depend on prices being comparable: a `false` here alongside a null `hasPriceGap` is consistent, not contradictory. Read `competitorsWithFreePlan` alongside it.
      */
-    hasFreeTierGap: boolean;
+    hasFreeTierGap: boolean | null;
     /**
-     * Whether competitors offer enterprise pricing but you don't
+     * Whether competitors offer enterprise pricing and you don't. Null when either side of the comparison is missing — your own pricing unmeasured, or no competitor measured. Those are its only two null conditions; like `hasFreeTierGap`, and unlike `hasPriceGap`, it does not null on a thin comparable-price sample. `false` means measured, with no gap.
      */
-    hasEnterpriseGap: boolean;
+    hasEnterpriseGap: boolean | null;
     /**
      * Whether competitors are running promotions you should know about
      */
@@ -1505,15 +1506,11 @@ export type PricingCompetitorResponse = {
     /**
      * Pricing page URL that was analyzed, or null exactly when `pricingDataAvailable` is present (no pricing data on this row).
      */
-    pricingUrl: {
-        [key: string]: unknown;
-    } | null;
+    pricingUrl: string | null;
     /**
      * How the pricing page was located, or null exactly when `pricingDataAvailable` is present.
      */
-    pricingLocationType: {
-        [key: string]: unknown;
-    } | null;
+    pricingLocationType: string | null;
     /**
      * Extracted pricing page content, or null exactly when `pricingDataAvailable` is present. A null here means this competitor's pricing is unmeasured — never 'they offer no pricing'.
      */
@@ -1577,9 +1574,7 @@ export type AiVisibilityProviderMetricResponse = {
     /**
      * Average rank across prompts for this provider (lower is better)
      */
-    rank?: {
-        [key: string]: unknown;
-    } | null;
+    rank?: number | null;
     /**
      * Whether this provider's counted answers named the customer. `false` means the customer was not named in the answers this check counted for this provider — it is not proof that the provider was asked and stayed silent. Under the full-coverage gate a check publishes only if every query it asked returned a usable answer, and there `false` is a MEASURED absence. Checks published before that gate stay published and can have counted fewer answers than they asked queries, so an answer that never arrived could have carried a mention. This response does not expose the queries-sent figure, so a caller cannot tell which kind of check this is. Report `false` as 'not mentioned in the answers we have from this provider'; never as 'this AI does not mention you'.
      */
@@ -1630,23 +1625,21 @@ export type AiVisibilityCustomerMetricsResponse = {
      */
     domain: string;
     /**
-     * Mention rate as a percentage: mentions / `totalQueries` * 100. The divisor is this check's own ANSWER count — the queries that came back with a usable answer — never a fixed 9. Under the full-coverage gate (a check publishes only if every query it asked returned a usable answer) that equals 3 AI providers x the project's prompt count; checks published before that gate stay published and can have counted fewer answers than they asked queries, and the queries-sent figure is not on this response. So this is a share of the answers counted, never a share of the queries asked — do not report it as 'mentioned in X% of AI queries'.
+     * Mention rate as a percentage: mentions / `totalQueries` * 100. The divisor is this check's own ANSWER count — the queries that came back with a usable answer — never a fixed 9. Under the full-coverage gate (a check publishes only if every query it asked returned a usable answer) that equals 3 AI providers x the project's prompt count; checks published before that gate stay published and can have counted fewer answers than they asked queries, and the queries-sent figure is not on this response. So this is a share of the answers counted, never a share of the queries asked — do not report it as 'mentioned in X% of AI queries'. Null when the check never recorded its answer count: with no denominator there is no rate, and the stored figure was divided by something unknown. A `0` is a real rate and means the models named this brand nowhere.
      */
-    mentionRate: number;
+    mentionRate: number | null;
     /**
      * Average rank across all providers and prompts (lower is better)
      */
-    avgRank?: {
-        [key: string]: unknown;
-    } | null;
+    avgRank?: number | null;
     /**
      * Number of this check's counted ANSWERS that mentioned the customer, out of `totalQueries`. Not out of the queries sent — that figure is not on this response.
      */
     mentionCount: number;
     /**
-     * AI Visibility Score — weighted 0-100 composite score
+     * AI Visibility Score — weighted 0-100 composite score. Null on checks recorded before this score existed: say the check has no score rather than reporting one. A `0` is a real score and means the brand was named nowhere we looked; a null means we never computed one.
      */
-    aiScore: number;
+    aiScore: number | null;
     /**
      * Per-provider breakdown
      */
@@ -1667,15 +1660,13 @@ export type AiVisibilityTopCompetitorResponse = {
      */
     name: string;
     /**
-     * Top competitor mention rate percentage. Same divisor as `customer.mentionRate` — the answers this check counted, not the queries sent.
+     * Top competitor mention rate percentage. Same divisor as `customer.mentionRate` — the answers this check counted, not the queries sent. Null on the same condition and for the same reason: no recorded answer count means no denominator, so there is no rate to report.
      */
-    mentionRate: number;
+    mentionRate: number | null;
     /**
      * Top competitor average rank (lower is better)
      */
-    avgRank?: {
-        [key: string]: unknown;
-    } | null;
+    avgRank?: number | null;
 };
 
 export type AiVisibilityCompetitorRankingResponse = {
@@ -1694,39 +1685,31 @@ export type AiVisibilityCompetitorRankingResponse = {
     /**
      * Average rank in OpenAI responses (lower is better)
      */
-    openaiAvgRank?: {
-        [key: string]: unknown;
-    } | null;
+    openaiAvgRank?: number | null;
     /**
      * Average rank in Claude responses (lower is better)
      */
-    claudeAvgRank?: {
-        [key: string]: unknown;
-    } | null;
+    claudeAvgRank?: number | null;
     /**
      * Average rank in Gemini responses (lower is better)
      */
-    geminiAvgRank?: {
-        [key: string]: unknown;
-    } | null;
+    geminiAvgRank?: number | null;
     /**
      * Overall average rank across all providers (lower is better)
      */
-    overallAvgRank?: {
-        [key: string]: unknown;
-    } | null;
+    overallAvgRank?: number | null;
     /**
      * Total mentions across the answers this check counted.
      */
     mentionCount: number;
     /**
-     * Mention rate as percentage. Same divisor as `customer.mentionRate` — the answers this check counted, not the queries sent.
+     * Mention rate as percentage. Same divisor as `customer.mentionRate` — the answers this check counted, not the queries sent. Null when that count was never recorded. This row names a THIRD PARTY, so a fabricated rate here is a claim about another company published under our name.
      */
-    mentionRate: number;
+    mentionRate: number | null;
     /**
-     * AI Visibility Score (0-100)
+     * AI Visibility Score (0-100), or null on checks recorded before this score existed. This one names a THIRD PARTY, so the distinction matters more here than anywhere else on the response: a `0` says the models never mentioned this competitor, a null says we have no score for them. Reporting a null as `0` publishes a false claim about another company under our name.
      */
-    aiScore: number;
+    aiScore: number | null;
     /**
      * Whether this domain is one the project currently monitors, as opposed to one an AI named on its own. Resolved against the project's CURRENT competitor list, so on a historical check it describes today's roster and not the roster at the time of that check — it is not a fact about the check. The customer's own row is always `true`; see `isOwn` to identify it.
      */
@@ -1743,17 +1726,17 @@ export type AiVisibilityDashboardSummaryResponse = {
      */
     topCompetitor?: AiVisibilityTopCompetitorResponse | null;
     /**
-     * Gap between customer and top competitor mention rate (negative means customer is behind)
+     * Gap between customer and top competitor mention rate (negative means customer is behind), or null when this check found no competitor to compare against — `topCompetitor` is null on the same response. A `0` means genuinely level; a null means there was nobody to be level with.
      */
-    mentionRateGap: number;
+    mentionRateGap: number | null;
     /**
      * Total unique competitors found across AI responses
      */
     totalCompetitorsFound: number;
     /**
-     * Answers this check counted — the queries that came back with a usable answer. Despite the field name this is NOT the number of queries sent; that figure is not on this response and cannot be derived from it. This is the divisor of every rate and score here. Under the full-coverage gate the two are equal (3 AI providers x the project's prompt count); checks published before that gate stay published and can have counted fewer answers than they asked queries, so this can be lower than what that check sent. Never describe this number as the queries asked. When `latestCheckDataAvailable` is present, this count describes the earlier check the other fields came from. `0` means the check predates the recorded count: it is a placeholder, not a measurement — do not divide by it or quote it, and treat `customer.mentionRate`, `customer.aiScore`, `mentionRateGap`, `topCompetitor.mentionRate` and every `competitorRankings[].mentionRate` and `.aiScore` as placeholders too.
+     * Answers this check counted — the queries that came back with a usable answer. Despite the field name this is NOT the number of queries sent; that figure is not on this response and cannot be derived from it. This is the divisor of every rate and score here. Under the full-coverage gate the two are equal (3 AI providers x the project's prompt count); checks published before that gate stay published and can have counted fewer answers than they asked queries, so this can be lower than what that check sent. Never describe this number as the queries asked. When `latestCheckDataAvailable` is present, this count describes the earlier check the other fields came from. **Null on a check recorded before we stored this count**, and on such a check every rate and score that divides by it is null too — so there is nothing to divide and nothing to misread.
      */
-    totalQueries: number;
+    totalQueries: number | null;
     /**
      * Total brand entries across this check's counted answers. Also the size preview for `includeAnswers=true`: an entry serializes to roughly 200 tokens, so a 60-entry check runs around 12k tokens unfiltered, while `brand=` returns about one entry per answer and lands nearer 2k.
      */
@@ -1774,13 +1757,13 @@ export type AiVisibilityLatestCheckUnavailableResponse = {
      */
     reason: 'incomplete_coverage';
     /**
-     * Answers that did come back usable in that check. NOT a visibility figure — a check can be fully covered and still score zero.
+     * Answers that did come back usable in that check, or null on a check that predates the recorded query count. NOT a visibility figure — a check can be fully covered and still score zero.
      */
-    measuredAnswers: number;
+    measuredAnswers: number | null;
     /**
-     * Answers that check asked for: 3 AI providers x the project's prompt count. The shortfall (expectedAnswers - measuredAnswers) is what did not arrive.
+     * Answers that check asked for: 3 AI providers x the project's prompt count. The shortfall (expectedAnswers - measuredAnswers) is what did not arrive. Null on a check that predates the recorded query count — say the check did not complete and give no numbers. Never treat a null as 0: the subtraction would report no shortfall on a cycle that measurably failed.
      */
-    expectedAnswers: number;
+    expectedAnswers: number | null;
 };
 
 export type AiVisibilityAnswerDifferentiationResponse = {
@@ -1910,9 +1893,7 @@ export type AiVisibilityProviderStatusResponse = {
     /**
      * When this model finished (ISO-8601). Null when it never reported.
      */
-    completedAt?: {
-        [key: string]: unknown;
-    } | null;
+    completedAt?: string | null;
     /**
      * Queries to this model that came back with an answer we could use. This is the discriminator to read `reported` and `brandsNamed` against.
      */
@@ -1940,7 +1921,7 @@ export type AiVisibilityProviderStatusMapResponse = {
 
 export type AiVisibilityAnswerCoverageResponse = {
     /**
-     * Queries this check sent: 3 AI providers x the number of prompts the project was running when it ran. Prompt count is customer config, so this figure is read from the check and is never fixed — do not assume 9, even though a project running the current default of 3 prompts produces 9.
+     * Queries this check sent: 3 AI providers x the prompt count stored on this check. Always read it from the check — do not assume 9. Checks keep the prompt count they were run with, and that count has not always been the same across a project's history.
      */
     queriesSent: number;
     /**
@@ -1959,7 +1940,7 @@ export type AiVisibilityDashboardResponse = {
      */
     summary: AiVisibilityDashboardSummaryResponse;
     /**
-     * Present ONLY when the project's most recent check was abandoned as incomplete: it did not get a usable answer for every query it asked, so it was never scored. When present, every other field in this response comes from an EARLIER check, and `lastUpdatedAt` is older than the most recent check attempted. Absent when the most recent check published normally — and absent, too, when an older check fell short but a later one has since published, because that failure has been superseded. An abandoned check is never retried into a score: a new check runs automatically, and the caller may also trigger one immediately. When describing this state, NEVER phrase it as a fraction — this dimension's own metric is a count of queries, so "1 of 9" and "8 of 9" both get read as a visibility rate. State the two numbers as separate facts that cannot be divided by each other: "We sent all 9 queries, but 1 answer didn't come back." If `expectedAnswers` is 0 the check predates the recorded query count and there is no honest sentence to build — say the check did not complete and give no numbers.
+     * Present ONLY when the project's most recent check was abandoned as incomplete: it did not get a usable answer for every query it asked, so it was never scored. When present, every other field in this response comes from an EARLIER check, and `lastUpdatedAt` is older than the most recent check attempted. Absent when the most recent check published normally — and absent, too, when an older check fell short but a later one has since published, because that failure has been superseded. An abandoned check is never retried into a score: a new check runs automatically, and the caller may also trigger one immediately. When describing this state, NEVER phrase it as a fraction — this dimension's own metric is a count of queries, so "1 of 9" and "8 of 9" both get read as a visibility rate. State the two numbers as separate facts that cannot be divided by each other: "We sent all 9 queries, but 1 answer didn't come back." If `expectedAnswers` is null the check predates the recorded query count and there is no honest sentence to build — say the check did not complete and give no numbers.
      */
     latestCheckDataAvailable?: AiVisibilityLatestCheckUnavailableResponse;
     /**
@@ -1985,6 +1966,25 @@ export type AiVisibilityDashboardResponse = {
 };
 
 export type AiProvider = 'openai' | 'claude' | 'gemini';
+
+export type ApiValidationErrorResponse = {
+    /**
+     * Machine-readable error code for a rejected request payload or query. `invalid_parameters` — a query parameter or body field failed validation. `invalid_run_id` — a path parameter naming a run is not a well-formed identifier. `invalid_check_id` — a path parameter naming an AI-visibility check is not a well-formed identifier.
+     */
+    code: 'invalid_parameters' | 'invalid_run_id' | 'invalid_check_id';
+    /**
+     * Human-readable validation message (joined when multiple fields fail).
+     */
+    message: string;
+    /**
+     * HTTP status code
+     */
+    status: number;
+};
+
+export type ApiValidationErrorEnvelope = {
+    error: ApiValidationErrorResponse;
+};
 
 export type AiVisibilityHistoryItemResponse = {
     /**
@@ -2046,13 +2046,13 @@ export type AiVisibilityIncompleteCycleResponse = {
      */
     reason?: 'incomplete_coverage';
     /**
-     * Answers that came back usable in this cycle. Not a visibility figure — a cycle can be fully covered and score zero.
+     * Answers that came back usable in this cycle, or null on a cycle that predates the recorded query count. Not a visibility figure — a cycle can be fully covered and score zero.
      */
-    measuredAnswers: number;
+    measuredAnswers: number | null;
     /**
-     * Answers the cycle asked for: 3 AI providers x the project's prompt count at the time.
+     * Answers the cycle asked for: 3 AI providers x the project's prompt count at the time. The shortfall (expectedAnswers - measuredAnswers) is what did not arrive. Null on a cycle that predates the recorded query count — say the cycle did not complete and give no numbers. Never treat a null as 0: the subtraction would report no shortfall on a cycle that measurably failed. This endpoint is where cycles are enumerated for plotting, so it is where that subtraction is most likely to run.
      */
-    expectedAnswers: number;
+    expectedAnswers: number | null;
 };
 
 export type AiVisibilityTrendDataPointResponse = {
@@ -2061,35 +2061,29 @@ export type AiVisibilityTrendDataPointResponse = {
      */
     date: string;
     /**
-     * Customer mention rate percentage (0-100)
+     * Customer mention rate percentage (0-100), or null when this point has no denominator to divide by: a check recorded before we stored its answer count, or — under a provider filter — a provider whose every slot on that check was unmeasured. A `0` means the models answered and named nobody; a null means there was nothing to compute a rate from. Plot a null as a break in the line, never as a zero.
      */
-    customerMentionRate: number;
+    customerMentionRate: number | null;
     /**
-     * Top competitor mention rate percentage (0-100)
+     * Top competitor mention rate percentage (0-100), or null when this check found no top competitor, or when there is no denominator (see `customerMentionRate`). `topCompetitorDomain` is null on the same points. A forced `0` here used to draw the market leader flat along the bottom of the chart and the customer ahead of everyone.
      */
-    topCompetitorMentionRate: number;
+    topCompetitorMentionRate: number | null;
     /**
      * Top competitor domain at this data point
      */
-    topCompetitorDomain?: {
-        [key: string]: unknown;
-    } | null;
+    topCompetitorDomain?: string | null;
     /**
-     * Gap between customer and top competitor (negative means customer is behind)
+     * Gap between customer and top competitor (negative means customer is behind), or null when this check had no top competitor to compare against — `topCompetitorDomain` is null on the same points. A `0` means genuinely level; a null means there was nobody to be level with. Plot a null as a break in the line, never as a point at zero.
      */
-    gap: number;
+    gap: number | null;
     /**
      * Customer AI Visibility Score (0-100). A single weighted composite across all providers — null when a provider filter is applied, since no per-provider score exists.
      */
-    customerAiScore?: {
-        [key: string]: unknown;
-    } | null;
+    customerAiScore?: number | null;
     /**
      * Top competitor AI Visibility Score (0-100). A single weighted composite across all providers — null when a provider filter is applied, since no per-provider score exists.
      */
-    topCompetitorAiScore?: {
-        [key: string]: unknown;
-    } | null;
+    topCompetitorAiScore?: number | null;
 };
 
 export type AlertListItemResponse = {
@@ -2169,9 +2163,7 @@ export type ScheduleItemResponse = {
     /**
      * Last completed run time (ISO-8601)
      */
-    lastRunAt: {
-        [key: string]: unknown;
-    } | null;
+    lastRunAt: string | null;
 };
 
 /**
@@ -2291,25 +2283,6 @@ export type BriefingHistoryItemResponse = {
     headline?: string | null;
 };
 
-export type ApiValidationErrorResponse = {
-    /**
-     * Machine-readable error code for a rejected request payload or query. `invalid_parameters` — a query parameter or body field failed validation. `invalid_run_id` — a path parameter naming a run is not a well-formed identifier.
-     */
-    code: 'invalid_parameters' | 'invalid_run_id';
-    /**
-     * Human-readable validation message (joined when multiple fields fail).
-     */
-    message: string;
-    /**
-     * HTTP status code
-     */
-    status: number;
-};
-
-export type ApiValidationErrorEnvelope = {
-    error: ApiValidationErrorResponse;
-};
-
 export type TechStackEvidenceResponse = {
     /**
      * Match source: 'header' = HTTP response header; 'html' = homepage body
@@ -2346,7 +2319,7 @@ export type PartialDetectionResponse = {
      */
     headersAvailable: boolean;
     /**
-     * Why headers were unavailable. HTML matcher detection (~85% of rules) still ran; header-dependent rules (~24 rules) are absent from the response.
+     * Why detection was partial: this site runs behavioral protection that hid its response headers from us. The page body was still read in full, so 88% of our 117 detection rules still ran and everything they found is real. The 13 rules that read headers and nothing else could not run at all, so these technologies were not looked for on this scan: Vercel, Netlify, AWS, Heroku, GitHub Pages, DigitalOcean, Render, Cloudflare, Fastly, Akamai, CloudFront, Bunny CDN, KeyCDN. None of them being listed is therefore not evidence the site doesn't use them, and no count in this response may be compared against a scan of a site whose headers we did read.
      */
     reason: 'site_uses_behavioral_protection';
 };
@@ -2365,7 +2338,7 @@ export type TechStackToolResponse = {
      */
     fetchedAt: string;
     /**
-     * Total count of detected technologies across all three stacks
+     * Total count of detected technologies across all three stacks. When `partialDetection` is present this is a FLOOR, not a total — 13 technologies could not be looked for on this scan, so the real figure is this number plus however many of them the site actually uses. While that marker is set, never compare this count against another domain's, and never phrase it as "N technologies against your M".
      */
     totalTechnologies: number;
     /**
@@ -2381,7 +2354,7 @@ export type TechStackToolResponse = {
      */
     engagementStack: Array<TechStackDetectedTechnologyResponse>;
     /**
-     * Present only when response headers couldn't be recovered (~1.1% of sites running behavioral protection that blocks header inspection). Detection from HTML matchers (~85% of rules) still ran and populates the three stack arrays; header-dependent tech (~24 rules) is absent. When present, missing tech should not be interpreted as 'site doesn't use it.'
+     * Present only when response headers couldn't be recovered (~1.1% of sites running behavioral protection that blocks header inspection). The three stack arrays are still populated from the page body and every detection in them is real — this marks a PARTIAL scan, not a failed one. What is missing is the 13 technologies detectable only from response headers; see `reason` for the list. While this is present, a technology's absence from the arrays is not evidence the site doesn't use it, and `totalTechnologies` is a floor rather than a total.
      */
     partialDetection?: PartialDetectionResponse;
 };
@@ -2475,6 +2448,17 @@ export type ApiBadGatewayErrorResponse = {
 
 export type ApiBadGatewayErrorEnvelope = {
     error: ApiBadGatewayErrorResponse;
+};
+
+export type HeaderInspectionUnavailableResponse = {
+    /**
+     * Always false for this marker — header inspection did not happen.
+     */
+    available: boolean;
+    /**
+     * Why headers couldn't be inspected: this site runs behavioral protection that hides response headers from us. The page body was still read in full, and since no trust-signal rule reads headers, every one of the 34 rules ran and the scan is complete. Nothing in the result is suppressed, reduced or provisional because of this.
+     */
+    reason: 'site_uses_behavioral_protection';
 };
 
 export type TrustSignalsVerdictResponse = {
@@ -2630,9 +2614,9 @@ export type TrustSignalsGapResponse = {
 
 export type TrustSignalsMetaResponse = {
     /**
-     * Total number of canonical trust signals the detector evaluates
+     * How many canonical trust signals this scan evaluated — the full catalogue on every live scan, `headerInspection` present or not, because every rule reads the page HTML and none reads headers. `null` only on a scan stored before the header short-circuit was removed, where nothing was evaluated at all. Never read a null here as zero coverage; it means the scan didn't happen, not that the site scored nothing.
      */
-    signalsEvaluated: number;
+    signalsEvaluated: number | null;
     /**
      * Benchmark dataset identifier — quarter and sample size
      */
@@ -2657,29 +2641,29 @@ export type TrustSignalsToolResponse = {
      */
     fetchedAt: string;
     /**
-     * Honest-degradation discriminator. Present only when the upstream fetch couldn't recover response headers (~1.1% of sites running behavioral protection that blocks header inspection). When present, all other fields in this response — `verdict`, `categoryScores`, `signalsDetected`, `suspiciousPatterns`, `gapsVsBenchmark` — are placeholder values, not a 'zero trust signals' result. Headers from the site couldn't be inspected; trust-signal evaluation depends on them. Absent on healthy scans (the normal path).
+     * Header-inspection marker. Present only when the upstream fetch couldn't recover response headers (~1.1% of sites running behavioral protection that blocks header inspection), and absent on every other scan. It does NOT suppress or qualify anything below it: the page body arrived in full, all 34 trust-signal rules read the body and nothing else, and the scan beside this marker is complete — its score, tier, category breakdown and `meta.signalsEvaluated` are exact and comparable against any other domain's scan. Do not report those results as partial, provisional or a minimum. What the marker does record is that the header evidence channel was closed on this fetch, so no `evidence` entry here can carry `kind: "header"` — it is present so that when a header-reading rule is added, consumers already know which scans could not have run it.
      */
-    signalsAvailable?: SignalsAvailableUnavailableResponse;
+    headerInspection?: HeaderInspectionUnavailableResponse;
     /**
-     * Overall verdict — tier, score, benchmark comparison, human-readable summary. ⚠️ When `signalsAvailable.available === false`, these fields are placeholder values (tier: 'minimal', score: 0) and must not be used for tier-distribution analytics or competitive ranking. Consumers must check `signalsAvailable` first.
+     * Overall verdict — tier, score, benchmark comparison, human-readable summary. Null only on a scan STORED before the header short-circuit was removed (results persist 24h), where it means the page was never inspected — never tier 'minimal' and never score 0. A live scan always populates it, including on the sites that carry `headerInspection`.
      */
-    verdict: TrustSignalsVerdictResponse;
+    verdict: TrustSignalsVerdictResponse | null;
     /**
-     * Per-category breakdown — score, max, and signals found in each of the 5 categories
+     * Per-category breakdown — score, max, and signals found in each of the 5 categories. Null only on a pre-fix stored scan; see `verdict`.
      */
-    categoryScores: TrustSignalsCategoryScoresResponse;
+    categoryScores: TrustSignalsCategoryScoresResponse | null;
     /**
-     * All trust signals detected on the homepage, with evidence
+     * All trust signals detected on the homepage, with evidence. Null only on a pre-fix stored scan; see `verdict`. An empty array is a different and real finding: we read the page and found none.
      */
-    signalsDetected: Array<TrustSignalsDetectedSignalResponse>;
+    signalsDetected: Array<TrustSignalsDetectedSignalResponse> | null;
     /**
-     * Asymmetry detection — claims without proof, count/logo mismatches, unlinked press, etc.
+     * Asymmetry detection — claims without proof, count/logo mismatches, unlinked press, etc. Null only on a pre-fix stored scan; see `verdict`. An empty array means we looked and found none.
      */
-    suspiciousPatterns: Array<TrustSignalsSuspiciousPatternResponse>;
+    suspiciousPatterns: Array<TrustSignalsSuspiciousPatternResponse> | null;
     /**
-     * Missing signals relative to tier benchmark — drives competitive insights
+     * Missing signals relative to tier benchmark — drives competitive insights. Null only on a pre-fix stored scan; see `verdict`. An empty array means none are missing.
      */
-    gapsVsBenchmark: Array<TrustSignalsGapResponse>;
+    gapsVsBenchmark: Array<TrustSignalsGapResponse> | null;
     /**
      * Scan metadata — signals evaluated, benchmark source, scan duration
      */
@@ -2763,9 +2747,7 @@ export type AiCrawlerCheckerCrawlerResultResponse = {
     /**
      * Raw robots.txt line that triggered the status, or null if no directive matched
      */
-    matchingDirective: {
-        [key: string]: unknown;
-    } | null;
+    matchingDirective: string | null;
 };
 
 export type AiCrawlerCheckerRobotsTxtResponse = {
@@ -3009,9 +2991,7 @@ export type SitemapVisualizerMetricsResponse = {
     /**
      * Average pathname depth across all URLs. Null when urls[] is empty.
      */
-    avgDepth: {
-        [key: string]: unknown;
-    } | null;
+    avgDepth: number | null;
 };
 
 export type SitemapVisualizerCategorizedUrlResponse = {
@@ -3030,9 +3010,7 @@ export type SitemapVisualizerCategorizedUrlResponse = {
     /**
      * Value of <lastmod> from the source XML if present, else null
      */
-    lastmod: {
-        [key: string]: unknown;
-    } | null;
+    lastmod: string | null;
 };
 
 export type SitemapVisualizerCategoryBreakdownResponse = {
@@ -3185,9 +3163,7 @@ export type SitemapVisualizerInsightsResponse = {
     /**
      * Count of URLs older than ~6 months (180 days). Null when no <lastmod> data is present at all.
      */
-    stalePageCount: {
-        [key: string]: unknown;
-    } | null;
+    stalePageCount: number | null;
     /**
      * Up to N sample URLs per populated category, largest categories first. Keys are content categories; absent keys mean the category had zero URLs.
      */
@@ -3832,7 +3808,7 @@ export type PublicProjectsControllerGetProjectV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: never;
     url: '/v1/projects/{projectId}';
@@ -3862,7 +3838,7 @@ export type PublicCompetitorsControllerListCompetitorsV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: never;
     url: '/v1/projects/{projectId}/competitors';
@@ -3895,7 +3871,7 @@ export type PublicCompetitorsControllerGetCompetitorV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: never;
     url: '/v1/projects/{projectId}/competitors/{competitorId}';
@@ -3925,7 +3901,7 @@ export type PublicTechTrustControllerGetTechTrustDashboardV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: never;
     url: '/v1/projects/{projectId}/tech-trust';
@@ -3955,7 +3931,7 @@ export type PublicTechTrustControllerGetTechTrustHistoryV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**
@@ -3998,7 +3974,7 @@ export type PublicTechTrustControllerGetTechTrustRunDetailV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: never;
     url: '/v1/projects/{projectId}/tech-trust/history/{runId}';
@@ -4028,7 +4004,7 @@ export type PublicContentControllerGetContentDashboardV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: never;
     url: '/v1/projects/{projectId}/content';
@@ -4058,7 +4034,7 @@ export type PublicContentControllerGetContentHistoryV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**
@@ -4101,7 +4077,7 @@ export type PublicContentControllerGetContentRunDetailV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: never;
     url: '/v1/projects/{projectId}/content/history/{runId}';
@@ -4131,7 +4107,7 @@ export type PublicContentControllerGetContentChangelogV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**
@@ -4186,7 +4162,7 @@ export type PublicPositioningControllerGetPositioningDashboardV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: never;
     url: '/v1/projects/{projectId}/positioning';
@@ -4216,7 +4192,7 @@ export type PublicPositioningControllerGetPositioningHistoryV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**
@@ -4259,7 +4235,7 @@ export type PublicPositioningControllerGetPositioningRunDetailV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: never;
     url: '/v1/projects/{projectId}/positioning/history/{runId}';
@@ -4289,7 +4265,7 @@ export type PublicPricingControllerGetPricingDashboardV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: never;
     url: '/v1/projects/{projectId}/pricing';
@@ -4319,7 +4295,7 @@ export type PublicPricingControllerGetPricingHistoryV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**
@@ -4362,7 +4338,7 @@ export type PublicPricingControllerGetPricingRunDetailV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: never;
     url: '/v1/projects/{projectId}/pricing/history/{runId}';
@@ -4392,11 +4368,11 @@ export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**
-         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large: roughly 12k tokens for a typical 3-prompt check and up to about 21k at the 5-prompt ceiling, against roughly 2k with `brand=`. Read `summary.totalEntries` to size it first (about 200 tokens per entry). The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
+         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large: roughly 12k tokens unfiltered, against roughly 2k with `brand=`. Read `summary.totalEntries` to size it first (about 200 tokens per entry). The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
          */
         includeAnswers?: boolean;
         /**
@@ -4416,6 +4392,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data = {
 };
 
 export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Errors = {
+    400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
 };
@@ -4439,7 +4416,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**
@@ -4486,11 +4463,11 @@ export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**
-         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large: roughly 12k tokens for a typical 3-prompt check and up to about 21k at the 5-prompt ceiling, against roughly 2k with `brand=`. Read `summary.totalEntries` to size it first (about 200 tokens per entry). The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
+         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large: roughly 12k tokens unfiltered, against roughly 2k with `brand=`. Read `summary.totalEntries` to size it first (about 200 tokens per entry). The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
          */
         includeAnswers?: boolean;
         /**
@@ -4510,6 +4487,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data = {
 };
 
 export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Errors = {
+    400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
 };
@@ -4533,7 +4511,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityTrendV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**
@@ -4579,7 +4557,7 @@ export type PublicAlertsControllerListAlertsV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**
@@ -4630,7 +4608,7 @@ export type PublicSchedulesControllerListSchedulesV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: never;
     url: '/v1/projects/{projectId}/schedules';
@@ -4659,7 +4637,7 @@ export type PublicBriefingControllerGetStrategicBriefingV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**
@@ -4693,7 +4671,7 @@ export type PublicBriefingControllerGetStrategicBriefingHistoryV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**
@@ -4736,7 +4714,7 @@ export type PublicBriefingControllerGetStrategicBriefingEditionV1Data = {
         /**
          * Project ID
          */
-        projectId: unknown;
+        projectId: string;
     };
     query?: {
         /**

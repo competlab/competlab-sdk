@@ -1,12 +1,12 @@
 {
   "name": "@competlab/sdk",
-  "version": "2.4.0",
+  "version": "3.0.0",
   "description": "TypeScript SDK for the CompetLab competitive intelligence API",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.mts",
+  "types": "./dist/index.d.cts",
   "exports": {
     ".": {
       "import": {
@@ -16,8 +16,10 @@
       "require": {
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
-      }
-    }
+      },
+      "default": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
   },
   "sideEffects": false,
   "engines": {
@@ -25,8 +27,10 @@
   },
   "scripts": {
     "generate": "openapi-ts",
-    "build": "tsdown",
-    "prepublishOnly": "npm run build"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "tsdown && node scripts/strip-dts-sourcemap-ref.mjs",
+    "verify:generated": "npm run generate && git diff --exit-code -- src/generated",
+    "prepublishOnly": "npm run typecheck && npm run build"
   },
   "keywords": [
     "competlab",
@@ -44,7 +48,7 @@
   "homepage": "https://competlab.com/developers/api",
   "repository": {
     "type": "git",
-    "url": "https://github.com/competlab/competlab-sdk"
+    "url": "git+https://github.com/competlab/competlab-sdk.git"
   },
   "bugs": {
     "url": "https://github.com/competlab/competlab-sdk/issues"

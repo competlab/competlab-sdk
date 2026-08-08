@@ -89,7 +89,7 @@ export class Tech__TrustProfile {
     /**
      * Get latest tech & trust data
      *
-     * Get the latest tech & trust profile data for all competitors in a project. Returns security headers, trust signals, technology stack, robots.txt analysis, and DNS infrastructure.
+     * Get the latest tech & trust profile data for all competitors in a project. Returns security headers, trust signals, technology stack, robots.txt analysis, and DNS infrastructure. Trust signals are a fixed set of things we look for on a HOMEPAGE, in four categories — each category description names its exact membership and its denominator, so a count of 0 means none of THOSE signals was found and nothing more. Do not infer a signal a category does not list. Fields we could not measure are null, with a sibling availability object giving the reason; never read a null as zero, false or absent, and note that a measured 0 / false / empty list is reported as itself and is a real finding. Two degradations are partial and worth distinguishing: shielded response headers null the security grade and score while the HTML-derived trust and tech counts stay real, and an unreadable robots.txt nulls only the AI-access fields.
      */
     public static publicTechTrustControllerGetTechTrustDashboardV1<ThrowOnError extends boolean = false>(options: Options<PublicTechTrustControllerGetTechTrustDashboardV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicTechTrustControllerGetTechTrustDashboardV1Responses, PublicTechTrustControllerGetTechTrustDashboardV1Errors, ThrowOnError>({
@@ -102,7 +102,7 @@ export class Tech__TrustProfile {
     /**
      * Get tech & trust run history
      *
-     * Get paginated history of tech & trust monitoring runs for a project. Each entry includes run timing and summary statistics.
+     * Get paginated history of tech & trust monitoring runs for a project. Each entry includes run timing and summary statistics. Fields we could not measure are null, with a sibling availability object giving the reason; never read a null as zero, false or absent, and note that a measured 0 / false / empty list is reported as itself and is a real finding. The two gap figures are null when there was no comparison to make — either side unmeasured, or no competitor to compare against — so a null gap is not a tie.
      */
     public static publicTechTrustControllerGetTechTrustHistoryV1<ThrowOnError extends boolean = false>(options: Options<PublicTechTrustControllerGetTechTrustHistoryV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicTechTrustControllerGetTechTrustHistoryV1Responses, PublicTechTrustControllerGetTechTrustHistoryV1Errors, ThrowOnError>({
@@ -115,7 +115,7 @@ export class Tech__TrustProfile {
     /**
      * Get tech & trust data for a specific run
      *
-     * Get full tech & trust data for a specific historical monitoring run, including per-competitor security headers, trust signals, technology stack, robots.txt, and DNS infrastructure.
+     * Get full tech & trust data for a specific historical monitoring run, including per-competitor security headers, trust signals, technology stack, robots.txt, and DNS infrastructure. Fields we could not measure are null, with a sibling availability object giving the reason; never read a null as zero, false or absent, and note that a measured 0 / false / empty list is reported as itself and is a real finding. A competitor whose robots.txt reads `exists: false` with NO availability marker genuinely publishes none, which allows all crawlers — a real finding, distinct from a null. A run that finished but produced no summary answers 404 `run_not_summarized`, which is a different fact from `run_not_found`: the run exists, it just has nothing to report. It used to answer 200 with an all-zero summary invented from the missing one.
      */
     public static publicTechTrustControllerGetTechTrustRunDetailV1<ThrowOnError extends boolean = false>(options: Options<PublicTechTrustControllerGetTechTrustRunDetailV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicTechTrustControllerGetTechTrustRunDetailV1Responses, PublicTechTrustControllerGetTechTrustRunDetailV1Errors, ThrowOnError>({
@@ -130,7 +130,7 @@ export class ContentIntelligence {
     /**
      * Get latest content intelligence data
      *
-     * Get the latest content intelligence data for all competitors in a project. Returns URL counts, content categorization, strategic URL analysis, and competitive gap assessment. Use this to understand the content landscape across competitors.
+     * Get the latest content intelligence data for all competitors in a project. Returns URL counts, content categorization, strategic URL analysis, and competitive gap assessment. Use this to understand the content landscape across competitors. Fields we could not measure are null, with a sibling availability object giving the reason; never read a null as zero, false or absent, and note that a measured 0 / false / empty list is reported as itself and is a real finding. The four gap lists carry a distinction worth respecting: a null list means no comparison ran, while an EMPTY list means we compared and found none — reading the first as the second reports a verdict about a comparison that never happened.
      */
     public static publicContentControllerGetContentDashboardV1<ThrowOnError extends boolean = false>(options: Options<PublicContentControllerGetContentDashboardV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicContentControllerGetContentDashboardV1Responses, PublicContentControllerGetContentDashboardV1Errors, ThrowOnError>({
@@ -143,7 +143,7 @@ export class ContentIntelligence {
     /**
      * Get content intelligence run history
      *
-     * Get paginated history of content intelligence monitoring runs for a project. Each entry includes run timing and summary statistics with gap analysis.
+     * Get paginated history of content intelligence monitoring runs for a project. Each entry includes run timing and summary statistics with gap analysis. Fields we could not measure are null, with a sibling availability object giving the reason; never read a null as zero, false or absent, and note that a measured 0 / false / empty list is reported as itself and is a real finding.
      */
     public static publicContentControllerGetContentHistoryV1<ThrowOnError extends boolean = false>(options: Options<PublicContentControllerGetContentHistoryV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicContentControllerGetContentHistoryV1Responses, PublicContentControllerGetContentHistoryV1Errors, ThrowOnError>({
@@ -156,7 +156,7 @@ export class ContentIntelligence {
     /**
      * Get content intelligence data for a specific run
      *
-     * Get full content intelligence data for a specific historical monitoring run, including per-competitor URL counts, content categorization, and strategic URL metrics.
+     * Get full content intelligence data for a specific historical monitoring run, including per-competitor URL counts, content categorization, and strategic URL metrics. Fields we could not measure are null, with a sibling availability object giving the reason; never read a null as zero, false or absent, and note that a measured 0 / false / empty list is reported as itself and is a real finding. A run that finished but produced no summary answers 404 `run_not_summarized`, which is a different fact from `run_not_found`: the run exists, it just has nothing to report. It used to answer 200 with an all-zero summary invented from the missing one.
      */
     public static publicContentControllerGetContentRunDetailV1<ThrowOnError extends boolean = false>(options: Options<PublicContentControllerGetContentRunDetailV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicContentControllerGetContentRunDetailV1Responses, PublicContentControllerGetContentRunDetailV1Errors, ThrowOnError>({
@@ -184,7 +184,7 @@ export class Positioning {
     /**
      * Get latest positioning data
      *
-     * Get the latest positioning data for all competitors in a project. Returns homepage messaging, value propositions, CTAs, target audience, and competitive messaging analysis.
+     * Get the latest positioning data for all competitors in a project. Returns homepage messaging, value propositions, CTAs, target audience, and competitive messaging analysis. Fields we could not measure are null, with a sibling availability object giving the reason; never read a null as zero, false or absent, and note that a measured 0 / false / empty list is reported as itself and is a real finding. For the messaging strings the distinction is sharp: a measured EMPTY STRING means we read the page and there is genuinely no call to action, which is a finding; a null means we never read it.
      */
     public static publicPositioningControllerGetPositioningDashboardV1<ThrowOnError extends boolean = false>(options: Options<PublicPositioningControllerGetPositioningDashboardV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicPositioningControllerGetPositioningDashboardV1Responses, PublicPositioningControllerGetPositioningDashboardV1Errors, ThrowOnError>({
@@ -197,7 +197,7 @@ export class Positioning {
     /**
      * Get positioning run history
      *
-     * Get paginated history of positioning monitoring runs for a project. Each entry includes run timing and summary statistics with messaging gap analysis.
+     * Get paginated history of positioning monitoring runs for a project. Each entry includes run timing and summary statistics with messaging gap analysis. Fields we could not measure are null, with a sibling availability object giving the reason; never read a null as zero, false or absent, and note that a measured 0 / false / empty list is reported as itself and is a real finding.
      */
     public static publicPositioningControllerGetPositioningHistoryV1<ThrowOnError extends boolean = false>(options: Options<PublicPositioningControllerGetPositioningHistoryV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicPositioningControllerGetPositioningHistoryV1Responses, PublicPositioningControllerGetPositioningHistoryV1Errors, ThrowOnError>({
@@ -210,7 +210,7 @@ export class Positioning {
     /**
      * Get positioning data for a specific run
      *
-     * Get full positioning data for a specific historical monitoring run, including per-competitor homepage messaging, value propositions, CTAs, and audience data.
+     * Get full positioning data for a specific historical monitoring run, including per-competitor homepage messaging, value propositions, CTAs, and audience data. Fields we could not measure are null, with a sibling availability object giving the reason; never read a null as zero, false or absent, and note that a measured 0 / false / empty list is reported as itself and is a real finding. A run that finished but produced no summary answers 404 `run_not_summarized`, which is a different fact from `run_not_found`: the run exists, it just has nothing to report. It used to answer 200 with an all-zero summary invented from the missing one.
      */
     public static publicPositioningControllerGetPositioningRunDetailV1<ThrowOnError extends boolean = false>(options: Options<PublicPositioningControllerGetPositioningRunDetailV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicPositioningControllerGetPositioningRunDetailV1Responses, PublicPositioningControllerGetPositioningRunDetailV1Errors, ThrowOnError>({
@@ -225,7 +225,7 @@ export class PricingIntelligence {
     /**
      * Get latest pricing intelligence data
      *
-     * Get the latest pricing intelligence data for all competitors in a project. Returns structured pricing plans, free tier availability, billing options, enterprise pricing, promotions, and competitive gap analysis. Every tracked competitor appears — rows without pricing data carry a `pricingDataAvailable` reason (no pricing page found, their page didn't respond, or a temporary problem on our side) instead of being omitted; branch on it before quoting pricing facts.
+     * Get the latest pricing intelligence data for all competitors in a project. Returns structured pricing plans, free tier availability, billing options, enterprise pricing, promotions, and competitive gap analysis. Every tracked competitor appears — rows without pricing data carry a `pricingDataAvailable` reason (no pricing page found, their page didn't respond, or a temporary problem on our side) instead of being omitted; branch on it before quoting pricing facts. A pricing page is the single most likely thing to be missing, so this is the dimension where the null contract matters most: when your own pricing couldn't be analyzed, every metric on `summary.customer` is null and `pricingAnalysisAvailable` says why. `hasFreePlan: null` means we did not check, NOT that there is no free plan — a measured `false` is reported as `false` and is a real finding. The three gap flags do NOT share one null condition, so read each field's own description rather than gating all three on the same test: all three are null when your side was unmeasured or no competitor was measured, and `hasPriceGap` is null on two further conditions the other two don't carry — fewer than three comparable competitor prices, or your own price not being comparable to the market. Market figures (`marketAvgPrice`, `pricePositionPercent`) are null below that three-price threshold, which is 'not enough market to average', never zero. Comparable means fixed monthly amounts sharing one currency AND one licensed unit: a per-seat price is never averaged against a flat one, `marketPricingUnit` says which group was chosen, and every market figure must be quoted with it.
      */
     public static publicPricingControllerGetPricingDashboardV1<ThrowOnError extends boolean = false>(options: Options<PublicPricingControllerGetPricingDashboardV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicPricingControllerGetPricingDashboardV1Responses, PublicPricingControllerGetPricingDashboardV1Errors, ThrowOnError>({
@@ -238,7 +238,7 @@ export class PricingIntelligence {
     /**
      * Get pricing run history
      *
-     * Get paginated history of pricing intelligence monitoring runs for a project. Each entry includes run timing and summary statistics with pricing gap analysis.
+     * Get paginated history of pricing intelligence monitoring runs for a project. Each entry includes run timing and summary statistics with pricing gap analysis. Fields we could not measure are null, with a sibling availability object giving the reason; never read a null as zero, false or absent, and note that a measured 0 / false / empty list is reported as itself and is a real finding.
      */
     public static publicPricingControllerGetPricingHistoryV1<ThrowOnError extends boolean = false>(options: Options<PublicPricingControllerGetPricingHistoryV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicPricingControllerGetPricingHistoryV1Responses, PublicPricingControllerGetPricingHistoryV1Errors, ThrowOnError>({
@@ -251,7 +251,7 @@ export class PricingIntelligence {
     /**
      * Get pricing data for a specific run
      *
-     * Get full pricing intelligence data for a specific historical monitoring run, including per-competitor pricing plans, billing options, free tiers, and enterprise pricing. Competitors the run could not measure appear with a `pricingDataAvailable` reason instead of being omitted.
+     * Get full pricing intelligence data for a specific historical monitoring run, including per-competitor pricing plans, billing options, free tiers, and enterprise pricing. Competitors the run could not measure appear with a `pricingDataAvailable` reason instead of being omitted. Fields we could not measure are null; never read a null as zero, false or absent, and note that a measured 0 / false is reported as itself and is a real finding. A run that finished but produced no summary answers 404 `run_not_summarized`, which is a different fact from `run_not_found`: the run exists, it just has nothing to report. It used to answer 200 with an all-zero summary invented from the missing one.
      */
     public static publicPricingControllerGetPricingRunDetailV1<ThrowOnError extends boolean = false>(options: Options<PublicPricingControllerGetPricingRunDetailV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicPricingControllerGetPricingRunDetailV1Responses, PublicPricingControllerGetPricingRunDetailV1Errors, ThrowOnError>({
@@ -292,7 +292,7 @@ export class AiVisibility {
     /**
      * Get AI visibility data for a specific check
      *
-     * Get full AI visibility data for a specific historical check: per-competitor rankings across all three AI providers, with mention rates and AI Visibility Scores, under `summary`. Rates here divide by the answers that came back, not the queries sent, and the queries-sent figure is not on `summary` — describe a rate as a share of the answers counted, never as a share of every query asked. Set `includeAnswers=true` to also get what the models actually said: every prompt sent, and every brand each model named in rank order with its stated reasoning, plus `providerStatus` and (where the check recorded its ask) `answerCoverage`. That block is large — roughly 12k tokens for a typical 3-prompt check, up to about 21k at the 5-prompt ceiling, against roughly 2k with `brand=`. Check `summary.totalEntries` to size it first (about 200 tokens per entry), and prefer `brand=<domain>` (one competitor across every answer) or `provider=` (one model) over fetching everything; `promptIndex=` narrows to a single prompt. `provider` and `promptIndex` narrow the answers array; `brand` does not — it reduces the `brands` list inside each answer, so every answer still comes back and the ones that did not name that domain arrive with an empty `brands`, which is a finding rather than an absence. No filter changes any number under `summary`: those are stored, computed over the whole check, and never recomputed for a filtered view. Ranks are stable under filtering. Queries that produced no usable answer are listed separately in `unansweredQueries` rather than appearing as answers naming nobody — those are different facts, and an empty `brands` under a `brand` filter is NOT that case. `summary.customer.perPrompt`, when present, breaks the customer's result down per prompt at no extra cost — use it before reaching for `includeAnswers`.
+     * Get full AI visibility data for a specific historical check: per-competitor rankings across all three AI providers, with mention rates and AI Visibility Scores, under `summary`. Rates here divide by the answers that came back, not the queries sent, and the queries-sent figure is not on `summary` — describe a rate as a share of the answers counted, never as a share of every query asked. Set `includeAnswers=true` to also get what the models actually said: every prompt sent, and every brand each model named in rank order with its stated reasoning, plus `providerStatus` and (where the check recorded its ask) `answerCoverage`. That block is large — roughly 12k tokens unfiltered, against roughly 2k with `brand=`. Check `summary.totalEntries` to size it first (about 200 tokens per entry), and prefer `brand=<domain>` (one competitor across every answer) or `provider=` (one model) over fetching everything; `promptIndex=` narrows to a single prompt. `provider` and `promptIndex` narrow the answers array; `brand` does not — it reduces the `brands` list inside each answer, so every answer still comes back and the ones that did not name that domain arrive with an empty `brands`, which is a finding rather than an absence. No filter changes any number under `summary`: those are stored, computed over the whole check, and never recomputed for a filtered view. Ranks are stable under filtering. Queries that produced no usable answer are listed separately in `unansweredQueries` rather than appearing as answers naming nobody — those are different facts, and an empty `brands` under a `brand` filter is NOT that case. `summary.customer.perPrompt`, when present, breaks the customer's result down per prompt at no extra cost — use it before reaching for `includeAnswers`.
      */
     public static publicAiVisibilityControllerGetAiVisibilityCheckDetailV1<ThrowOnError extends boolean = false>(options: Options<PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Responses, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Errors, ThrowOnError>({
@@ -367,7 +367,7 @@ export class StrategicBriefing {
      *
      * **Returned with any finished edition, regardless of `sections`:** `coverage` (methodology and data-quality caveats — read these before quoting any figure) and `contains` (the list of sections this edition actually holds, so you can pick what to fetch next instead of requesting slots blind). Both are null whenever `meta.status` is not `done`, which says nothing about whether earlier editions exist — check `…/history`.
      *
-     * **Reading the numbers:** the AI Visibility Score is 0–100 (higher is better); an AI `rank` is ordinal (lower is better); action `impact` is 1–4 (higher is more critical); action effort is bucketed as `effortMinutes` (`<30` | `30-120` | `>120`). A project's next briefing is scheduled approximately 30 days after its last **successful** one.
+     * **Reading the numbers:** the AI Visibility Score is 0–100 (higher is better); an AI `rank` is ordinal (lower is better); action `impact` is 1–4 (higher is more critical); action effort is bucketed as `effortMinutes` (`<30` | `30-120` | `>120`, or `null` when the briefing gave that action no estimate — report it as unsized rather than as quick). A project's next briefing is scheduled approximately 30 days after its last **successful** one.
      */
     public static publicBriefingControllerGetStrategicBriefingV1<ThrowOnError extends boolean = false>(options: Options<PublicBriefingControllerGetStrategicBriefingV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicBriefingControllerGetStrategicBriefingV1Responses, PublicBriefingControllerGetStrategicBriefingV1Errors, ThrowOnError>({
@@ -469,7 +469,7 @@ export class Tools {
     /**
      * Get an async trust-signals scan by ID
      *
-     * Get the current state of an async trust-signals scan. Returns the scan's lifecycle (`queued` / `running` / `completed` / `failed`) along with `createdAt` and `expiresAt` always, plus `startedAt` once the runner picks it up and `completedAt` once it reaches a terminal state. On `completed` the full canonical scan response is in `item.result` (tier verdict, category scores, detected signals with evidence, suspicious patterns, gaps). On `failed` the failure details are in `item.error` with a machine-readable `code` — currently `homepage_fetch_failed` (upstream homepage fetch threw) or `scan_failed` (any other error during scan execution). Scoped to the API key's organization — cross-tenant access, never-existed IDs, expired IDs (24h TTL), and malformed IDs all return 404 `scan_not_found` with an identical envelope to prevent existence-disclosure. Typically sub-second — safe to poll on a 2–5 second interval depending on your timeout budget.
+     * Get the current state of an async trust-signals scan. Returns the scan's lifecycle (`queued` / `running` / `completed` / `failed`) along with `createdAt` and `expiresAt` always, plus `startedAt` once the runner picks it up and `completedAt` once it reaches a terminal state. On `completed` the full canonical scan response is in `item.result` (tier verdict, category scores, detected signals with evidence, suspicious patterns, gaps). Roughly 1% of sites run behavioral protection that hides response headers from us. Those scans carry `item.result.headerInspection` = `{ available: false, reason: "site_uses_behavioral_protection" }`, and the result beside it is COMPLETE — the page body was read in full, all 34 trust-signal rules read the body and none reads headers, so the tier, score, category breakdown and `meta.signalsEvaluated` are exact and comparable against any other domain. Report them as ordinary results; the marker only means no `evidence` entry can carry `kind: "header"`. A `null` in `verdict`, `categoryScores`, `signalsDetected`, `suspiciousPatterns`, `gapsVsBenchmark` or `meta.signalsEvaluated` therefore means the page was never inspected at all, and appears only on scans stored before this behavior shipped (results persist 24h). It never means the site scored zero, has no trust signals, or sits in the `minimal` tier. An empty ARRAY is the opposite case and is a real finding: we looked and found none. On `failed` the failure details are in `item.error` with a machine-readable `code` — currently `homepage_fetch_failed` (upstream homepage fetch threw) or `scan_failed` (any other error during scan execution). Scoped to the API key's organization — cross-tenant access, never-existed IDs, expired IDs (24h TTL), and malformed IDs all return 404 `scan_not_found` with an identical envelope to prevent existence-disclosure. Typically sub-second — safe to poll on a 2–5 second interval depending on your timeout budget.
      */
     public static publicTrustSignalsToolControllerGetScanV1<ThrowOnError extends boolean = false>(options: Options<PublicTrustSignalsToolControllerGetScanV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicTrustSignalsToolControllerGetScanV1Responses, PublicTrustSignalsToolControllerGetScanV1Errors, ThrowOnError>({

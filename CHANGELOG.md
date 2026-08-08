@@ -3,9 +3,43 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
-## 2.4.0
+## 3.0.0
+
+> **2.4.0 was never published.** It was built and tagged in the repository but never released to
+> npm, so everything it contained ships here. If you are on 2.3.0 — the previous npm release —
+> this entry is your complete upgrade path.
+
+### Breaking
+
+- **Fields that were never measured are now `null` instead of a placeholder.** The API stopped
+  publishing invented values: when a site couldn't be fetched, a page didn't exist, or a market
+  was too thin to compare, it used to return `false`, `0` or `[]` anyway. Those are now `null`.
+  The generated types carry it — **129 nullable properties, up from 43 in 2.3.0**.
+
+  This will surface as compile errors wherever you assigned a `number` to a `number`, and that
+  is the point: the old type was wrong, not the new one. **`null` means we did not measure it —
+  never zero, never empty, never "no".** A measured `0` or `false` is reported as itself and is a
+  real finding. See *Reading the data* in the README, and the new `isMeasured` /
+  `isMeasuredTrue` / `isMeasuredFalse` guards — `??`, `||` and bare truthiness all convert a
+  `null` back into the placeholder the API just stopped sending.
+
+- **Methods no longer declare an error branch they never return.** Every method already threw
+  `CompetLabError`, but the declared return type also carried a `{ data: undefined, error }`
+  arm that runtime never produced. So `const { data } = await cl.projects.list()` failed to
+  compile, and `if (result.error)` was permanently dead code. `data` is now always present on a
+  returned result. Remove any `!` assertions or `result.error` checks; use `try/catch`.
+
+- **`CompetLabError.code` is typed** instead of bare `string` — the documented codes
+  (`project_not_found`, `api_key_invalid`, `rate_limit_exceeded`, …) autocomplete, while an
+  undocumented code still type-checks.
+
+- **`types` now points at `dist/index.d.cts`** to match the CJS `main`, for legacy
+  `moduleResolution: node` consumers. Modern resolution is unaffected — the `exports` map already
+  declared per-condition types.
 
 ### Added
+- **Null-safety guards.** `isMeasured`, `isMeasuredTrue`, `isMeasuredFalse` — exported from the
+  package root, matching the platform's own read-path convention.
 - **Briefing editions.** `strategicBriefing.history(projectId, { page, limit })` lists past
   editions newest first — one cheap metadata row each (`runId`, date, edition number, status,
   headline), never briefing content. `strategicBriefing.edition(projectId, runId, { sections,
@@ -23,11 +57,30 @@ This project adheres to [Semantic Versioning](https://semver.org).
 ### Fixed
 - **README briefing example referenced fields that do not exist.** It told you to branch on
   `meta.availability` and read `data.dimensionHealth`; neither is in the API. Corrected to
-  `meta.status` and `contains`, with the fallback-to-history path spelled out.
+  `meta.status` and `contains`, with the fallback-to-history path spelled out. The same wrong
+  fields were still being taught by the 2.0.0 entry below, which ships inside the tarball — also
+  corrected.
+- **Error messages for non-API failures.** A JSON body that wasn't our error envelope produced
+  the literal message `[object Object]`, and an HTML error page from a gateway put the whole
+  document into `message`. Both now report as `http_error` with the status and a bounded message;
+  `network_error` is reserved for requests that never reached the API.
+- **Documented the error contract at all.** The README never mentioned that methods throw, nor
+  that `CompetLabError` exists.
+- **Source maps.** The CJS bundle shipped without one while the ESM bundle had full inlined
+  sources; declaration maps pointed at `src/`, which the package does not publish. Both JS
+  formats now carry working maps, and the dead declaration maps are gone.
+- **Counts in the README.** The badge said 34 methods beside body text saying 36, and the MCP
+  server was described as having 32 tools when it has 35.
+- **The README claimed the SDK reads `COMPETLAB_API_KEY`.** It does not, and never has — pass
+  `apiKey` explicitly.
 
 ### Changed
-- Regenerated from the refreshed OpenAPI spec (34 -> 36 operations). No breaking changes: the two
-  new query arguments are optional and the existing call signatures are unchanged.
+- Regenerated from the OpenAPI spec (34 -> 36 operations). The two new query arguments are
+  optional and existing call signatures are unchanged; the breaking part is the nullability
+  above.
+- **CI now verifies before publishing.** The release workflow asserts the git tag matches
+  `package.json`, re-runs codegen and fails if it differs from what was committed, then
+  typechecks — none of which happened before. Publishes now carry npm provenance.
 
 ## 2.3.0
 
@@ -100,9 +153,11 @@ This project adheres to [Semantic Versioning](https://semver.org).
 - **`cl.strategicBriefing`** — the synthesized competitive briefing that supersedes the action plan.
   - `cl.strategicBriefing.get(projectId, { sections?, includeCharts? })` →
     `GET /v1/projects/{projectId}/strategic-briefing`.
-  - Returns `{ item, meta, coverage, dimensionHealth }`. Branch on `meta.availability`
-    (`ready` | `ready-refreshing` | `preparing` | `none`); `item` is `null` until the first
-    edition has finished generating.
+  - Returns `{ meta, item, coverage, contains }`. Branch on `meta.status`; `item` is `null`
+    until the first edition has finished generating.
+  - *Corrected in 3.0.0: this entry originally described `dimensionHealth` and
+    `meta.availability`. Neither field has ever existed in the API — read `contains` and
+    `meta.status` instead.*
   - `sections` defaults to `['hub']` (the executive digest + navigation map). Drill deeper with
     `actions`, `competitors`, any `deep-<dimension>`, or `all`. `includeCharts` (default `false`)
     adds full chart series.
@@ -114,7 +169,7 @@ const plan = await cl.analysis.actionPlan(projectId);
 
 // After (v2.x) — the hub digest is the synthesized strategic read:
 const { data } = await cl.strategicBriefing.get(projectId);
-// data.meta.availability, data.item
+// data.meta.status, data.item
 
 // Closest equivalent of the old prioritized action list:
 const actions = await cl.strategicBriefing.get(projectId, { sections: ['actions'] });

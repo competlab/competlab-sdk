@@ -7,15 +7,38 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for npm provenance
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org
+
       - run: npm ci
-      - run: npm run generate
+
+      # The tag is the only trigger, so a tag that disagrees with package.json would
+      # publish a version nobody asked for. Fail before anything is built.
+      - name: Tag must match package.json version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "tag v$TAG does not match package.json $PKG"
+            exit 1
+          fi
+          echo "publishing $PKG"
+
+      # Regenerating must be a no-op. If it isn't, the committed client disagrees with
+      # the committed spec and the tarball would not be what was reviewed.
+      - name: Generated client is in sync with openapi.json
+        run: npm run verify:generated
+
+      - run: npm run typecheck
       - run: npm run build
-      - run: npm publish --access public
+
+      - run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
