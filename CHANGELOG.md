@@ -3,6 +3,48 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 3.3.0
+
+### Fixed
+
+- **`fetchUrl` documented a check that never fires.** Where `headersNeeded: true` is blocked by
+  behavioural fingerprinting, the JSDoc said `headers` **would be absent**. It isn't — the API
+  returns `headers: {}` with `headersAvailable: false`. So the documented check never took its
+  branch, and `{}` read as "we looked and the response carried no headers" when the truth is
+  "we could not see them". Published in 3.1.0 and 3.2.0; this is the release that corrects it.
+
+  **Branch on `headersAvailable`, never on whether `headers` exists.** `headers` stays optional
+  in the type because it is genuinely absent when you pass `headersNeeded: false` — so its
+  presence answers "did you ask for headers", not "did we get any".
+
+  ```typescript
+  const res = await cl.tools.fetchUrl({ url, headersNeeded: true });
+
+  if (!res.data.item.headers) { /* WRONG — never true when you asked for them */ }
+  if (res.data.item.headersAvailable) { /* right: we saw them */ }
+  ```
+
+### Added
+
+- **`ContentCategory` is now an exported type.** The twelve-value union 3.2.0 introduced
+  generated inline on the parameter, with nothing to import — so narrowing a value meant reaching
+  through `Parameters<typeof cl.content.changelog>`. The API now declares it as a named schema:
+
+  ```typescript
+  import CompetLab, { type ContentCategory } from '@competlab/sdk';
+
+  const CATEGORIES = [
+    'blog', 'docs', 'tools', 'landing', 'caseStudies', 'comparison',
+    'integrations', 'changelog', 'webinars', 'legal', 'programmatic', 'other',
+  ] as const satisfies readonly ContentCategory[];
+
+  const isCategory = (v: string): v is ContentCategory =>
+    (CATEGORIES as readonly string[]).includes(v);
+  ```
+
+  The `Parameters<…>` form from 3.2.0 still compiles — it resolves to the same union — so nothing
+  needs changing. This is the version worth writing.
+
 ## 3.2.0
 
 Two documentation fixes from the API, one of which changes a type. Minor rather than a patch

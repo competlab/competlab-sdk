@@ -808,22 +808,7 @@
             "in": "query",
             "description": "Filter by content category (blog, docs, tools, landing, caseStudies, comparison, integrations, changelog, webinars, legal, programmatic, other). Changelog rows carry the same category the content dashboard reports for the same URL, decided over the competitor's whole sitemap rather than over the changed URLs alone — so a page added into a templated catalog filters under `programmatic`, not `other`.",
             "schema": {
-              "example": "blog",
-              "type": "string",
-              "enum": [
-                "blog",
-                "docs",
-                "tools",
-                "landing",
-                "caseStudies",
-                "comparison",
-                "integrations",
-                "changelog",
-                "webinars",
-                "legal",
-                "programmatic",
-                "other"
-              ]
+              "$ref": "#/components/schemas/ContentCategory"
             }
           },
           {
@@ -5351,6 +5336,23 @@
           "removedByCategory",
           "addedCounts",
           "removedCounts"
+        ]
+      },
+      "ContentCategory": {
+        "type": "string",
+        "enum": [
+          "blog",
+          "docs",
+          "tools",
+          "landing",
+          "caseStudies",
+          "comparison",
+          "integrations",
+          "changelog",
+          "webinars",
+          "legal",
+          "programmatic",
+          "other"
         ]
       },
       "PositioningMessagingUnavailableResponse": {
@@ -10602,7 +10604,7 @@
           },
           "headers": {
             "type": "object",
-            "description": "Response headers, lower-cased keys. Present when the request had `headersNeeded: true` AND `headersAvailable` is `true`.",
+            "description": "Response headers, lower-cased keys. Present whenever the request had `headersNeeded: true` — including when nothing could be read, in which case it is an empty object rather than a missing field. Read `headersAvailable` to tell the two apart; a `{}` here means we asked and the target revealed nothing, not that we did not ask.",
             "additionalProperties": {
               "type": "string"
             },
@@ -10613,7 +10615,7 @@
           },
           "headersAvailable": {
             "type": "boolean",
-            "description": "Honest-degradation discriminator. `true` when headers were observed end-to-end; `false` when the target site uses advanced behavioral fingerprinting that prevents header access — `headers` will be absent in that case.",
+            "description": "Honest-degradation discriminator, and the ONLY field to branch on. `true` when headers were observed end-to-end; `false` when the target site uses advanced behavioral fingerprinting that prevents header access — `headers` is then an empty object, still present. Testing whether `headers` exists never distinguishes the two cases.",
             "example": true
           },
           "contentType": {
@@ -10667,7 +10669,7 @@
           },
           "headersNeeded": {
             "type": "boolean",
-            "description": "Include `headers` and `headersAvailable` in the response. Defaults to service-controlled value when omitted. When the target site uses advanced behavioral fingerprinting, `headersAvailable` will be `false` and `headers` will be absent.",
+            "description": "Include `headers` and `headersAvailable` in the response. Defaults to service-controlled value when omitted. When the target site uses advanced behavioral fingerprinting, `headersAvailable` is `false` and `headers` is an empty object — present, not missing. Branch on `headersAvailable`, never on whether `headers` exists.",
             "example": true
           },
           "cleanHtml": {

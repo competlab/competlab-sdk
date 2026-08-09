@@ -997,6 +997,8 @@ export type ContentChangelogItemResponse = {
     };
 };
 
+export type ContentCategory = 'blog' | 'docs' | 'tools' | 'landing' | 'caseStudies' | 'comparison' | 'integrations' | 'changelog' | 'webinars' | 'legal' | 'programmatic' | 'other';
+
 export type PositioningMessagingUnavailableResponse = {
     /**
      * Always false for this discriminator.
@@ -3712,13 +3714,13 @@ export type FetchUrlToolResponse = {
      */
     body?: string;
     /**
-     * Response headers, lower-cased keys. Present when the request had `headersNeeded: true` AND `headersAvailable` is `true`.
+     * Response headers, lower-cased keys. Present whenever the request had `headersNeeded: true` — including when nothing could be read, in which case it is an empty object rather than a missing field. Read `headersAvailable` to tell the two apart; a `{}` here means we asked and the target revealed nothing, not that we did not ask.
      */
     headers?: {
         [key: string]: string;
     };
     /**
-     * Honest-degradation discriminator. `true` when headers were observed end-to-end; `false` when the target site uses advanced behavioral fingerprinting that prevents header access — `headers` will be absent in that case.
+     * Honest-degradation discriminator, and the ONLY field to branch on. `true` when headers were observed end-to-end; `false` when the target site uses advanced behavioral fingerprinting that prevents header access — `headers` is then an empty object, still present. Testing whether `headers` exists never distinguishes the two cases.
      */
     headersAvailable?: boolean;
     /**
@@ -3749,7 +3751,7 @@ export type PtFetchUrlRequestDto = {
      */
     bodyNeeded?: boolean;
     /**
-     * Include `headers` and `headersAvailable` in the response. Defaults to service-controlled value when omitted. When the target site uses advanced behavioral fingerprinting, `headersAvailable` will be `false` and `headers` will be absent.
+     * Include `headers` and `headersAvailable` in the response. Defaults to service-controlled value when omitted. When the target site uses advanced behavioral fingerprinting, `headersAvailable` is `false` and `headers` is an empty object — present, not missing. Branch on `headersAvailable`, never on whether `headers` exists.
      */
     headersNeeded?: boolean;
     /**
@@ -4150,7 +4152,7 @@ export type PublicContentControllerGetContentChangelogV1Data = {
         /**
          * Filter by content category (blog, docs, tools, landing, caseStudies, comparison, integrations, changelog, webinars, legal, programmatic, other). Changelog rows carry the same category the content dashboard reports for the same URL, decided over the competitor's whole sitemap rather than over the changed URLs alone — so a page added into a templated catalog filters under `programmatic`, not `other`.
          */
-        category?: 'blog' | 'docs' | 'tools' | 'landing' | 'caseStudies' | 'comparison' | 'integrations' | 'changelog' | 'webinars' | 'legal' | 'programmatic' | 'other';
+        category?: ContentCategory;
         /**
          * By default each item returns up to 3 sample URLs per category. Set true to return the full URL list per category. High-activity competitors can produce large responses — combine with `category` and `competitorId` filters to scope. Subject to an internal byte cap; check `truncated` in the response.
          */
