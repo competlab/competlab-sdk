@@ -3,6 +3,54 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 3.1.0
+
+Regenerated from the deployed API contract. Everything here is additive — no field changed type,
+no field was removed, and no existing call site needs editing.
+
+### Added
+
+- **`programmatic` — a 12th content category.** Templated pages generated from a database or a
+  pattern (per-item catalog entries, reference tables) are now counted separately instead of
+  landing in `other`. It appears as a key in `categorizedCounts`, as a value of the content
+  changelog's `category` filter, and in the free sitemap tool's category breakdown.
+
+  It is **not** one of the 9 strategic categories, so it stays out of `strategicUrls`,
+  `criticalGaps`, `advantages` and `onTrack` — which means `totalUrls - strategicUrls` is no
+  longer safe to read as "legal plus junk". On a vendor that generates templated pages at scale
+  most of that difference is a real content operation. Read `categorizedCounts.programmatic`
+  before drawing a conclusion from the gap.
+
+- **`programmaticExampleUrls`** on each content competitor — up to 5 real URLs sampled from that
+  competitor's templated pages, so you can settle in seconds what a large `programmatic` count
+  actually is. The platform deliberately does not judge why a vendor generates them, because a
+  URL shape cannot show intent; these make that refusal checkable rather than unhelpful. Sampled
+  at read time, so they may differ between calls. Typed `Array<string> | null` and always
+  present: `null` exactly when `contentDataAvailable` is present, `[]` when we read the sitemap
+  and there genuinely are none.
+
+- **`trustComparisonState` and `comparableCompetitors`** on the tech & trust summary, with a new
+  exported `ComparisonState` union. The state says how to read `trustSignalGap` instead of
+  leaving you to infer it — whether the comparison was complete, incomplete, or never attempted —
+  and `comparableCompetitors` is the sample it was drawn from. Both are optional: a run recorded
+  before they shipped omits them, and an absent state must not be read as `'compared'`. See
+  *Reading the data* in the README.
+
+### Changed
+
+- **The content changelog now agrees with the content dashboard about the same URL.** Rows used
+  to be categorised one URL at a time, which made group verdicts unreachable there — a page added
+  into a templated catalog arrived as `other`. It is now categorised against the whole URL set,
+  so it arrives as `programmatic`. An API-side change, carried here because it changes what the
+  method returns.
+
+- **Five dashboard methods document the 404 they can return.** `no_data_available` means the
+  project exists and simply has no completed run for that dimension yet — not a missing project
+  and not a failed measurement. The distinction from `project_not_found` is now in the JSDoc you
+  see at the call site.
+
+- Nullable properties: **130, up from 129** — the one addition is `programmaticExampleUrls`.
+
 ## 3.0.0
 
 > **2.4.0 was never published.** It was built and tagged in the repository but never released to

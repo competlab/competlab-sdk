@@ -318,6 +318,11 @@ export type SummaryTopTrustResponse = {
     trustSignalCount: number;
 };
 
+/**
+ * How to read `trustSignalGap`, so you do not have to infer it. `compared` — an ordinary comparison against a measured field. `sole_among_tracked` — every one of the tracked competitors has a usable check in this run's data, all of them displaying zero homepage trust signals, and you do not: you are the only one, a measured finding and not missing data. `some_competitors_unmeasured` — at least one tracked competitor produced no usable check, so the comparison is INCOMPLETE, and that is all this state says: a measured competitor may still be leading, so read `trustSignalGap` and `topTrustCompetitor` before describing what the measured ones showed. `no_competitor_measured` — competitors are tracked and every one of their checks failed. `no_competitors_tracked` — no competitors are tracked, so nothing was attempted; this is not a failure. `customer_unmeasured` — your own domain could not be read this run, so there is no comparison to describe. Absent on runs recorded before this field shipped, which means the state was not computed — never read an absent value as `compared`. Two limits bound every reading. The set is YOUR TRACKED COMPETITORS — a list you chose, not a sample of a market — so it licenses nothing about your category or any vendor not on it: not 'no competitor offers this', not 'the only vendor', not 'unique in the market', not 'market leader'. And this dimension measures what a vendor DISPLAYS on its homepage, so the honest claim is always 'none of them displays it'; a vendor can hold SOC 2 and never badge it, and a zero here says nothing about what they hold.
+ */
+export type ComparisonState = 'sole_among_tracked' | 'some_competitors_unmeasured' | 'no_competitor_measured' | 'no_competitors_tracked' | 'customer_unmeasured' | 'compared';
+
 export type TechTrustDashboardSummaryResponse = {
     /**
      * Number of competitors checked in this run
@@ -347,6 +352,14 @@ export type TechTrustDashboardSummaryResponse = {
      * Your trust signal count minus the top competitor's (negative = you are behind), or null when there is no comparison to make: your own domain was unanalyzed, or no competitor was checked at all. A field of competitors all measured at zero is a real comparison and yields a real number — your own count, positive — not a null. A `0` means genuinely tied. Unlike `securityScoreGap`, this survives a shielded check — trust signals come from the HTML.
      */
     trustSignalGap: number | null;
+    /**
+     * How to read `trustSignalGap`, so you do not have to infer it. `compared` — an ordinary comparison against a measured field. `sole_among_tracked` — every one of the tracked competitors has a usable check in this run's data, all of them displaying zero homepage trust signals, and you do not: you are the only one, a measured finding and not missing data. `some_competitors_unmeasured` — at least one tracked competitor produced no usable check, so the comparison is INCOMPLETE, and that is all this state says: a measured competitor may still be leading, so read `trustSignalGap` and `topTrustCompetitor` before describing what the measured ones showed. `no_competitor_measured` — competitors are tracked and every one of their checks failed. `no_competitors_tracked` — no competitors are tracked, so nothing was attempted; this is not a failure. `customer_unmeasured` — your own domain could not be read this run, so there is no comparison to describe. Absent on runs recorded before this field shipped, which means the state was not computed — never read an absent value as `compared`. Two limits bound every reading. The set is YOUR TRACKED COMPETITORS — a list you chose, not a sample of a market — so it licenses nothing about your category or any vendor not on it: not 'no competitor offers this', not 'the only vendor', not 'unique in the market', not 'market leader'. And this dimension measures what a vendor DISPLAYS on its homepage, so the honest claim is always 'none of them displays it'; a vendor can hold SOC 2 and never badge it, and a zero here says nothing about what they hold.
+     */
+    trustComparisonState?: ComparisonState;
+    /**
+     * Tracked competitors that produced a usable check this run, excluding your own domain. The sample `trustSignalGap` was drawn from, and the denominator behind `trustComparisonState` — quote it whenever you quote the state, so a reader knows how large 'all of them' was. Absent on runs recorded before this field shipped, which means the figure was never computed; a real `0` is different and means every tracked competitor's check failed, and that run says so with `trustComparisonState: no_competitor_measured`.
+     */
+    comparableCompetitors?: number;
 };
 
 export type SecurityHeadersResponse = {
@@ -628,11 +641,11 @@ export type ContentSummaryCustomerResponse = {
      */
     totalUrls: number | null;
     /**
-     * Strategic URLs (excludes legal/other categories), or null when your own sitemap couldn't be analyzed this run. A `0` is a measured finding and the honest floor of the content comparison; a null means we never read the sitemap.
+     * Strategic URLs — the sum over the 9 strategic categories ONLY (Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars). Legal, Programmatic Pages, Other are counted in `categorizedCounts` and excluded here, so `totalUrls - strategicUrls` is NOT "legal plus junk": on a vendor that generates templated pages at scale, most of that difference is Programmatic Pages — a real content operation — and attributing it to noise understates them badly. Read `categorizedCounts.programmatic` before drawing any conclusion from the difference. Null when your own sitemap couldn't be analyzed this run. A `0` is a measured finding and the honest floor of the content comparison; a null means we never read the sitemap.
      */
     strategicUrls: number | null;
     /**
-     * URL counts per content category, or null when your own sitemap couldn't be analyzed this run. Nulled as a whole rather than returned all-zero, because an all-zero map reads as "measured, and every category is empty" — a much stronger claim than "we couldn't look". The keys are the 11 categories we classify into: blog, docs, tools, landing, caseStudies, comparison, integrations, changelog, webinars, legal, other. A category absent from the map has zero URLs; a category present with 0 was measured as empty. Note this map is WIDER than the set the gap analysis evaluates: Legal, Other are counted here but never assessed for gaps, advantages or on-track status, so a category with a count here and no entry in `criticalGaps` / `advantages` / `onTrack` may simply never have been a candidate. `strategicUrls` is the sum over the 9 evaluated ones, not over this whole map.
+     * URL counts per content category, or null when your own sitemap couldn't be analyzed this run. Nulled as a whole rather than returned all-zero, because an all-zero map reads as "measured, and every category is empty" — a much stronger claim than "we couldn't look". The keys are the 12 categories we classify into: blog, docs, tools, landing, caseStudies, comparison, integrations, changelog, webinars, legal, programmatic, other. A category absent from the map has zero URLs; a category present with 0 was measured as empty. Note this map is WIDER than the set the gap analysis evaluates: Legal, Programmatic Pages, Other are counted here but never assessed for gaps, advantages or on-track status, so a category with a count here and no entry in `criticalGaps` / `advantages` / `onTrack` may simply never have been a candidate. `strategicUrls` is the sum over the 9 evaluated ones, not over this whole map.
      */
     categorizedCounts: {
         [key: string]: number;
@@ -803,19 +816,19 @@ export type ContentDashboardSummaryResponse = {
      */
     comparableCompetitors: number;
     /**
-     * Content categories where you have zero content but competitors do. Only the 9 strategic categories are evaluated here: Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars. Legal, Other are counted in `categorizedCounts` but never assessed, so their absence from this list is not a verdict about them. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
+     * Content categories where you have zero content but competitors do. Only the 9 strategic categories are evaluated here: Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars. Legal, Programmatic Pages, Other are counted in `categorizedCounts` but never assessed, so their absence from this list is not a verdict about them. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
      */
     criticalGaps: Array<ContentCriticalGapResponse> | null;
     /**
-     * Content categories where you are significantly behind (>50%). Only the 9 strategic categories are evaluated here: Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars. Legal, Other are counted in `categorizedCounts` but never assessed, so their absence from this list is not a verdict about them. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
+     * Content categories where you are significantly behind (>50%). Only the 9 strategic categories are evaluated here: Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars. Legal, Programmatic Pages, Other are counted in `categorizedCounts` but never assessed, so their absence from this list is not a verdict about them. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
      */
     significantGaps: Array<ContentSignificantGapResponse> | null;
     /**
-     * Content categories where you lead all competitors. Only the 9 strategic categories are evaluated here: Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars. Legal, Other are counted in `categorizedCounts` but never assessed, so their absence from this list is not a verdict about them. A category missing from this list either wasn't evaluated or wasn't led — check it against that set before reporting either. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding. A null here in particular must NOT be read as leading in none.
+     * Content categories where you lead all competitors. Only the 9 strategic categories are evaluated here: Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars. Legal, Programmatic Pages, Other are counted in `categorizedCounts` but never assessed, so their absence from this list is not a verdict about them. A category missing from this list either wasn't evaluated or wasn't led — check it against that set before reporting either. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding. A null here in particular must NOT be read as leading in none.
      */
     advantages: Array<ContentAdvantageResponse> | null;
     /**
-     * Content categories where you are competitive (within threshold). Only the 9 strategic categories are evaluated here: Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars. Legal, Other are counted in `categorizedCounts` but never assessed, so their absence from this list is not a verdict about them. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
+     * Content categories where you are competitive (within threshold). Only the 9 strategic categories are evaluated here: Blog Posts, Documentation, Free Tools, Landing Pages, Case Studies, Comparison Pages, Integrations, Changelog, Webinars. Legal, Programmatic Pages, Other are counted in `categorizedCounts` but never assessed, so their absence from this list is not a verdict about them. Null in TWO cases, and they are different facts you must not report as the same one: your own sitemap couldn't be analyzed this run (`customer.contentAnalysisAvailable` is present — our reach into YOUR site), or no competitor returned usable content data (`comparableCompetitors` is 0 — our reach into THEIRS, with your own site measured fine). Check both before saying whose check failed. An empty array is neither: it means we compared and found none, which is a real finding.
      */
     onTrack: Array<ContentOnTrackResponse> | null;
     /**
@@ -861,15 +874,23 @@ export type ContentCompetitorResponse = {
      */
     totalUrls: number | null;
     /**
-     * Strategic URLs (excludes legal/other categories), or null exactly when `contentDataAvailable` is present.
+     * Strategic URLs — the sum over the 9 strategic categories ONLY. Legal, Programmatic Pages, Other are counted in `categorizedCounts` and excluded here, so `totalUrls - strategicUrls` is NOT "legal plus junk" — most of it may be Programmatic Pages, which is a content operation rather than noise. Null exactly when `contentDataAvailable` is present.
      */
     strategicUrls: number | null;
     /**
-     * URL counts by content category, or null if categorization unavailable
+     * URL counts by content category, or null if categorization unavailable. Keys are the 12 categories we classify into: blog, docs, tools, landing, caseStudies, comparison, integrations, changelog, webinars, legal, programmatic, other. A category ABSENT from the map was not computed for this run — older runs predate categories added since — while a category present with `0` was measured as empty. Those are different facts; do not report an absent key as a zero.
      */
     categorizedCounts?: {
         [key: string]: number;
     } | null;
+    /**
+     * Up to 5 real URLs sampled from this competitor's `programmatic` pages, spread across the sections they came from. Empty when the competitor publishes none.
+     *
+     * Why these ship: the platform reports templated pages WITHOUT judging why a vendor generates them, because a URL shape cannot show intent — for a programmatic-SEO player it is the growth engine, for a reference database it is plumbing. That refusal is only honest if you can settle it yourself, and these URLs do that in seconds. **Open two or three before characterising a large `programmatic` count.** They are evidence for a count, not a measurement of their own — sampled at read time, never stored, so they may differ between calls.
+     *
+     * `null` exactly when `contentDataAvailable` is present: we read no sitemap, so there is nothing to sample. An empty ARRAY is the different, measured fact that we read the sitemap and it has no programmatic pages.
+     */
+    programmaticExampleUrls: Array<string> | null;
     /**
      * Number of READABLE sitemaps this run for this competitor (0 when `contentDataAvailable` is present)
      */
@@ -951,13 +972,13 @@ export type ContentChangelogItemResponse = {
      */
     totalRemoved: number;
     /**
-     * Added URLs grouped by content category. By default each category is capped at 3 sample URLs (numeric totals remain accurate via `addedCounts`). Pass `allUrlsPerCategory=true` to return full URL lists.
+     * Added URLs grouped by content category. Categories are the same ones the content dashboard reports, decided over the competitor's whole sitemap rather than over these URLs alone — so a page added into a templated catalog arrives as `programmatic`, matching what the dashboard says about the same page. By default each category is capped at 3 sample URLs (numeric totals remain accurate via `addedCounts`). Pass `allUrlsPerCategory=true` to return full URL lists.
      */
     addedByCategory: {
         [key: string]: unknown;
     };
     /**
-     * Removed URLs grouped by content category. By default each category is capped at 3 sample URLs (numeric totals remain accurate via `removedCounts`). Pass `allUrlsPerCategory=true` to return full URL lists.
+     * Removed URLs grouped by content category, decided over the sitemap the URL was removed FROM. By default each category is capped at 3 sample URLs (numeric totals remain accurate via `removedCounts`). Pass `allUrlsPerCategory=true` to return full URL lists.
      */
     removedByCategory: {
         [key: string]: unknown;
@@ -2958,11 +2979,11 @@ export type SitemapVisualizerSitemapInfoResponse = {
      */
     type: 'index' | 'urlset';
     /**
-     * Count of URLs collected from this sitemap (post 10k-cap)
+     * Number of URLs from this sitemap included in the analysis, which covers at most 10,000 URLs in total. On a row of type 'index' this is 0, because the URLs are counted on the individual sitemaps it lists — except the top-level row, which carries the total for the whole analysis.
      */
     urlCount: number;
     /**
-     * Count of URLs this sitemap actually declared (pre 10k-cap)
+     * Number of URLs this sitemap declares, before the 10,000-URL analysis limit. 0 on rows of type 'index' for the same reason as above.
      */
     actualUrlCount: number;
 };
@@ -3000,9 +3021,9 @@ export type SitemapVisualizerCategorizedUrlResponse = {
      */
     url: string;
     /**
-     * Content-category classification (forked taxonomy, kebab-case)
+     * Content-category classification (kebab-case)
      */
-    category: 'blog' | 'docs' | 'tools' | 'landing' | 'legal' | 'case-studies' | 'comparison' | 'integrations' | 'changelog' | 'webinars' | 'careers' | 'other';
+    category: 'blog' | 'docs' | 'tools' | 'landing' | 'legal' | 'case-studies' | 'comparison' | 'integrations' | 'changelog' | 'webinars' | 'careers' | 'programmatic' | 'other';
     /**
      * Path depth — segment count of URL.pathname after filtering empty parts
      */
@@ -3069,6 +3090,10 @@ export type SitemapVisualizerCategoriesResponse = {
      * Careers / hiring pages
      */
     careers: SitemapVisualizerCategoryBreakdownResponse;
+    /**
+     * Templated pages generated from a database or pattern — per-item catalog entries, reference tables. Assigned to a group of 25 or more sibling URLs under one parent path whose slugs are machine-generated, never to a single URL. Describes how the pages are generated, not their purpose or quality. Example URLs ship in `insights.sampleUrlsByCategory.programmatic`.
+     */
+    programmatic: SitemapVisualizerCategoryBreakdownResponse;
     /**
      * Uncategorized pages
      */
@@ -3153,7 +3178,7 @@ export type SitemapVisualizerDepthDistributionResponse = {
 
 export type SitemapVisualizerInsightsResponse = {
     /**
-     * Bucketization of URLs by content freshness
+     * URL counts grouped by how recently each page was last modified
      */
     freshness: SitemapVisualizerFreshnessBucketsResponse;
     /**
@@ -3171,7 +3196,7 @@ export type SitemapVisualizerInsightsResponse = {
         [key: string]: Array<string>;
     };
     /**
-     * Deterministic, rule-based interpretation string (1-3 sentences)
+     * Plain-language read of what this sitemap shows, in 1-3 sentences. The same sitemap always produces the same text.
      */
     summary: string;
 };
@@ -3186,7 +3211,7 @@ export type SitemapVisualizerToolResponse = {
      */
     fetchedAt: string;
     /**
-     * Coarse status — 'ok'/'partial' for success, 'not-found'/'access-denied'/'invalid' as first-class envelope states
+     * Overall outcome of the scan — 'ok'/'partial' for success, 'not-found'/'access-denied'/'invalid' as first-class envelope states. 'partial' means a limit stopped the scan early; 'invalid' means a document was retrieved and could not be parsed as XML, never that nothing arrived.
      */
     status: 'ok' | 'partial' | 'not-found' | 'access-denied' | 'invalid';
     /**
@@ -3198,7 +3223,7 @@ export type SitemapVisualizerToolResponse = {
      */
     sitemaps: Array<SitemapVisualizerSitemapInfoResponse>;
     /**
-     * True if the URL list was capped at 10,000 or child-sitemap fan-out hit the 20-child cap
+     * True if a limit stopped the scan before it read everything: more than 10,000 URLs, more than 20 sitemaps, or sitemap indexes nested deeper than the scan walks. The counts below describe what was read, not the whole site.
      */
     truncated: boolean;
     /**
@@ -3222,7 +3247,7 @@ export type SitemapVisualizerToolResponse = {
      */
     validation: SitemapVisualizerValidationResultResponse;
     /**
-     * AI-consumable insight layer — freshness, depth distribution, stale-page count, category samples, summary
+     * Interpreted findings — freshness, depth distribution, stale-page count, category samples, summary
      */
     insights: SitemapVisualizerInsightsResponse;
 };
@@ -4123,7 +4148,7 @@ export type PublicContentControllerGetContentChangelogV1Data = {
          */
         competitorId?: string;
         /**
-         * Filter by content category (blog, docs, tools, landing, legal, caseStudies, comparison, integrations, changelog, webinars, other)
+         * Filter by content category (blog, docs, tools, landing, caseStudies, comparison, integrations, changelog, webinars, legal, programmatic, other). Changelog rows are categorized per URL as they are detected, so the group-derived `programmatic` label does not appear on changelog entries — templated pages arrive here under `other`. Use the dashboard's `categorizedCounts` for the programmatic total.
          */
         category?: string;
         /**

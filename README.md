@@ -258,6 +258,29 @@ if (isMeasured(you.tierCount)) {
 }
 ```
 
+### Two neighbours of `null` that are not `null`
+
+**An empty array is a measurement.** `null` means we never looked; `[]` means we looked and there
+was nothing there. `programmaticExampleUrls` is the clearest case — `null` exactly when
+`contentDataAvailable` is present (no sitemap read, nothing to sample), `[]` when we read the
+sitemap and the competitor genuinely publishes no templated pages.
+
+**An absent optional field is not a default.** Fields added to a dimension only exist on runs
+recorded after they shipped, so an older run omits them. `trustComparisonState` is the one to
+watch: it tells you how to read `trustSignalGap`, and `undefined` means the state was never
+computed — it does **not** mean `'compared'`.
+
+```typescript
+const summary = data.item.summary;
+
+if (summary.trustComparisonState === undefined) {
+  // Pre-dates the field. You know the gap number, not whether it was a full comparison.
+} else if (summary.trustComparisonState === 'some_competitors_unmeasured') {
+  // Incomplete: at least one competitor produced no usable check this run.
+  // A measured competitor may still be ahead — read the gap before describing it.
+}
+```
+
 ## Error handling
 
 Every method throws `CompetLabError` on failure — there is no error field on the result, so
