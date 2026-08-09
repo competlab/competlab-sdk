@@ -4148,9 +4148,9 @@ export type PublicContentControllerGetContentChangelogV1Data = {
          */
         competitorId?: string;
         /**
-         * Filter by content category (blog, docs, tools, landing, caseStudies, comparison, integrations, changelog, webinars, legal, programmatic, other). Changelog rows are categorized per URL as they are detected, so the group-derived `programmatic` label does not appear on changelog entries — templated pages arrive here under `other`. Use the dashboard's `categorizedCounts` for the programmatic total.
+         * Filter by content category (blog, docs, tools, landing, caseStudies, comparison, integrations, changelog, webinars, legal, programmatic, other). Changelog rows carry the same category the content dashboard reports for the same URL, decided over the competitor's whole sitemap rather than over the changed URLs alone — so a page added into a templated catalog filters under `programmatic`, not `other`.
          */
-        category?: string;
+        category?: 'blog' | 'docs' | 'tools' | 'landing' | 'caseStudies' | 'comparison' | 'integrations' | 'changelog' | 'webinars' | 'legal' | 'programmatic' | 'other';
         /**
          * By default each item returns up to 3 sample URLs per category. Set true to return the full URL list per category. High-activity competitors can produce large responses — combine with `category` and `competitorId` filters to scope. Subject to an internal byte cap; check `truncated` in the response.
          */

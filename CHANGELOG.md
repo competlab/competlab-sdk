@@ -3,6 +3,46 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 3.2.0
+
+Two documentation fixes from the API, one of which changes a type. Minor rather than a patch
+for the reason below: nothing that worked at runtime breaks, but a build can.
+
+### Changed
+
+- **`content.changelog({ category })` is now a union of the twelve categories** instead of
+  `string`. The API has always rejected an unknown category with a `400` — the type just never
+  said so, and `category: 'programatic'` compiled. Now it doesn't.
+
+  **This can break a build.** A value that isn't known at compile time — a CLI argument, a
+  query-string parameter, a column from a database — no longer assigns to it. Narrow it first:
+
+  ```typescript
+  type ChangelogCategory = NonNullable<
+    NonNullable<Parameters<typeof cl.content.changelog>[1]>['category']
+  >;
+
+  const CATEGORIES = [
+    'blog', 'docs', 'tools', 'landing', 'caseStudies', 'comparison',
+    'integrations', 'changelog', 'webinars', 'legal', 'programmatic', 'other',
+  ] as const satisfies readonly ChangelogCategory[];
+
+  const isCategory = (v: string): v is ChangelogCategory =>
+    (CATEGORIES as readonly string[]).includes(v);
+
+  if (isCategory(input)) await cl.content.changelog('proj_abc', { category: input });
+  ```
+
+  The `satisfies` clause is the point: if the API adds a thirteenth category, the list above
+  fails to compile on the next SDK upgrade rather than silently going stale.
+
+- **The `category` parameter no longer contradicts itself.** Its description still claimed that
+  templated pages arrive on changelog entries as `other` and that the dashboard was the only
+  place carrying a programmatic total. That stopped being true when the API started categorising
+  changelog rows over the whole URL set — which 3.1.0 shipped, while this comment still said
+  otherwise on the parameter you read before making the call. Filtering by `programmatic` works,
+  and now the JSDoc says so.
+
 ## 3.1.0
 
 Regenerated from the deployed API contract. Everything here is additive — no field changed type,

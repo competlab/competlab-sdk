@@ -806,10 +806,24 @@
             "name": "category",
             "required": false,
             "in": "query",
-            "description": "Filter by content category (blog, docs, tools, landing, caseStudies, comparison, integrations, changelog, webinars, legal, programmatic, other). Changelog rows are categorized per URL as they are detected, so the group-derived `programmatic` label does not appear on changelog entries — templated pages arrive here under `other`. Use the dashboard's `categorizedCounts` for the programmatic total.",
+            "description": "Filter by content category (blog, docs, tools, landing, caseStudies, comparison, integrations, changelog, webinars, legal, programmatic, other). Changelog rows carry the same category the content dashboard reports for the same URL, decided over the competitor's whole sitemap rather than over the changed URLs alone — so a page added into a templated catalog filters under `programmatic`, not `other`.",
             "schema": {
               "example": "blog",
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "blog",
+                "docs",
+                "tools",
+                "landing",
+                "caseStudies",
+                "comparison",
+                "integrations",
+                "changelog",
+                "webinars",
+                "legal",
+                "programmatic",
+                "other"
+              ]
             }
           },
           {
