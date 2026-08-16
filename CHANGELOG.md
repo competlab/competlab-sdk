@@ -3,6 +3,126 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 4.0.0
+
+The API rebuilt how it reads a site's robots.txt, and the shape of the answer changed with it.
+Major because seven fields and three types were **deleted, not deprecated** — if you read any of
+them, this release breaks your build, which is the point. They were answering a question the API
+no longer believes is answerable.
+
+### Removed — the single AI-access verdict
+
+- **`allowsAiAccess`**, **`blockedAiBotsCount`** (tech-trust summary) and **`aiBotsBlocked`**
+  (`robotsTxt`) are gone.
+
+  One boolean cannot say whether AI can reach a site, because the map from assistant to crawler is
+  neither one-to-one nor symmetric. Microsoft Copilot has no crawler of its own — it grounds on
+  the Bing index, so `bingbot` decides it. Gemini Apps is decided by `Google-Extended`, a token
+  that fetches nothing at all yet governs both training and that assistant. A site could block
+  every OpenAI token by name and still be reachable by an assistant nobody considered, and
+  `allowsAiAccess: false` said the opposite.
+
+  There is **no replacement boolean**, deliberately. Read `aiAccess.assistantAccess` and answer
+  per assistant.
+
+### Removed — the AI accessibility score
+
+- **`AiCrawlerCheckerAccessibilityResponse`** (`item.accessibility`, the 0–100 `score`, `label`,
+  `interpretation`, `color`) and **`typicalScoreRange`** on `industryPosition`.
+
+  The score weighted training crawlers most heavily, so blocking them — a legitimate content
+  decision that costs no visibility — marked correct configurations red. It also moved when our
+  crawler catalog changed rather than when your site did. Deleted rather than rebalanced, because
+  a weighted score over a set we control has no defensible denominator.
+
+- **`AiCrawlerCheckerStrategyResponse`** (`item.strategy`) is gone with it. It sorted crawlers into
+  "training vs retrieval", a taxonomy that gets `Google-Extended` silently wrong in the direction
+  that flatters you.
+
+- **`AiCrawlerCheckerHeadersResponse`** (`item.headers`) is gone; the homepage read now carries
+  that ground.
+
+### Added — `aiAccess`, and one rule that will bite
+
+`TechTrustCompetitorResponse.aiAccess` carries per-assistant reach across six assistants (ChatGPT,
+Claude, Perplexity, Microsoft Copilot, Google AI Overviews, Gemini Apps) and per-operator training
+access across nine operators. Each verdict names the crawlers that decided it and, where a rule
+decided it, that directive verbatim with its line number.
+
+New exported types: `AiAccessResponse`, `AiAccessMeasurementResponse`, `AiAccessSourcesReadResponse`,
+`AiAccessSurfaceReadResponse`, `AiAccessExplanationResponse`, `AssistantAccessResponse`,
+`ModelTrainingAccessResponse`, `DecidingCrawlerResponse`, `RuleThatMayNotWorkResponse`,
+`RuleWithUnintendedScopeResponse`, `AiCrawlerCheckerAccessControlReadResponse`,
+`AiCrawlerCheckerHomepageReadResponse`.
+
+**The rule: absent is not empty, and neither is open.** When the robots.txt could not be read,
+`assistantAccess` and `modelTrainingAccess` are **omitted entirely**. An empty array would claim
+we evaluated all six assistants and none can reach the site — a different fact from "we could not
+read the file". So the idiom that looks safe is the bug:
+
+```typescript
+const { data } = await cl.techTrust.dashboard(projectId);
+
+for (const c of data.item.competitors) {
+  // WRONG — turns "we never measured it" into "nothing can reach them"
+  const reach = c.aiAccess?.assistantAccess ?? [];
+
+  // right: branch on the status first
+  if (!c.aiAccess) continue;                                   // no AI-access section at all
+  switch (c.aiAccess.measurement.status) {
+    case 'could_not_measure':
+      break;                                                   // no verdicts exist; say so
+    case 'measured_no_policy_found':                           // a real 404 on robots.txt —
+    case 'measured':                                           // the standard allows everyone
+      for (const a of c.aiAccess.assistantAccess ?? []) {
+        console.log(a.assistantName, a.crawlerAccessStatus);
+      }
+  }
+}
+```
+
+`crawlerAccessStatus` takes `can_reach_site`, `can_reach_part_of_site`, `cannot_reach_site` or
+`blocked_but_may_not_be_honoured`. **Partial reach counts as reach** — counting only
+`can_reach_site` reported Wikipedia as reachable by none of the six, when the truth was all six
+reaching part of it. No count is stored anywhere; take `array.length`, and when you publish it,
+name the denominator as our roster rather than as AI in general.
+
+**Those values are documented, not typed.** `crawlerAccessStatus`, `trainingAccessStatus`,
+`measurement.status`, `AiAccessSurfaceReadResponse.state`, `crawlerPurpose` and `honoursRobotsTxt`
+all generate as `string`, because the API publishes them without an `enum`. So the switch above
+compiles with no exhaustiveness checking and a typo in a `case` fails silently at runtime rather
+than loudly at build. Until the API declares them, narrow them yourself:
+
+```typescript
+const REACH = [
+  'can_reach_site', 'can_reach_part_of_site',
+  'cannot_reach_site', 'blocked_but_may_not_be_honoured',
+] as const;
+type Reach = (typeof REACH)[number];
+
+const isReach = (v: string): v is Reach => (REACH as readonly string[]).includes(v);
+```
+
+Note the asymmetry while it lasts: the free tool's equivalents on the same spec **do** carry
+`enum`, so `AiCrawlerCheckerAccessControlReadResponse.reason` is a real four-value union while the
+monitored dimension's neighbours are bare strings.
+
+And a verdict says an assistant is **permitted to fetch** the content. It never says it cites it.
+
+### Changed — reason enums narrowed to what can actually occur
+
+`RobotsTxtUnavailableResponse.reason` went from eight values to **five**, and the free checker's
+`AiCrawlerCheckerAccessControlReadResponse.reason` is a different set of **four** — they are not
+versions of each other. The removed values were never emittable on those surfaces. Its `state`
+likewise drops `not_attempted`, which that fetcher cannot produce since it always attempts every
+resource. If you switched exhaustively over these, the removed arms are now unreachable code.
+
+### Changed — trust signals
+
+`categories.disclosures` is now **required** rather than optional, and the taxonomy is 26 signals
+across five categories (was 24 across four): a new `disclosures` category holding a privacy-policy
+signal, and `hasLGPDNotice` added to `compliance`.
+
 ## 3.3.0
 
 ### Fixed

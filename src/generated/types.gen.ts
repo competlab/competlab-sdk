@@ -279,15 +279,7 @@ export type SummaryCustomerResponse = {
      */
     techStackCount: number | null;
     /**
-     * Number of AI bots blocked by your robots.txt, or null exactly when `allowsAiAccess` is null — the robots.txt posture wasn't measured this run (whole domain unanalyzed, or only the robots.txt couldn't be retrieved). Never read a null as 0: '0 bots blocked' is a measured claim.
-     */
-    blockedAiBotsCount: number | null;
-    /**
-     * Whether your domain allows AI crawler access, or null when it couldn't be measured this run — either your whole domain wasn't analyzed (accompanied by `techTrustAnalysisAvailable`) or only your robots.txt couldn't be retrieved (no discriminator accompanies it). A null with no discriminator can also arrive if the run stored no measurements at all, so treat null as unknown on its own — never only when a discriminator confirms it. Never report an AI-access posture off a null. A domain with no robots.txt at all measures as `true` — a real 'allows all crawlers' fact.
-     */
-    allowsAiAccess: boolean | null;
-    /**
-     * Honest-degradation discriminator. Present only when your own domain couldn't be analyzed this run — see `reason`. When present, EVERY metric in this object is null — `securityGrade`, `securityScore`, `trustSignalCount`, `techStackCount`, `allowsAiAccess`, `blockedAiBotsCount` — and so are `securityScoreGap` and `trustSignalGap`. Nothing here is a measured fact; the nulls say that on their own, and this field records why. Only `domain` remains populated, and only when a domain was on file. Distinct from `securitySignalsAvailable`, which is a PARTIAL degradation: there the check ran and only the header-derived numbers are unknown, so the trust and tech counts stay measured. Absent on healthy scans (the normal path).
+     * Honest-degradation discriminator. Present only when your own domain couldn't be analyzed this run — see `reason`. When present, EVERY metric in this object is null — `securityGrade`, `securityScore`, `trustSignalCount`, `techStackCount` — and so are `securityScoreGap` and `trustSignalGap`. Nothing here is a measured fact; the nulls say that on their own, and this field records why. Only `domain` remains populated, and only when a domain was on file. Distinct from `securitySignalsAvailable`, which is a PARTIAL degradation: there the check ran and only the header-derived numbers are unknown, so the trust and tech counts stay measured. Absent on healthy scans (the normal path).
      */
     techTrustAnalysisAvailable?: TechTrustUnavailableResponse;
 };
@@ -395,7 +387,7 @@ export type SecurityHeadersResponse = {
 
 export type TrustSignalCategoriesResponse = {
     /**
-     * Compliance signals detected, out of 5 looked for: SOC 2, ISO 27001, HIPAA, GDPR, CCPA. A 0 means none of those specific signals was found — it is not a general statement about the site's privacy or compliance posture, and no other signal may be inferred from it. Evidence strength differs within the category, so a positive count needs care too: SOC 2, ISO 27001 and HIPAA match a rendered trust badge, but GDPR and CCPA are page-wide text matches, so a consent banner or a footer link registers one. Report a GDPR/CCPA hit as "the page mentions it", never as a compliance posture. The privacy-regime signals here are US and EU only — LGPD, PIPEDA, PDPA and similar are not detected — though SOC 2 and ISO 27001 are held worldwide, so this is not a US/EU-only list.
+     * Compliance signals detected, out of 6 looked for: SOC 2, ISO 27001, HIPAA, GDPR, CCPA, LGPD. A 0 means none of those specific signals was found — it is not a general statement about the site's privacy or compliance posture, and no other signal may be inferred from it. Evidence strength differs within the category, so a positive count needs care too: SOC 2, ISO 27001 and HIPAA match a rendered trust badge, but GDPR, CCPA and LGPD are text matches, so a consent banner or a footer link registers one. Report those three as "the page mentions it", never as a compliance posture. PIPEDA, PDPA and other regimes are not detected at all.
      */
     compliance: number;
     /**
@@ -407,14 +399,18 @@ export type TrustSignalCategoriesResponse = {
      */
     socialProof: number;
     /**
-     * Certifications detected, out of 8 looked for: PCI DSS, FedRAMP, ISO 9001, ISO 14001, SOC 1, SOC 3, NIST, HITRUST. A 0 means none of those badges was DISPLAYED on the homepage — a vendor may hold any of them without publishing it, so this is never evidence that they lack a certification.
+     * Certifications detected, out of 8 looked for: PCI DSS, FedRAMP, ISO 9001, ISO 14001, SOC 1, SOC 3, NIST, HITRUST. A 0 means none of those badges was DISPLAYED on the homepage — a vendor may hold any of them without publishing it, so this is never evidence that they lack a certification. Each name must match as a whole word against page text or a badge image, so a page containing "administration" or "Afghanistan" no longer registers NIST.
      */
     certifications: number;
+    /**
+     * Disclosure links detected, out of 1 looked for: Privacy Policy. Matches a homepage link whose target or text names a privacy policy in English, Spanish, Portuguese, French, German, Italian, Dutch, Polish, Russian or Ukrainian. It is evidence the page LINKS one — never an assessment of what the policy says. A 0 means the homepage carries no such link; the vendor may still publish a policy elsewhere on the site.
+     */
+    disclosures: number;
 };
 
 export type TrustSignalsResponse = {
     /**
-     * Total trust signals detected on this domain, out of 24 we look for across the four categories below. These are signals published on the HOMEPAGE — a vendor may hold a certification without displaying it, so this measures visible trust-building, not the underlying facts. Distinct from the standalone trust-signals scan tool, which uses its own wider taxonomy and its own categories.
+     * Total trust signals detected on this domain, out of 26 we look for across the five categories below. These are signals published on the HOMEPAGE — a vendor may hold a certification without displaying it, so this measures visible trust-building, not the underlying facts. Most of the NAMED programmes in this list are US or EU ones: the six review platforms are the anglophone B2B SaaS review ecosystem, and the privacy regimes are GDPR, CCPA and LGPD, with PIPEDA, PDPA and others not detected. The list is not uniformly so — ISO 27001, ISO 9001, ISO 14001 and PCI DSS are held worldwide, and the social-proof and disclosure signals describe a practice rather than a programme, so they are market-neutral. That is what bounds a count: a vendor selling outside the US and EU commonly scores on the market-neutral signals and near-zero on the named programmes. Compare counts within a market rather than across markets, and when a total is low, say WHICH part is low rather than reporting the total as a level of trust. Distinct from the standalone trust-signals scan tool, which uses its own wider taxonomy and its own categories.
      */
     totalCount: number;
     /**
@@ -463,9 +459,9 @@ export type RobotsTxtUnavailableResponse = {
      */
     available: boolean;
     /**
-     * Why the robots.txt analysis is unavailable: the robots.txt file could not be retrieved this run (network timeout or error). Distinct from a domain that genuinely has no robots.txt — that is a measured 'allows all crawlers' result and carries no discriminator.
+     * Why the robots.txt analysis is unavailable — what WE observed, never a claim about the site. 'access_transport_error' — no answer came back at all. 'access_http_error_status' — the server answered with a status that settles nothing, such as 5xx, 403 or 429. 'access_body_not_robots' — a success status carrying markup rather than a robots.txt, usually a bot-protection page. 'access_body_too_large' — the file exceeded our transfer ceiling. 'access_fallback_unavailable' — our second attempt was unavailable too. Distinct from a domain that genuinely has no robots.txt — that is a measured 'allows all crawlers' result and carries no discriminator.
      */
-    reason: 'robots_fetch_failed';
+    reason: 'access_transport_error' | 'access_http_error_status' | 'access_body_not_robots' | 'access_body_too_large' | 'access_fallback_unavailable';
 };
 
 export type RobotsTxtResponse = {
@@ -474,17 +470,219 @@ export type RobotsTxtResponse = {
      */
     exists: boolean | null;
     /**
-     * AI bots explicitly blocked in robots.txt, or null when the file could not be retrieved. An empty ARRAY means we read the file and it blocks no AI bots — a real finding; a null means we never read it. Never derive an AI-access posture from a null.
-     */
-    aiBotsBlocked: Array<string> | null;
-    /**
      * Total number of disallow rules, or null when the file could not be retrieved. A measured 0 means we read the file and it disallows nothing.
      */
     totalRules: number | null;
     /**
-     * Honest-degradation discriminator. Present only when the robots.txt file could not be retrieved this run (network timeout or error). When present, every other field in this object — `exists`, `aiBotsBlocked`, `totalRules` — is null, so no AI-access posture can be derived from them. Absent on healthy scans AND on domains that genuinely have no robots.txt: that is a measured 'allows all crawlers' result, and it arrives as `exists: false` with no marker.
+     * Honest-degradation discriminator. Present only when the robots.txt file could not be retrieved this run (network timeout or error). When present, every other field in this object — `exists`, `totalRules` — is null, and the sibling `aiAccess` block carries no verdicts at all, so no AI-access posture can be derived from either. Absent on healthy scans AND on domains that genuinely have no robots.txt: that is a measured 'allows all crawlers' result, and it arrives as `exists: false` with no marker.
      */
     robotsTxtAvailable?: RobotsTxtUnavailableResponse;
+};
+
+export type AiAccessSurfaceReadResponse = {
+    /**
+     * `read` (we looked and got an answer), `measured_absence` (we looked and the surface genuinely carries nothing — a real 404), `could_not_read` (we looked and failed), or `not_attempted` (this surface was outside what this check set out to read). The last two are different facts and must never be reported alike: one is a failure, the other is a scope boundary.
+     */
+    state: string;
+    /**
+     * Why the read failed. Present if and only if `state` is `could_not_read`. Values name what WE observed, never what the site did wrong — e.g. `access_http_error_status`, `access_transport_error`, `access_body_not_robots`, `access_body_too_large`, `access_response_headers_unavailable`, `access_page_body_unavailable`, `access_fallback_unavailable`.
+     */
+    reason?: string;
+    /**
+     * The HTTP status observed, where one was. Recorded on success too — the difference between a 404 and a 503 is the fact this whole envelope exists to keep.
+     */
+    httpStatusCode?: number;
+};
+
+export type AiAccessSourcesReadResponse = {
+    /**
+     * robots.txt, which decides whether a crawler may REACH the site. Site-wide.
+     */
+    robotsTxt: AiAccessSurfaceReadResponse;
+    /**
+     * `<meta name="robots">` on the fetched page, which decides whether what was fetched may be USED. PER PAGE — we read the homepage, so a `not_attempted` here means no page-level directive was consulted for any verdict below.
+     */
+    pageMetaRobotsTag: AiAccessSurfaceReadResponse;
+    /**
+     * `X-Robots-Tag` on the HTTP response — the same controls, delivered in headers. Also per page. Microsoft names Copilot in NOARCHIVE and Google names AI Overviews in nosnippet, so when this and `pageMetaRobotsTag` are `not_attempted`, verdicts for those two assistants rest on robots.txt alone.
+     */
+    httpResponseHeaders: AiAccessSurfaceReadResponse;
+};
+
+export type AiAccessExplanationResponse = {
+    /**
+     * Stable identifier, so a consumer can branch without parsing prose.
+     */
+    code: string;
+    /**
+     * The sentence. Render it verbatim; do not paraphrase or substitute your own.
+     */
+    text: string;
+};
+
+export type AiAccessMeasurementResponse = {
+    /**
+     * `measured`, `measured_no_policy_found` (a real 404 — the site publishes no robots.txt, which under the standard allows every crawler), or `could_not_measure`. Check this before reading anything else: on `could_not_measure` there are no verdicts at all, and their absence is not openness.
+     */
+    status: string;
+    /**
+     * When this was ATTEMPTED — which is when it was measured on any status other than `could_not_measure`, and on that one is the time we tried and failed rather than the time of a measurement. A single response carries one reading per domain and no history, so it supports 'where do we stand' and not 'what changed'; a change question needs two responses taken apart.
+     */
+    measuredAt: string;
+    /**
+     * Why the read failed. Present only when `status` is `could_not_measure`.
+     */
+    couldNotMeasureReason?: string;
+    /**
+     * Which of the three control surfaces were actually read, each with its own outcome. Read this before quoting any verdict as complete: a `not_attempted` here is a limit of the check, not a property of the site.
+     */
+    sourcesRead: AiAccessSourcesReadResponse;
+    /**
+     * Sentences this product is willing to say about the measurement, each with a stable `code` and the `text` to render verbatim. ABSENT when there is nothing that needs saying. It is never an empty array: emptiness would assert that we weighed what needed saying and concluded nothing did.
+     */
+    explanations?: Array<AiAccessExplanationResponse>;
+};
+
+export type DecidingCrawlerResponse = {
+    /**
+     * The crawler's user-agent token exactly as its operator publishes it.
+     */
+    userAgentToken: string;
+    /**
+     * What blocking this crawler costs. `fetches_pages_to_cite_in_answers` costs visibility; `collects_training_data` costs none and is a content decision; `builds_search_index_that_grounds_assistants` costs visibility indirectly, through the assistant built on that index; `seo_or_backlink_analysis`, `renders_link_previews` and `checks_ad_landing_pages` have no AI consequence. `policy_token_does_not_crawl` names a token that issues no HTTP requests of its own — it is a CONTROL the operator applies to content fetched by a different crawler, and blocking it still changes what an assistant may do, which is why such a token can decide a `cannot_reach_site`. `Google-Extended` is the case to understand: Google documents it as governing both model training and grounding in Gemini Apps, so one directive carries a training consequence and a visibility consequence at once. Read this field before treating any block as costly or costless.
+     */
+    crawlerPurpose: string;
+    /**
+     * Whether a rule against this token actually binds. `yes` it binds; `no` it does not; `not_for_user_initiated_requests` and `not_for_security_or_integrity_checks` mean the operator publishes a carve-out for that case, so a rule is written but not guaranteed; `unknown` means nobody publishes either way. ⚠️ WHAT 'BINDS' MEANS DEPENDS ON THE NEIGHBOURING `crawlerPurpose`. For a crawler that fetches, it is whether the crawler obeys the directive. For `policy_token_does_not_crawl` it cannot be — such a token issues no requests — and there it means the OPERATOR honours the directive when deciding what to do with content another crawler already fetched. Both are 'the rule has effect'; only the mechanism differs. ⚠️ THIS FIELD IS NOT ON ITS OWN A STATEMENT OF OBSERVED BEHAVIOUR. It carries the operator's published position OR a measured result, and `honoursRobotsTxtEvidence` is what tells you which. Never quote this value without reading that one.
+     */
+    honoursRobotsTxt: string;
+    /**
+     * How well we know the value beside it, and it qualifies that value rather than merely annotating it. `operator_documented` is the operator's own words. `independently_measured` cites a study, so the value is an observation. `disputed` means a credible allegation the operator denies — a `yes` under `disputed` is the operator's CLAIM and contested, so word it as a claim and never as 'this crawler respects robots.txt'. `undocumented` means nobody publishes either way; never read it as 'ignores'.
+     */
+    honoursRobotsTxtEvidence: string;
+    /**
+     * WHICH KIND OF RULE decided this crawler, which is what says where to edit. `names_this_crawler`: a group naming it decided the outcome — somebody chose that. `wildcard_catch_all`: no group names it and the `User-agent: *` rule decided it, frequently a rule written before the crawler existed and applying to it by accident. A named group REPLACES the wildcard group rather than adding to it (RFC 9309 §2.2.1), so naming a crawler lifts it out of the catch-all entirely. ABSENT when nothing restricted this crawler — there is no audience for a rule that does not exist.
+     */
+    decidedByRuleFor?: 'names_this_crawler' | 'wildcard_catch_all';
+    /**
+     * The directive that decided it, verbatim, so the claim can be checked against the site's own file rather than taken on trust.
+     */
+    decidedByDirective?: string;
+    /**
+     * 1-based line number of that directive.
+     */
+    decidedByLineNumber?: number;
+};
+
+export type AssistantAccessResponse = {
+    /**
+     * The assistant, as its users know it.
+     */
+    assistantName: string;
+    /**
+     * Whether this assistant can obtain this site's content: `can_reach_site`, `cannot_reach_site`, `can_reach_part_of_site`, or `blocked_but_may_not_be_honoured` — the last meaning a rule is written against crawlers whose operators publish an exemption, so protection is not guaranteed. Count the assistants in this array to get totals; no count is stored. IT IS NOT A CITATION MEASUREMENT: it says an assistant is permitted to obtain the content, never that it mentions or cites this site. Note also that a `cannot_reach_site` may be decided by a crawler whose `crawlerPurpose` is `policy_token_does_not_crawl` — that is consistent, not contradictory: see that field.
+     */
+    crawlerAccessStatus: string;
+    /**
+     * `whole_site` or `homepage_only`. robots.txt is site-wide; `nosnippet` and NOARCHIVE are per page and we read the homepage, so a verdict leaning on them describes that page alone.
+     */
+    appliesTo: string;
+    /**
+     * The crawlers that decided this verdict — the names behind the status. Never publish the verdict without them: 'blocked' is a claim, 'blocked because these two tokens are disallowed' is a finding.
+     */
+    decidedByCrawlers: Array<DecidingCrawlerResponse>;
+    /**
+     * Sentences to render verbatim about THIS assistant. ABSENT when there is nothing to say — never an empty array, which would claim we considered what needed saying and found nothing.
+     */
+    explanations?: Array<AiAccessExplanationResponse>;
+};
+
+export type ModelTrainingAccessResponse = {
+    /**
+     * The operator whose training use is governed. Usually the company whose models are affected; `Common Crawl` is the exception — it trains nothing, but publishes the open corpus much training is built from, so a site owner blocking it is making this same decision.
+     */
+    modelOperatorName: string;
+    /**
+     * `may_use_content_for_training`, `may_not_use_content_for_training`, `may_use_part_of_content_for_training`, or `blocked_but_may_not_be_honoured` — the last meaning a rule is written but the deciding crawler is not reliably bound by robots.txt, either because its operator publishes an exemption or because it is measured not to obey the file at all. Read `decidedByCrawlers[].honoursRobotsTxt` and `honoursRobotsTxtEvidence` to tell those two apart; they are different facts and only the second means the content should be treated as taken. AS A RULE, blocking training crawlers costs no AI visibility and is a legitimate content decision — do not report it as a problem, a gap, or something to undo. THE RULE HAS ONE EXCEPTION AND YOU MUST CHECK FOR IT: a few tokens govern training AND an assistant at once, `Google-Extended` being the documented case. Where the same crawler in `decidedByCrawlers` also appears under an entry in `assistantAccess`, that block DOES carry a visibility consequence and the exception applies — report it. The check is mechanical: match on `userAgentToken`. Never suppress a finding on the strength of the general rule without running it.
+     */
+    trainingAccessStatus: string;
+    /**
+     * The crawlers that decided this verdict. Match their `userAgentToken` against the tokens under `assistantAccess[].decidedByCrawlers` to find the dual-purpose case the status description warns about.
+     */
+    decidedByCrawlers: Array<DecidingCrawlerResponse>;
+    /**
+     * Sentences to render verbatim about THIS operator. ABSENT when there is nothing to say — never an empty array, which would claim we considered what needed saying and found nothing.
+     */
+    explanations?: Array<AiAccessExplanationResponse>;
+};
+
+export type RuleThatMayNotWorkResponse = {
+    /**
+     * The user agent exactly as the site wrote it, so they can find the line.
+     */
+    userAgentInFile: string;
+    /**
+     * The directive as written.
+     */
+    directiveInFile: string;
+    /**
+     * Why the rule may not have effect. `operator_exempts_user_initiated_requests`: the operator publishes that robots.txt may not apply when a person asks for the page directly, so the rule is a request rather than protection. `crawler_does_not_honour_robots_txt`: a published study observed it fetching pages after being disallowed. Both point at the crawler's operator. A third cause — a token we do not recognise — is deliberately NOT reported per rule; see `additionalObservations` for our coverage, stated once.
+     */
+    whyItMayNotWork: 'operator_exempts_user_initiated_requests' | 'crawler_does_not_honour_robots_txt';
+    /**
+     * The sentence to render verbatim, naming the operator and citing evidence.
+     */
+    explanation: AiAccessExplanationResponse;
+};
+
+export type RuleWithUnintendedScopeResponse = {
+    /**
+     * The user agent exactly as the site wrote it, so they can find the group.
+     */
+    userAgentInFile: string;
+    /**
+     * `escapes_restrictions_others_get` — the only kind emitted. The site's `User-agent: *` group disallows these paths, and naming this crawler in a group of its own REPLACES that group for it rather than adding to it, so the crawler is permitted where the rest of the web is not.
+     */
+    kind: 'escapes_restrictions_others_get';
+    /**
+     * The wildcard-group directives this crawler is exempt from, verbatim as written in the file. A FLOOR, not the complete list: only directives closing a content area are reported, so ordinary hygiene paths a crawler also escapes — `/wp-admin/`, `/cgi-bin/`, `/feed/` — are deliberately omitted as findings that cost the reader nothing. Belongs to THIS crawler alone; two crawlers in one file can escape different subsets, so never quote one finding's list against another's name.
+     */
+    affectedRules: Array<string>;
+    /**
+     * The sentence to render verbatim. It states the mechanism and stops: whether the exemption was intended is not something we can measure, and privileging AI crawlers over other traffic is a legitimate strategy. Do not report this as an error.
+     */
+    explanation: AiAccessExplanationResponse;
+};
+
+export type AiAccessResponse = {
+    /**
+     * Whether we measured it, and why not when we didn't.
+     */
+    measurement: AiAccessMeasurementResponse;
+    /**
+     * One verdict per AI assistant we track. ABSENT when the policy could not be measured — an empty array would claim we evaluated every assistant and none can reach the site, which is a different fact entirely.
+     */
+    assistantAccess?: Array<AssistantAccessResponse>;
+    /**
+     * One verdict per model operator. Absent for the same reason as `assistantAccess`.
+     */
+    modelTrainingAccess?: Array<ModelTrainingAccessResponse>;
+    /**
+     * Rules in this site's robots.txt that may not have the effect they appear to have — each attributable to the CRAWLER'S OPERATOR, never to the site. Two causes: the operator publishes a carve-out (commonly for fetches a person asked for directly), or a published study measured the crawler ignoring disallow directives. An empty array means we looked and found none; absent means we did not look. It NEVER suggests replacing a user-agent token: distinguishing a retired token from one we never catalogued needs a registry of live user agents that nobody publishes, and guessing would have told sites their `Omgili` rule was dead in favour of its own predecessor.
+     */
+    rulesThatMayNotWork?: Array<RuleThatMayNotWorkResponse>;
+    /**
+     * Rules that worked exactly as written and did NOT reach the crawler beside them — the counterpart to `rulesThatMayNotWork`. Under the robots exclusion standard a group naming a crawler REPLACES the wildcard group for it, so writing `User-agent: GPTBot` / `Allow: /` beneath a `*` group that closes three sections leaves GPTBot the only agent permitted into those sections. Same absent-versus-empty rule as the array above: `[]` means we looked and the file has none.
+     */
+    rulesWithUnintendedScope?: Array<RuleWithUnintendedScopeResponse>;
+    /**
+     * Facts about the file worth stating even where they change no verdict. Currently one: how much of THIS file our catalog can speak to, e.g. 'names 34 user agents besides the wildcard group, and our catalog covers 24 of them'. That is our coverage gap disclosed with the universe it is drawn from — it is never a claim that the tokens we do not carry are wrong or obsolete.
+     */
+    additionalObservations?: Array<AiAccessExplanationResponse>;
+    /**
+     * Which edition of our crawler and assistant tables produced these verdicts, so a stored result stays explainable after the tables change.
+     */
+    crawlerCatalogVersion: string;
 };
 
 export type DnsLookupUnavailableResponse = {
@@ -539,9 +737,13 @@ export type TechTrustCompetitorResponse = {
      */
     technologyStack: TechnologyStackResponse;
     /**
-     * Robots.txt analysis and AI bot blocking
+     * Robots.txt analysis
      */
     robotsTxt: RobotsTxtResponse;
+    /**
+     * Which AI assistants can reach this site, and which model operators may train on it. ABSENT when the check carries no AI-access information — read that as not evaluated, never as 'open'. A check that attempted the measurement and failed is NOT absent: it carries this section with `measurement.status` of `could_not_measure`, which is a different fact and is reportable as one.
+     */
+    aiAccess?: AiAccessResponse;
     /**
      * DNS and email infrastructure
      */
@@ -626,7 +828,7 @@ export type ContentUnavailableResponse = {
      */
     available: boolean;
     /**
-     * Why your own content is unmeasured this run. 'content_fetch_failed' = your sitemap couldn't be read; 'content_url_not_configured' = no sitemap is set up for your own domain.
+     * Why your own content is unmeasured this run. 'content_fetch_failed' = your sitemap couldn't be read; 'content_url_not_configured' = no working sitemap could be found for your own domain — none was discovered, or the ones we hold no longer resolve. It describes what we could not find, not something you failed to set up: sitemap locations are re-discovered periodically, so a site that reorganises its sitemaps reads this way until the next re-discovery.
      */
     reason: 'content_fetch_failed' | 'content_url_not_configured';
 };
@@ -651,7 +853,7 @@ export type ContentSummaryCustomerResponse = {
         [key: string]: number;
     } | null;
     /**
-     * Present ONLY when your own sitemap couldn't be analyzed this run (fetch failed, or no sitemap configured) — see `reason`. When present, every metric in this object is null, `strategicUrlGap` is null, and all four gap lists (`criticalGaps`, `significantGaps`, `advantages`, `onTrack`) and their four count siblings are null. Nothing here is a measured fact; the nulls say so on their own, and this field records why. Only `domain` remains populated — and where no domain was on file it holds the literal placeholder `unknown` rather than being omitted, so treat that exact string as 'no domain', not as a site name. This flag is a sufficient reason for those eight nulls but NOT a necessary one: they are also null when your own sitemap read fine and no competitor returned usable data (`comparableCompetitors` is 0), with this flag absent — so never conclude from a null gap list alone that YOUR check failed. Note too the difference between a null list and an empty one: `[]` means we compared and found none, which is a real finding.
+     * Present ONLY when your own sitemap couldn't be analyzed this run (fetch failed, or no working sitemap could be found) — see `reason`. When present, every metric in this object is null, `strategicUrlGap` is null, and all four gap lists (`criticalGaps`, `significantGaps`, `advantages`, `onTrack`) and their four count siblings are null. Nothing here is a measured fact; the nulls say so on their own, and this field records why. Only `domain` remains populated — and where no domain was on file it holds the literal placeholder `unknown` rather than being omitted, so treat that exact string as 'no domain', not as a site name. This flag is a sufficient reason for those eight nulls but NOT a necessary one: they are also null when your own sitemap read fine and no competitor returned usable data (`comparableCompetitors` is 0), with this flag absent — so never conclude from a null gap list alone that YOUR check failed. Note too the difference between a null list and an empty one: `[]` means we compared and found none, which is a real finding.
      */
     contentAnalysisAvailable?: ContentUnavailableResponse;
 };
@@ -855,7 +1057,7 @@ export type ContentCompetitorUnavailableResponse = {
      */
     available: boolean;
     /**
-     * Why this competitor's content couldn't be counted this run. 'no_sitemap_published' = a measured absence — no working sitemap exists (nothing discovered, or every discovered/conventional location returns 404), so their content is invisible to sitemap-based analysis (a real fact about them, not a scan failure). 'sitemap_fetch_failed' = our fetch or parse failed this run — nothing was measured, so no verdict about the competitor's content may be derived from this row. On the dashboard this reflects the latest known fetch state — a newer run's in-flight failure can briefly surface here until that run completes; in run-detail responses the reason is scoped to that run.
+     * Why this competitor's content couldn't be counted this run. 'no_sitemap_published' = no working sitemap was found for them — nothing was discovered, or every location we know of returns 404. Read it as 'nothing findable where we look', not as proof they publish none: we re-discover sitemap locations periodically, so a competitor who has MOVED theirs reads this way until we re-check. What it does support is that their content is currently invisible to sitemap-based analysis, and to sitemap-reading crawlers. 'sitemap_fetch_failed' = our fetch or parse failed this run — nothing was measured, so no verdict about the competitor's content may be derived from this row. On the dashboard this reflects the latest known fetch state — a newer run's in-flight failure can briefly surface here until that run completes; in run-detail responses the reason is scoped to that run.
      */
     reason: 'no_sitemap_published' | 'sitemap_fetch_failed';
 };
@@ -870,7 +1072,7 @@ export type ContentCompetitorResponse = {
      */
     isOwn: boolean;
     /**
-     * Total URLs discovered across all sitemaps for this competitor, or null exactly when `contentDataAvailable` is present (no readable sitemap this run). Never read a null as 0: '0 URLs' is a measured claim about a readable sitemap.
+     * Total DISTINCT URLs across this competitor's sitemaps, or null exactly when `contentDataAvailable` is present (no readable sitemap this run). Never read a null as 0: '0 URLs' is a measured claim about a readable sitemap. Distinct matters and is not a formality — two of a competitor's stored sitemap locations can resolve to the same set of pages after they reorganise, and each page is counted once regardless. So this figure need not equal the sum of the per-sitemap counts you may see elsewhere, and `sitemapCount` counts the files they publish rather than the ones that contributed here. Do not reconcile the two; this is the page count.
      */
     totalUrls: number | null;
     /**
@@ -896,7 +1098,7 @@ export type ContentCompetitorResponse = {
      */
     sitemapCount: number;
     /**
-     * Honest-degradation discriminator (per-competitor). Present only when NO sitemap could be read for this competitor this run — see `reason` for whether that is a measured absence (they publish no sitemap) or our fetch failure. When present, `totalUrls` and `strategicUrls` are null and `categorizedCounts` is null — do not derive any content verdict (e.g. 'competitor has no blog') from this row. Absent whenever at least one sitemap was read (the normal path). On the dashboard, rows reflect the latest known state per sitemap, so a fetch failure in a newer, still-running run can briefly mark a row unavailable until that run completes; run-detail rows are scoped to their own run.
+     * Honest-degradation discriminator (per-competitor). Present only when NO sitemap could be read for this competitor this run — see `reason` for whether that is a measured absence (no working sitemap could be found for them, a claim whose limits `reason` spells out) or our fetch failure. When present, `totalUrls` and `strategicUrls` are null and `categorizedCounts` is null — do not derive any content verdict (e.g. 'competitor has no blog') from this row. Absent whenever at least one sitemap was read (the normal path). On the dashboard, rows reflect the latest known state per sitemap, so a fetch failure in a newer, still-running run can briefly mark a row unavailable until that run completes; run-detail rows are scoped to their own run.
      */
     contentDataAvailable?: ContentCompetitorUnavailableResponse;
 };
@@ -1277,7 +1479,7 @@ export type PricingSummaryCustomerResponse = {
      */
     domain: string;
     /**
-     * Your popular plan price (numeric amount), or null if unavailable. Check `popularPlanCurrency` before rendering a currency symbol next to it — this amount is in whatever currency your pricing page uses, not necessarily USD — and `popularPlanUnit` before describing it, since it may be priced per seat rather than flat.
+     * The price of the plan named by `popularPlanName` — which is not always the plan you badge as most popular; see that field. Null if unavailable. Check `popularPlanCurrency` before rendering a currency symbol next to it — this amount is in whatever currency your pricing page uses, not necessarily USD — and `popularPlanUnit` before describing it, since it may be priced per seat rather than flat.
      */
     popularPlanPrice?: number | null;
     /**
@@ -1289,7 +1491,7 @@ export type PricingSummaryCustomerResponse = {
      */
     popularPlanUnit?: string | null;
     /**
-     * Your popular plan name, or null if unavailable
+     * The plan we use to represent your pricing: your own 'most popular' badge when that plan lists a comparable monthly price, otherwise the cheapest plan on your page that does — a free or quote-only flagship carries no amount to position against a market. So this is not always the plan you feature. `popularPlanPrice`, `popularPlanCurrency` and `popularPlanUnit` all describe THIS plan, whichever one it is. Null if your pricing wasn't measured this run.
      */
     popularPlanName?: string | null;
     /**
@@ -2748,36 +2950,79 @@ export type PtTrustSignalsRequestDto = {
 
 export type AiCrawlerCheckerCrawlerResultResponse = {
     /**
-     * Robots.txt user-agent token for this crawler
+     * Robots.txt user-agent token for this crawler, exactly as the operator publishes it. Matching is case-insensitive per RFC 9309.
      */
     userAgent: string;
     /**
-     * Human-readable display name
+     * Name to show. Identical to the user-agent token — a prettified variant would be a second name for the same thing, and the point of showing it is that you can search your own file for it.
      */
     displayName: string;
     /**
-     * Operating organization
+     * The organization that operates this crawler. Where the operator does not document the token at all, the name says so rather than implying they claim it.
      */
     operator: string;
     /**
-     * Crawler purpose category
+     * What this crawler is FOR — the field that says what blocking it actually costs. 'fetches_pages_to_cite_in_answers': blocking costs VISIBILITY in AI answers. 'collects_training_data': blocking protects your content and costs no visibility; it is a legitimate choice, not a problem. 'builds_search_index_that_grounds_assistants': an ordinary search crawler that an assistant grounds on, so a rule written for search reaches the assistant too. 'policy_token_does_not_crawl': fetches nothing; it carries a policy that applies to other crawlers' fetches. 'seo_or_backlink_analysis', 'renders_link_previews', 'checks_ad_landing_pages': no AI consequence. 'purpose_unknown': we see the token in the wild and could not source what it does — our gap, not a defect in your file.
      */
-    category: 'training' | 'retrieval' | 'hybrid';
+    crawlerPurpose: 'fetches_pages_to_cite_in_answers' | 'collects_training_data' | 'builds_search_index_that_grounds_assistants' | 'policy_token_does_not_crawl' | 'seo_or_backlink_analysis' | 'renders_link_previews' | 'checks_ad_landing_pages' | 'purpose_unknown';
     /**
-     * Per-crawler access status derived from robots.txt rules
+     * Whether this crawler's operator says it obeys robots.txt. 'not_for_user_initiated_requests' matters most: several operators publish that their rules may not apply when a person pastes a URL and asks about it directly, so a rule against those reads as 'you have asked them not to crawl you', not 'they cannot reach you'.
+     */
+    honoursRobotsTxt: 'yes' | 'no' | 'not_for_user_initiated_requests' | 'not_for_security_or_integrity_checks' | 'unknown';
+    /**
+     * How well we know that, which governs how firmly the claim is worded. 'operator_documented': their own words. 'independently_measured': a study, cited with its limits. 'disputed': a credible allegation the operator denies, reported as a dispute and never as a verdict. 'undocumented': nobody has published anything — which is not the same as 'ignores robots.txt'.
+     */
+    honoursRobotsTxtEvidence: 'operator_documented' | 'independently_measured' | 'disputed' | 'undocumented';
+    /**
+     * The operator's own documentation page. Absent where we could not find one.
+     */
+    operatorDocumentationUrl?: string;
+    /**
+     * When a person last read that operator page. Operators move tokens and rewrite policies without notice, so this says what was published ON A DATE rather than implying it is current. Claims soften as it ages.
+     */
+    operatorDocsLastCheckedOn: string;
+    /**
+     * Whether this crawler can reach the site. 'conditional' means the homepage is reachable but a rule closes a recognised content area to it — ordinary operational paths such as /wp-admin/ do not count.
      */
     status: 'allowed' | 'blocked' | 'conditional';
     /**
-     * Raw robots.txt line that triggered the status, or null if no directive matched
+     * The robots.txt line that decided the status, verbatim, or null when no directive matched.
      */
     matchingDirective: string | null;
+    /**
+     * 1-based line number of that directive, so you can go straight to it in your own file.
+     */
+    matchingDirectiveLine?: number;
+    /**
+     * WHO THE RULE WAS WRITTEN FOR, which decides what you would edit. 'names_this_crawler': a group naming this crawler decided it — a policy somebody chose. 'wildcard_catch_all': no group names it and your `User-agent: *` rule decided it — frequently a rule written before the crawler existed, applying to it by accident. A named group REPLACES the wildcard group rather than adding to it (RFC 9309 §2.2.1), so naming a crawler lifts it out of the catch-all. Absent when nothing restricted this crawler.
+     */
+    ruleAudience?: 'names_this_crawler' | 'wildcard_catch_all';
+};
+
+export type AiCrawlerCheckerAccessControlReadResponse = {
+    /**
+     * Whether we read THIS resource, and if not, why. The same block appears on every resource the check reads — robots.txt, the homepage, llms.txt and llms-full.txt — so read it against the field it sits on rather than assuming robots.txt. 'read' means we retrieved and interpreted it. 'measured_absence' means the server answered 404 and the resource genuinely is not published — a real result, and for robots.txt specifically that is the state RFC 9309 treats as allowing every crawler. 'could_not_read' means we could not reach or interpret it, so nothing beside it may be read as a finding about the site; where that happens to robots.txt, the entire verdict layer is absent rather than assumed. A failed read is not an open site.
+     */
+    state: 'read' | 'measured_absence' | 'could_not_read';
+    /**
+     * Why the read did not complete. Present only when state is 'could_not_read'. Each value names what WE observed, never a claim about the site. 'access_transport_error' — no answer came back at all. 'access_http_error_status' — the server answered with a status that settles nothing, such as 5xx, 403 or 429. 'access_body_not_robots' — a success status carrying markup rather than a robots.txt, usually a bot-protection page. 'access_body_not_expected_format' — the same thing on llms.txt: a success status carrying markup where a plain-text file was expected, which is a page we could not read and never evidence that the file is absent.
+     */
+    reason?: 'access_transport_error' | 'access_http_error_status' | 'access_body_not_robots' | 'access_body_not_expected_format';
+    /**
+     * HTTP status observed for this file, where one was observed
+     */
+    httpStatusCode?: number;
 };
 
 export type AiCrawlerCheckerRobotsTxtResponse = {
     /**
-     * Whether the robots.txt file was successfully fetched
+     * Whether a robots.txt file was read. False covers both 'the site publishes none' and 'we could not read it' — see 'read' for which.
      */
     found: boolean;
+    /**
+     * Whether we actually read the file, and if not, why. Check this before interpreting anything else in the response.
+     */
+    read: AiCrawlerCheckerAccessControlReadResponse;
     /**
      * Raw text content of the robots.txt file when fetched successfully
      */
@@ -2799,18 +3044,26 @@ export type AiCrawlerCheckerMetaTagResultResponse = {
     content: string;
 };
 
-export type AiCrawlerCheckerHeadersResponse = {
+export type AiCrawlerCheckerHomepageReadResponse = {
     /**
-     * Value of the X-Robots-Tag header from the homepage response
+     * Whether we read the homepage, and if not, why. Read this before interpreting `metaTags` or `xRobotsTag` — their absence means nothing until you know the page was fetched.
+     */
+    read: AiCrawlerCheckerAccessControlReadResponse;
+    /**
+     * AI-related meta robots directives found on the homepage. ABSENT when the page was not read — never an empty array, which would claim we looked and the page carries none.
+     */
+    metaTags?: Array<AiCrawlerCheckerMetaTagResultResponse>;
+    /**
+     * Value of the X-Robots-Tag response header, where the homepage carried one. Present even on an error status, because a header on an error response is still a real observation.
      */
     xRobotsTag?: string;
 };
 
 export type AiCrawlerCheckerLlmsTxtResultResponse = {
     /**
-     * Whether the file was found at /llms.txt or /llms-full.txt
+     * Whether we read the file, and if not, why. There is deliberately no `found` boolean: `read` means the file exists and was read, `measured_absence` means the server returned 404 and it genuinely is not published, and `could_not_read` means we do not know — a refused request, an error status, or markup served with a 200 by a bot-protection page. A single boolean collapsed all of those into 'this site has no llms.txt', which is a claim about the site invented from a failed request.
      */
-    found: boolean;
+    read: AiCrawlerCheckerAccessControlReadResponse;
     /**
      * Count of markdown section headers (`# foo` lines)
      */
@@ -2825,78 +3078,48 @@ export type AiCrawlerCheckerLlmsTxtResultResponse = {
     approxTokens?: number;
 };
 
-export type AiCrawlerCheckerAccessibilityResponse = {
-    /**
-     * 0-100 weighted composite accessibility score
-     */
-    score: number;
-    /**
-     * Coarse-grained accessibility label
-     */
-    label: 'Fully Open' | 'Mostly Open' | 'Mixed Access' | 'Mostly Blocked';
-    /**
-     * Human-readable interpretation of the score
-     */
-    interpretation: string;
-    /**
-     * UI hint color for the score
-     */
-    color: 'teal' | 'blue' | 'orange' | 'red';
-};
-
-export type AiCrawlerCheckerStrategyResponse = {
-    /**
-     * Stable machine-readable strategy type
-     */
-    type: 'block-nothing' | 'block-training-allow-retrieval' | 'block-everything' | 'block-retrieval-allow-training' | 'mixed';
-    /**
-     * Human-readable strategy label
-     */
-    label: string;
-    /**
-     * Description of the detected strategy
-     */
-    description: string;
-};
-
 export type AiCrawlerCheckerIndustryPositionResponse = {
     /**
      * Human-readable industry label
      */
     industryLabel: string;
     /**
-     * Average percentage of sites in this industry blocking at least one AI bot
+     * Published share of sites in this vertical blocking at least one AI crawler OF ANY KIND, training crawlers included. ⚠️ This is NOT the same quantity as assistantAccess: it is dominated in practice by training crawlers, which do not affect whether assistants can cite a site. Do not read it as 'this share of the industry is unreachable to AI assistants'.
      */
-    industryAvgBlockRate: number;
+    industryAnyAiCrawlerBlockRate: number;
     /**
-     * Typical accessibility score range for this industry [min, max]
+     * False where the published figure is interpolated between studies rather than directly measured for this vertical. The insight sentence marks interpolated figures with '~'.
      */
-    typicalScoreRange: Array<number>;
+    figureIsMeasured: boolean;
     /**
-     * Where this domain sits relative to the typical score range
+     * The study the figure comes from.
      */
-    position: 'below-average' | 'average' | 'above-average';
+    source: string;
     /**
-     * Human-readable sentence explaining the position in industry context
+     * When the source was published or last read. Absent where we do not know — absent means unknown, never current.
+     */
+    sourceDate?: string;
+    /**
+     * The figure in a sentence, stating what it counts. It deliberately does not place this site on a scale against it, because the two measure different things.
      */
     insight: string;
 };
 
 export type AiCrawlerCheckerRecommendationResponse = {
     /**
-     * Stable machine-readable id (e.g. 'ip-protection', 'visibility-risk')
+     * Stable machine-readable id
      */
     id: string;
     /**
-     * Short recommendation title
+     * Short title
      */
     title: string;
     /**
-     * Recommendation detail
+     * The detail. Recommendations EXPLAIN what a configuration costs; they suggest undoing one only where the evidence says it was not chosen deliberately — a rule naming a crawler is a decision, a wildcard rule that swept one up is usually not. Blocking a training crawler is never presented as a problem to fix.
      */
     description: string;
     /**
-     * Priority for the recommendation
+     * Priority, ordered by consequence rather than by how many crawlers are involved.
      */
     priority: 'high' | 'medium' | 'low';
 };
@@ -2915,54 +3138,50 @@ export type AiCrawlerCheckerToolResponse = {
      */
     industry: 'news-media' | 'arts-entertainment' | 'law-government' | 'finance-healthcare' | 'saas-tech' | 'ecommerce' | 'other';
     /**
-     * All 21 catalog entries with derived per-crawler status
+     * What this answer covers and what it does not, in one sentence, meant to be shown beside the result rather than buried. Present whenever a verdict was reached.
      */
-    crawlers: Array<AiCrawlerCheckerCrawlerResultResponse>;
+    scopeOfAnswer?: string;
+    /**
+     * Every catalog crawler with its derived status — evidence you can check line by line, not a scoreboard. Nothing counts this array; the headline counts assistants. Absent when robots.txt could not be read, because we evaluated no crawler and an empty array would read as 'we looked and found none'.
+     */
+    crawlers?: Array<AiCrawlerCheckerCrawlerResultResponse>;
     /**
      * robots.txt fetch result
      */
     robotsTxt: AiCrawlerCheckerRobotsTxtResponse;
     /**
-     * AI-related meta robots directives captured from the homepage
+     * The homepage read, carrying the AI meta robots directives and X-Robots-Tag it produced. Both live under ONE read outcome because they come from ONE request — and that request is the one most likely to fail, since robots.txt is a small text file while the homepage is HTML behind whatever bot protection the site runs. Check `homepage.read` before concluding anything from what is or is not here: an unread page used to publish as an empty tag list plus a missing header, which reads as two findings agreeing that the site has no page-level directives when it is one failure counted twice.
      */
-    metaTags: Array<AiCrawlerCheckerMetaTagResultResponse>;
+    homepage: AiCrawlerCheckerHomepageReadResponse;
     /**
-     * Values captured from homepage response headers
-     */
-    headers: AiCrawlerCheckerHeadersResponse;
-    /**
-     * /llms.txt stats (AI search file spec)
+     * /llms.txt — the read outcome, and stats only where we read one.
      */
     llmsTxt: AiCrawlerCheckerLlmsTxtResultResponse;
     /**
-     * /llms-full.txt stats (AI search file spec)
+     * /llms-full.txt — the read outcome, and stats only where we read one.
      */
     llmsFullTxt: AiCrawlerCheckerLlmsTxtResultResponse;
     /**
-     * Accessibility verdict — score + label + interpretation
+     * THE HEADLINE: whether each AI assistant can fetch this site's pages, with the crawlers that decided each verdict named beside it. Count this array to say '4 of 6' — no count is stored anywhere, so a number and the names behind it cannot disagree. There is deliberately no aggregate score: a weighted 0-100 has no unit, no defensible denominator, and moves when our crawler catalog changes rather than when the site does. Absent when robots.txt could not be read.
      */
-    accessibility: AiCrawlerCheckerAccessibilityResponse;
+    assistantAccess?: Array<AssistantAccessResponse>;
     /**
-     * Detected strategy — opt-in/opt-out pattern across crawler categories
+     * Whether each model operator may use this site's content for training — reported as a NEUTRAL fact, never as a problem. Blocking a training crawler usually protects content at no cost to whether assistants can cite the site, because the two are governed by different crawlers, and many well-advised sites block training deliberately. ⚠️ THE EXCEPTION IS MECHANICAL AND MUST BE CHECKED, NOT ASSUMED: a few tokens govern training AND an assistant at once — Google documents `Google-Extended` as controlling both model training and grounding in Gemini Apps. Where a token under `decidedByCrawlers` here also appears under `assistantAccess[].decidedByCrawlers`, that block DOES cost reach. Match on `userAgentToken` before repeating the general rule. Absent when robots.txt could not be read.
      */
-    strategy: AiCrawlerCheckerStrategyResponse;
+    modelTrainingAccess?: Array<ModelTrainingAccessResponse>;
     /**
-     * Industry-context positioning — benchmark percentile and insight
+     * A published industry figure for context, with its source. Read the field descriptions before comparing it to anything — it counts a different quantity from assistantAccess. Absent when robots.txt could not be read.
      */
-    industryPosition: AiCrawlerCheckerIndustryPositionResponse;
+    industryPosition?: AiCrawlerCheckerIndustryPositionResponse;
     /**
-     * Prioritized recommendations for closing gaps
+     * What to do, ordered by consequence. Absent when robots.txt could not be read — advice built on a file we never saw could break a working configuration.
      */
-    recommendations: Array<AiCrawlerCheckerRecommendationResponse>;
-    /**
-     * Ready-to-paste robots.txt patch for the detected blocked crawlers
-     */
-    robotsSnippet: string;
+    recommendations?: Array<AiCrawlerCheckerRecommendationResponse>;
 };
 
 export type PtAiCrawlerCheckerRequestDto = {
     /**
-     * Target domain to check for AI-crawler accessibility. Accepts a bare hostname or a full URL — normalized (lowercased, scheme and path stripped) before checking.
+     * Target domain to check. Accepts a bare hostname or a full URL — normalized (lowercased, scheme and path stripped) before checking.
      */
     domain: string;
     /**
@@ -2981,11 +3200,11 @@ export type SitemapVisualizerSitemapInfoResponse = {
      */
     type: 'index' | 'urlset';
     /**
-     * Number of URLs from this sitemap included in the analysis, which covers at most 10,000 URLs in total. On a row of type 'index' this is 0, because the URLs are counted on the individual sitemaps it lists — except the top-level row, which carries the total for the whole analysis.
+     * Number of URLs from this sitemap included in the analysis, which covers at most 10,000 URLs in total. A row of type 'index' carries the total for the sitemaps it lists, which are also listed individually — so summing every row double-counts. For the analysis-wide total use `metrics.totalUrls`.
      */
     urlCount: number;
     /**
-     * Number of URLs this sitemap declares, before the 10,000-URL analysis limit. 0 on rows of type 'index' for the same reason as above.
+     * Number of URLs this sitemap declares, before the 10,000-URL analysis limit. On a row of type 'index', the total its own children declare.
      */
     actualUrlCount: number;
 };
@@ -3000,7 +3219,7 @@ export type SitemapVisualizerMetricsResponse = {
      */
     totalActualUrls: number;
     /**
-     * Number of sitemap resources fetched
+     * Number of sitemap resources actually read, counting both 'index' and 'urlset' rows. Never what the site declares — anything the scan could not read is in `unreadSitemaps` instead.
      */
     totalSitemaps: number;
     /**
@@ -3213,23 +3432,31 @@ export type SitemapVisualizerToolResponse = {
      */
     fetchedAt: string;
     /**
-     * Overall outcome of the scan — 'ok'/'partial' for success, 'not-found'/'access-denied'/'invalid' as first-class envelope states. 'partial' means a limit stopped the scan early; 'invalid' means a document was retrieved and could not be parsed as XML, never that nothing arrived.
+     * Overall outcome of the scan — 'ok'/'partial' for success, 'not-found'/'access-denied'/'invalid' as first-class envelope states. 'partial' means the scan did not cover the whole corpus: either a limit stopped it early, or a sitemap the site declares could not be read — check `truncated` and `unreadSitemaps` for which. 'invalid' means a document was retrieved and could not be parsed as XML, never that nothing arrived.
      */
     status: 'ok' | 'partial' | 'not-found' | 'access-denied' | 'invalid';
     /**
-     * How the sitemap was discovered
+     * Where discovery started, not the only place it looked. Every scan reads both the conventional /sitemap.xml and every Sitemap: directive robots.txt declares, so a site publishing several sitemaps returns all of them; `sitemaps` is the authoritative list of what was actually read. 'sitemap-xml' means the conventional path returned a sitemap; 'robots-txt' that it did not and robots.txt declared at least one instead — which may itself have failed to load, so check `sitemaps`; 'provided' that you supplied the URL; 'none' that neither source yielded anything.
      */
     source: 'sitemap-xml' | 'robots-txt' | 'provided' | 'none';
     /**
-     * All sitemap resources fetched or attempted
+     * Every sitemap resource actually read, in the order the scan read them. When `urls` is returned it is the concatenation of each 'urlset' row's URLs in this same order. A sitemap that could not be read is not here: if the site declared it in robots.txt it is named in `unreadSitemaps`, and if it was a child listed inside an index, `validation.validIndex` reports that the index names children the scan could not retrieve.
      */
     sitemaps: Array<SitemapVisualizerSitemapInfoResponse>;
     /**
-     * True if a limit stopped the scan before it read everything: more than 10,000 URLs, more than 20 sitemaps, or sitemap indexes nested deeper than the scan walks. The counts below describe what was read, not the whole site.
+     * True if the scan stopped short of the whole corpus: more than 10,000 URLs, its ceiling of 20 sitemaps under any one index or 20 declared in robots.txt, sitemap indexes nested deeper than it walks, or a declared sitemap it could not read. The counts below describe what was read, not the whole site.
      */
     truncated: boolean;
     /**
-     * True if the root sitemap returned 401/403
+     * Sitemaps declared in this site's robots.txt that the scan could not read: the URL is not fetchable as written (relative rather than absolute, or a host we will not follow), a redirect led off the site's own domain, the server refused it, or nothing came back. Each one is a promise robots.txt makes and does not keep — search engines and AI crawlers read the same directives, so it is worth fixing on your own site. Absent when every declared sitemap was read. Two cases are deliberately not listed: one that answered 404, which is a confirmed absence rather than an unread document; and one the scan skipped after using up its own budget, which `truncated` alone covers. Capped at 20 entries.
+     */
+    unreadSitemaps?: Array<string>;
+    /**
+     * How many declared sitemaps went unread. Absent when none did. This is the number to report — it is not `unreadSitemaps.length`, which is capped at 20 and omits any value carrying a scheme the scan will not repeat back. A scan can report unread sitemaps with an empty list, and that still means the site's robots.txt is at fault rather than the scan's limits.
+     */
+    unreadSitemapCount?: number;
+    /**
+     * True if the conventional /sitemap.xml returned 401/403
      */
     accessDenied: boolean;
     /**
@@ -3384,9 +3611,9 @@ export type AgentAdoptionCheckResponse = {
      */
     category: 'discoverability' | 'accessControl' | 'contentReadability' | 'agentEndpoints';
     /**
-     * Tri-state check result; 'neutral' is informational
+     * Check outcome. 'pass' and 'fail' are measured verdicts about the site. 'neutral' is informational, or a check whose dependency was skipped. 'could-not-measure' means WE could not look — a server error, a timeout, a bot challenge — and says nothing about the site. Both 'neutral' and 'could-not-measure' are excluded from the score, from the numerator and the denominator alike.
      */
-    status: 'pass' | 'fail' | 'neutral';
+    status: 'pass' | 'fail' | 'neutral' | 'could-not-measure';
     /**
      * Whether the check is scored. false = informational — excluded from both numerator and denominator.
      */
@@ -3456,6 +3683,10 @@ export type AgentAdoptionCategoryReportResponse = {
      * Count of checks that were neutral / informational
      */
     neutral: number;
+    /**
+     * Count of checks WE could not run — a server error, a timeout, a bot challenge. These say nothing about the site. This names the score's universe: 'score' is a proportion over passed + failed only, so a category with any check here was scored over fewer checks than a full one and the two scores are not comparable.
+     */
+    couldNotMeasure: number;
     /**
      * All checks belonging to this category
      */
@@ -3544,7 +3775,7 @@ export type AgentAdoptionCountersResponse = {
 
 export type AgentAdoptionMetaResponse = {
     /**
-     * Count of checks that produced a result (pass/fail/neutral). Dependency-skipped checks are counted.
+     * Count of checks that produced a result of any kind (pass, fail, neutral, or could-not-measure). Dependency-skipped checks are counted.
      */
     checksEvaluated: number;
     /**
@@ -3664,7 +3895,7 @@ export type AgentAdoptionScanResponse = {
 
 export type PtAgentAdoptionRequestDto = {
     /**
-     * Target domain to scan for AI-agent readiness. Accepts a bare hostname or a full URL — normalized (lowercased, scheme and path stripped) before scanning.
+     * Target domain to run the Agent Adoption Check against. Accepts a bare hostname or a full URL — normalized (lowercased, scheme and path stripped) before scanning.
      */
     domain: string;
     /**
