@@ -3,6 +3,163 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 5.0.0
+
+AI Visibility stopped answering "where do you rank" and started answering "who do the models
+recommend, and how often". The average-position family is **deleted, not deprecated**, the trend
+endpoint returns a different document, and the engine roster went from three to five. A sixth
+dimension, AI Sources, arrives with it.
+
+Major for four reasons, each of which breaks a build rather than a runtime: fields removed,
+a response type replaced, two enums widened, and a set of fields that were guaranteed and now
+are optional.
+
+### Added — AI Sources, the sixth dimension
+
+`cl.aiSources` — `dashboard()`, `history()`, `checkDetail()`. For the two engines that hand back
+the pages they pulled while answering (Perplexity and Google AI Overviews), it asks a project's
+eight buying questions, reads those pages, and reports per engine which companies the engine
+named, which pages it retrieved, and which of those pages name your competitors and not you.
+
+Three rules govern every figure it returns, and each is easy to break by accident:
+
+- **Retrieved, never cited.** An engine does not say which of the pages it pulled it leaned on.
+  **No count in this payload is a citation count**, and calling one that invents a fact the
+  engines never published.
+- **Per engine, never pooled.** The two engines share roughly a quarter of their source domains,
+  so adding their page counts describes a list neither produced. Answers may pool as a vote
+  (`summary.brands`); pages may not. The one cross-engine object is the core — the hosts at least
+  two engines retrieved.
+- **Counts, never rates.** Report `n of N answers`. Eight questions is a small set by design, and
+  a percentage computed from it is false precision.
+
+The trap is `status`, which has three values and not two:
+
+```typescript
+const hosts = data.item.summary.coreHosts;
+
+// WRONG — sweeps in 'unreadable', turning a page we could not read into one that omits you
+const wrong = hosts.filter((h) => h.status !== 'already_named');
+
+// right: only 'missing' means we read the page and your name was not on it
+const toWork = hosts.filter((h) => h.status === 'missing');
+```
+
+`actionHint.text` on each core host and the sentences under `summary.limits.sentences` are
+payload — render them verbatim rather than composing your own.
+
+### Removed — the average-position family
+
+- **`avgRank`** on `AiVisibilityCustomerMetricsResponse` and `AiVisibilityTopCompetitorResponse`.
+- **`overallAvgRank`**, **`openaiAvgRank`**, **`claudeAvgRank`**, **`geminiAvgRank`** on
+  `AiVisibilityCompetitorRankingResponse`.
+- **`rank`** on `AiVisibilityProviderMetricResponse`.
+
+An average of positions pooled the engines into one number that moved when none of the engines
+had moved, and it ordered brands by how high they landed when named rather than by how often
+they were named at all — so it could rank a brand above one recommended twice as often.
+
+**There is no replacement average, deliberately.** A brand's standing is now its **presence** on
+`summary.marketMap`: the share of usable answers that named it, pooled over the check and up to
+four previous published checks, shipped with a 95% interval. Two brands whose intervals overlap
+are not ordered, and `rankByPresence` ranks by how often a brand is named, never by how high it
+appeared.
+
+Note what did **not** move: `AiVisibilityAnswerBrandResponse.rank` is still there and still means
+the position inside one stored answer. It was never an average.
+
+### Removed — the trend point list
+
+- **`AiVisibilityTrendDataPointResponse`** is gone, and with it the `{ items, incompleteCycles }`
+  envelope. `cl.aiVisibility.trend()` keeps its name and its path and returns
+  `AiVisibilityTrendResponse`: `window`, `scope`, `companies[]` and `events`.
+
+The old shape plotted your rate against a single "top competitor" per point. Measured against
+stored history, the per-check rate moved a median of 11 points per check where the windowed
+reading moved 2–3, and every large step in the competitor line was the line changing which
+company it was about — a chart of its own bookkeeping.
+
+Each company row now carries its reading `now`, its reading at the `start` of the window, and the
+difference. **Read `presenceChangeSeparable` before narrating any of it:**
+
+```typescript
+const { data } = await cl.aiVisibility.trend('proj_abc');
+
+for (const c of data.item.companies) {
+  // WRONG — presenceChange is a number even when it is inside the noise
+  if (c.presenceChange && c.presenceChange > 0) report(`${c.name} is up`);
+
+  // right: the intervals have to actually separate
+  if (c.presenceChangeSeparable === true && (c.presenceChange ?? 0) > 0) {
+    report(`${c.name} is up`);
+  }
+}
+```
+
+Pass `detail: 'series'` for each company's share downsampled to at most 12 points. Under a
+`provider` scope, `rank` and `score` are `null` and `enginesBacking` is omitted — there is no
+per-engine score, by design.
+
+### Changed — two engines joined, and `AiProvider` widened
+
+**`AiProvider` is now `'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews'`.**
+An exhaustive `switch` or a `Record<AiProvider, T>` written against v4 will not compile. That is
+the intent — a missing engine should be a build error, not a key that silently reads as zero.
+
+Google AI Overviews answers in prose and ranks nothing. Its entries carry a `name` and a `domain`
+and none of the profile fields, and any `rank` on them is **the order of first mention in
+`answerText`, computed by CompetLab** — Google assigned no position, so never report it as a rank
+Google gave.
+
+### Changed — guaranteed fields that are now optional
+
+This is the quiet half of the release, and the one most likely to reach production before you
+notice. These were `required` in v4 and are optional now:
+
+- **`AiVisibilityPerProviderResponse`** and **`AiVisibilityProviderStatusMapResponse`**: `openai`,
+  `claude`, `gemini`. A check records the engines it actually asked, so an engine it did not ask
+  is **absent** from these records. Absent means not measured — never zero.
+- **`AiVisibilityAnswerBrandResponse`**: `description`, `rankingRationale`, `sentiment`,
+  `mentionContext`, `targetAudience`, `pricingSignal`, `positionConfidence`, `features`,
+  `differentiation`, `messaging`. The chat engines write these per brand; a prose engine does not,
+  so they are absent on a Google AI Overviews entry.
+- **`AiVisibilityAnswerDifferentiationResponse`**: `axis`, `uniqueValue`.
+  **`AiVisibilityAnswerMessagingResponse`**: `keywords`, `credibilitySignals`,
+  `differentiationClaims`.
+
+```typescript
+// WRONG — reads "this engine was never asked" as "this engine found nothing"
+const openaiMentions = data.item.summary.customer.perProvider.openai?.mentionCount ?? 0;
+
+// right: absence is its own answer
+const openai = data.item.summary.customer.perProvider.openai;
+if (openai) console.log(openai.mentionCount);
+else console.log('OpenAI was not among the engines this check asked');
+```
+
+### Added — the readings behind the new standing
+
+New exported types, all reachable from `summary`: `AiVisibilityMarketMapResponse` and its brand
+rows (presence with its interval, zone, `rankByPresence`, the endorsement and price readings),
+`AiVisibilityCustomerStandingResponse` (your readings set interval-against-interval against the
+core), `AiVisibilityUntrackedCoreBrandResponse` (core companies you are not tracking),
+`AiVisibilityPromptMarketResponse` (whether your prompts are reaching the competitors you track),
+`AiVisibilityNoAnswerShownResponse`, and the full `AiSources*` family.
+
+**`noAnswerShown` is not "not mentioned".** It is a third state beside answered and unmeasured:
+the engine was read and had no answer to show — today, a Google results page that carried no AI
+Overview. It is excluded from every count on the payload rather than scored as a miss, and
+reporting it as "0 mentions" or as a failed query are both wrong.
+
+**`BriefingSectionName` gains `deep-ai-sources`**, so the briefing now covers fourteen analysis
+areas — six read from stored monitoring checks, eight researched for the briefing alone.
+
+### Fixed
+
+- `explanations` on the tech-trust dashboard is now **absent** where there is nothing to say,
+  rather than an empty array. `[]` asserted that we weighed what needed saying and found nothing,
+  when in fact sentences existed and were withheld.
+
 ## 4.0.0
 
 The API rebuilt how it reads a site's robots.txt, and the shape of the answer changed with it.

@@ -71,7 +71,7 @@ export type ProjectListItemResponse = {
 
 export type DimensionLastRunResponse = {
     /**
-     * Timestamp of the last completed run for this dimension (ISO-8601), or null if there is none. For `techTrust`, `content`, `positioning` and `pricing`, null means no run has completed. For `aiVisibility` this is instead the last check that published a measurement: a cycle that ran but did not get a usable answer to every query it asked is abandoned and never moves this timestamp, so neither an unchanged value nor null proves that nothing ran. That cycle is still reported — `/ai-visibility` carries `latestCheckDataAvailable` when an earlier check has published, and `/ai-visibility/trend` reports it in `incompleteCycles`, the only surface that reports it when no check has ever published, since `/ai-visibility` then returns 404 `no_data_available`.
+     * Timestamp of the last completed run for this dimension (ISO-8601), or null if there is none. For `techTrust`, `content`, `positioning` and `pricing`, null means no run has completed. For `aiVisibility` this is instead the last check that published a measurement: a cycle that ran but had a query it could not read is abandoned and never moves this timestamp (a query the model was read for and had no answer to show — `noAnswerShown` — does not count against it), so neither an unchanged value nor null proves that nothing ran. That cycle is still reported — `/ai-visibility` carries `latestCheckDataAvailable` when an earlier check has published, and `/ai-visibility/trend` reports it under `events.incompleteCycles`, the only surface that reports it when no check has ever published, since `/ai-visibility` then returns 404 `no_data_available`. For `aiSources` the same rule holds on its own checks: the last check that published, never an abandoned cycle (no engine produced a usable answer, or the page stage could not be closed) — `/ai-sources` carries `latestCheckDataAvailable` for that case once an earlier check has published.
      */
     lastRunAt: string | null;
 };
@@ -94,9 +94,13 @@ export type DimensionFreshnessResponse = {
      */
     pricing: DimensionLastRunResponse;
     /**
-     * AI brand mentions across ChatGPT, Claude, and Gemini
+     * AI brand mentions across ChatGPT, Claude, Gemini, Perplexity, and Google AI Overviews
      */
     aiVisibility: DimensionLastRunResponse;
+    /**
+     * The pages Perplexity and Google AI Overviews read when they answer your buyers' questions, and whether you are on them
+     */
+    aiSources: DimensionLastRunResponse;
 };
 
 export type ProjectDetailResponse = {
@@ -929,7 +933,7 @@ export type ContentSignificantGapResponse = {
      */
     competitorMax: number;
     /**
-     * How far behind you are as a percentage (negative = behind)
+     * How far behind the competitor average you are in this category, as a percentage of that average. A MAGNITUDE, always POSITIVE: 80 means you publish 80% fewer URLs here than the average competitor, and a larger number is a wider gap. It cannot be negative or small — an entry appears in this list only where your count is under half the competitor average, so this figure is always above 50. Being AHEAD in a category produces no entry here at all rather than a negative number; look to `advantages` for that. NOTE THE OPPOSITE CONVENTION on `strategicUrlGap` elsewhere in this response, which is a signed difference where negative means behind. These two gap fields do not share a sign rule, so read each one's own description and never carry a direction from one to the other.
      */
     gapPercentage: number;
     /**
@@ -1797,32 +1801,40 @@ export type PricingRunDetailResponse = {
 
 export type AiVisibilityProviderMetricResponse = {
     /**
-     * Average rank across prompts for this provider (lower is better)
-     */
-    rank?: number | null;
-    /**
-     * Whether this provider's counted answers named the customer. `false` means the customer was not named in the answers this check counted for this provider — it is not proof that the provider was asked and stayed silent. Under the full-coverage gate a check publishes only if every query it asked returned a usable answer, and there `false` is a MEASURED absence. Checks published before that gate stay published and can have counted fewer answers than they asked queries, so an answer that never arrived could have carried a mention. This response does not expose the queries-sent figure, so a caller cannot tell which kind of check this is. Report `false` as 'not mentioned in the answers we have from this provider'; never as 'this AI does not mention you'.
+     * Whether this model's counted answers named the customer. `false` means the customer was not named in the answers this check counted for this model — it is not proof that the model was asked and stayed silent. Under the full-coverage gate a check publishes only if every query it asked was read — it returned a usable answer, or the model was read and had no answer to show (`noAnswerShown`) — and there `false` is a MEASURED absence. Checks published before that gate stay published and can have counted fewer answers than they asked queries, so an answer that never arrived could have carried a mention. This response does not expose the queries-sent figure, so a caller cannot tell which kind of check this is. Report `false` as 'not mentioned in the answers we have from this model'; never as 'this AI does not mention you'.
      */
     mentioned: boolean;
     /**
-     * Number of mentions across prompts for this provider
+     * How many of this model's counted answers named the customer. Its divisor is `answersCounted` on this same record — state it as a count of that model's answers, and do not divide it by the check-wide `totalQueries`, which counts every model's answers.
      */
-    mentionCount?: number;
+    mentionCount: number;
+    /**
+     * This model's answers the check counted. 0 beside mentionCount 0 means the model was read and had no answer to show on every prompt — never that it answered and named nobody.
+     */
+    answersCounted: number;
 };
 
 export type AiVisibilityPerProviderResponse = {
     /**
-     * OpenAI (ChatGPT) metrics
+     * ChatGPT metrics
      */
-    openai: AiVisibilityProviderMetricResponse;
+    openai?: AiVisibilityProviderMetricResponse;
     /**
-     * Anthropic (Claude) metrics
+     * Claude metrics
      */
-    claude: AiVisibilityProviderMetricResponse;
+    claude?: AiVisibilityProviderMetricResponse;
     /**
-     * Google (Gemini) metrics
+     * Gemini metrics
      */
-    gemini: AiVisibilityProviderMetricResponse;
+    gemini?: AiVisibilityProviderMetricResponse;
+    /**
+     * Perplexity metrics
+     */
+    perplexity?: AiVisibilityProviderMetricResponse;
+    /**
+     * Google AI Overviews metrics
+     */
+    google_ai_overviews?: AiVisibilityProviderMetricResponse;
 };
 
 export type AiVisibilityPerPromptResponse = {
@@ -1835,11 +1847,11 @@ export type AiVisibilityPerPromptResponse = {
      */
     promptLabel: string;
     /**
-     * Models that named the customer for this prompt. A model is listed only when it genuinely ranked them, so this is safe to read positively. Reading it negatively needs the usual care: a model missing from the list did not name the customer in the answers this check counted — under the full-coverage gate that is a measured absence, but on a check published before that gate it could be an answer that never arrived.
+     * Models that named the customer for this prompt. A model is listed only when it genuinely ranked them, so this is safe to read positively. Reading it negatively needs the usual care: a model missing from the list did not name the customer in the answers this check counted — under the full-coverage gate that is a measured absence where the model answered, but a model with `answersCounted: 0` under `perProvider` was read and had no answer to show on this check, and on a check published before that gate it could be an answer that never arrived.
      */
-    mentionedBy: Array<'openai' | 'claude' | 'gemini'>;
+    mentionedBy: Array<'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews'>;
     /**
-     * 0-100 weighted position score for this prompt, averaged over the models whose answers this check counted — never over a fixed 3. Higher is better, and it rewards top positions steeply rather than linearly, so it is not a rank and not a percentage of anything. `mentionedBy` is the tell for reading a `0`: non-empty means the score is real. If `mentionedBy` is empty and you need certainty, fetch `includeAnswers=true&promptIndex=<n>` — a prompt that was answered and did not rank the customer has entries in `answers`, while one that was never measured is in `unansweredQueries`.
+     * 0-100 position score for this prompt, averaged over the models whose answers this check counted — never over a fixed model count. Higher is better. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. So it is not a rank and not a percentage of anything. A score of 0 for a brand the answers did name means it sat only in the tail of AI recommendations — below the top 5, or too seldom inside it for the average to register. `mentionedBy` separates the two: non-empty means the models named them here. If `mentionedBy` is empty and you need certainty, fetch `includeAnswers=true&promptIndex=<n>` — a prompt that was answered and did not rank the customer has entries in `answers`, while one that was never measured is in `unansweredQueries`.
      */
     score: number;
 };
@@ -1850,29 +1862,25 @@ export type AiVisibilityCustomerMetricsResponse = {
      */
     domain: string;
     /**
-     * Mention rate as a percentage: mentions / `totalQueries` * 100. The divisor is this check's own ANSWER count — the queries that came back with a usable answer — never a fixed 9. Under the full-coverage gate (a check publishes only if every query it asked returned a usable answer) that equals 3 AI providers x the project's prompt count; checks published before that gate stay published and can have counted fewer answers than they asked queries, and the queries-sent figure is not on this response. So this is a share of the answers counted, never a share of the queries asked — do not report it as 'mentioned in X% of AI queries'. Null when the check never recorded its answer count: with no denominator there is no rate, and the stored figure was divided by something unknown. A `0` is a real rate and means the models named this brand nowhere.
+     * Mention rate as a percentage: mentions / `totalQueries` * 100. The divisor is this check's own ANSWER count — the queries that came back with a usable answer — never a fixed number. Under the full-coverage gate (a check publishes only once every query it asked was read) that is the ask — every AI model the check asked × its recorded prompt count — MINUS the queries a model was read for and had no answer to show (`noAnswerShown`); checks published before that gate stay published and can have counted fewer answers than they asked queries, and the queries-sent figure is not on this response. So this is a share of the answers counted, never a share of the queries asked — do not report it as 'mentioned in X% of AI queries'. A `0` is a real rate: none of the answers this check counted named this brand.
      */
-    mentionRate: number | null;
-    /**
-     * Average rank across all providers and prompts (lower is better)
-     */
-    avgRank?: number | null;
+    mentionRate: number;
     /**
      * Number of this check's counted ANSWERS that mentioned the customer, out of `totalQueries`. Not out of the queries sent — that figure is not on this response.
      */
     mentionCount: number;
     /**
-     * AI Visibility Score — weighted 0-100 composite score. Null on checks recorded before this score existed: say the check has no score rather than reporting one. A `0` is a real score and means the brand was named nowhere we looked; a null means we never computed one.
+     * AI Visibility Score, 0-100. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. Averaged over the answers this check counted and smoothed over up to the last 5 published checks. Present on every published check, and a `0` is a measured score — never 'unscored'. A score of 0 for a brand the answers did name means it sat only in the tail of AI recommendations — below the top 5, or too seldom inside it for the average to register. Read `mentionRate` beside it to tell that case from a brand no counted answer named.
      */
-    aiScore: number | null;
+    aiScore: number;
     /**
-     * Per-provider breakdown
+     * Per-model breakdown, one entry per AI model this check asked. A model is ABSENT when the check did not ask it — checks keep the model set they were run with, so a check from before a model was added carries no entry for it. Absent means not measured; never read it as 'not mentioned'. A model that is PRESENT with `mentioned: false` is read together with its `answersCounted`: beside a non-zero count it answered and did not name the customer, beside `answersCounted: 0` it was read and had no answer to show on every prompt, which is not a measurement of the customer at all.
      */
     perProvider: AiVisibilityPerProviderResponse;
     /**
-     * How the customer did on each of the project's prompts individually, across the models that answered. The cheap way to answer 'which of my questions am I losing on' — a few small rows, no need to request the raw answers block. Present only on checks that recorded how many prompts they asked: older checks stored a fixed three rows whatever the project actually ran, so those are omitted rather than published as prompts that may never have existed. Absent therefore means 'not available for this check', never 'this project has no prompts' — and the array length is this check's real prompt count wherever it is present.
+     * How the customer did on each of the project's prompts individually, across the models that answered. The cheap way to answer 'which of my questions am I losing on' — a few small rows, no need to request the raw answers block. One row per prompt the check asked, so the array length is that check's own prompt count.
      */
-    perPrompt?: Array<AiVisibilityPerPromptResponse>;
+    perPrompt: Array<AiVisibilityPerPromptResponse>;
 };
 
 export type AiVisibilityTopCompetitorResponse = {
@@ -1885,13 +1893,9 @@ export type AiVisibilityTopCompetitorResponse = {
      */
     name: string;
     /**
-     * Top competitor mention rate percentage. Same divisor as `customer.mentionRate` — the answers this check counted, not the queries sent. Null on the same condition and for the same reason: no recorded answer count means no denominator, so there is no rate to report.
+     * Top competitor mention rate percentage. Same divisor as `customer.mentionRate` — the answers this check counted, not the queries sent.
      */
-    mentionRate: number | null;
-    /**
-     * Top competitor average rank (lower is better)
-     */
-    avgRank?: number | null;
+    mentionRate: number;
 };
 
 export type AiVisibilityCompetitorRankingResponse = {
@@ -1908,37 +1912,308 @@ export type AiVisibilityCompetitorRankingResponse = {
      */
     isOwn: boolean;
     /**
-     * Average rank in OpenAI responses (lower is better)
-     */
-    openaiAvgRank?: number | null;
-    /**
-     * Average rank in Claude responses (lower is better)
-     */
-    claudeAvgRank?: number | null;
-    /**
-     * Average rank in Gemini responses (lower is better)
-     */
-    geminiAvgRank?: number | null;
-    /**
-     * Overall average rank across all providers (lower is better)
-     */
-    overallAvgRank?: number | null;
-    /**
      * Total mentions across the answers this check counted.
      */
     mentionCount: number;
     /**
-     * Mention rate as percentage. Same divisor as `customer.mentionRate` — the answers this check counted, not the queries sent. Null when that count was never recorded. This row names a THIRD PARTY, so a fabricated rate here is a claim about another company published under our name.
+     * Mention rate as percentage. Same divisor as `customer.mentionRate` — the answers this check counted, not the queries sent. This row names a THIRD PARTY: a `0` here is a measured rate — none of the answers this check counted named them — and must be reported as exactly that.
      */
-    mentionRate: number | null;
+    mentionRate: number;
     /**
-     * AI Visibility Score (0-100), or null on checks recorded before this score existed. This one names a THIRD PARTY, so the distinction matters more here than anywhere else on the response: a `0` says the models never mentioned this competitor, a null says we have no score for them. Reporting a null as `0` publishes a false claim about another company under our name.
+     * AI Visibility Score (0-100), on the same rule as `customer.aiScore`. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. This row names a THIRD PARTY, so the reading matters more here than anywhere else on the response. A score of 0 for a brand the answers did name means it sat only in the tail of AI recommendations — below the top 5, or too seldom inside it for the average to register. Reporting a `0` as 'never named' is a false claim about another company published under our name. Read `mentionRate` beside a `0` score: a non-zero rate means the brand was named, and a `0` rate means no counted answer named it.
      */
-    aiScore: number | null;
+    aiScore: number;
     /**
      * Whether this domain is one the project currently monitors, as opposed to one an AI named on its own. Resolved against the project's CURRENT competitor list, so on a historical check it describes today's roster and not the roster at the time of that check — it is not a fact about the check. The customer's own row is always `true`; see `isOwn` to identify it.
      */
     isTracked: boolean;
+};
+
+/**
+ * Which of the three readings this evidence supports. `rivals_named_in_most_answers` — most of the answers named at least one company the account tracks, so the numbers beside this are measuring the intended competition. `rival_match_too_close_to_call` — some answers named a tracked competitor and some named none, in a proportion this much evidence cannot separate; an undecided reading, not a milder version of the next one. `answers_and_rival_list_disagree` — almost none of the answers named a tracked competitor. That last one does NOT assert that the prompts are wrong. It compares two things the customer supplied, the prompts and the tracked competitor list, so a disagreement means one of them does not match what the models said and this comparison cannot tell you which. A narrow market that genuinely does not come up in AI answers yet produces the same reading, and that is a real finding rather than a defect. Report the disjunction, and point at the stored answers (`includeAnswers=true`) — they are the evidence that settles it.
+ */
+export type PromptMarketState = 'rivals_named_in_most_answers' | 'rival_match_too_close_to_call' | 'answers_and_rival_list_disagree';
+
+export type AiVisibilityPromptMarketExplanationResponse = {
+    /**
+     * Stable identifier for this sentence. Branch on it if you need to; never substitute your own wording for it. The project-level reading and a per-prompt reading carry DIFFERENT codes even where their `state` matches, so the two are not interchangeable and de-duplicating a list by code will not collapse them.
+     */
+    code: string;
+    /**
+     * The sentence to report, in the words every CompetLab surface uses. Render it VERBATIM — do not paraphrase it, shorten it, or compose your own sentence from `state`. The wording is chosen to say only what this comparison can support, and a rewrite reliably says more than that. It carries no fraction and no percentage on purpose: this dimension's headline metric is itself a count of answers, so a number inside this sentence gets read as a visibility rate. The counts are the sibling fields — put them beside the sentence, never inside it.
+     */
+    text: string;
+};
+
+export type AiVisibilityPromptMarketPromptResponse = {
+    /**
+     * Stable identifier for the prompt, minted once and kept for the life of that prompt — including when its wording is rewritten. It is the durable way to follow one prompt across checks. Note that the project endpoint returns prompt TEXTS and no ids, so lining a row up with a project's current prompts means matching on `promptTextInProject` below.
+     */
+    promptId: string;
+    /**
+     * The prompt's wording as the project holds it now — which is also the wording every answer behind this reading was produced by, because answers produced by wording that has since been rewritten are excluded from it. Quote it so a reader can find the prompt in the project's settings, and match on it to line this row up with the project endpoint's prompt list. It will always match a current prompt; `promptId` is the durable handle if you need to follow one across edits.
+     */
+    promptTextInProject: string;
+    /**
+     * This prompt's own reading, on the same three-token scale as the project-level `state` and read in exactly the same way. Computed over the answers to THIS prompt alone, so it can differ from the project-level reading — which is the whole reason to look here.
+     */
+    state: PromptMarketState;
+    /**
+     * The sentence to report for this prompt, rendered verbatim like the project-level one. It is deliberately IDENTICAL for every prompt in the same state and never names the prompt — `promptId` and `promptTextInProject` do that. Say it once over a list of prompts rather than repeating a near-identical paragraph per row.
+     */
+    explanation: AiVisibilityPromptMarketExplanationResponse;
+    /**
+     * Answers to THIS prompt that named at least one company the account tracks. Membership, not volume: an answer that named four tracked competitors counts once, exactly like an answer that named one.
+     */
+    answersNamingAnyRival: number;
+    /**
+     * Divide `answersNamingAnyRival` by THIS figure and nothing else. It is the universe that numerator is drawn from: answers to this prompt as its text stands TODAY. Two exclusions. A query that produced no usable answer is out entirely and is never counted as an answer that named nobody. An answer produced before the customer last edited this prompt's text is also out, because it answers a question nobody is asking any more. Do not compare it to a figure on the market map: this row covers ONE prompt while the map pools every prompt, so it is a fraction of the map's total by construction and that gap is not evidence of anything.
+     */
+    answersMatchingCurrentPromptText: number;
+};
+
+export type AiVisibilityPromptMarketResponse = {
+    /**
+     * Which of the three readings this evidence supports. `rivals_named_in_most_answers` — most of the answers named at least one company the account tracks, so the numbers beside this are measuring the intended competition. `rival_match_too_close_to_call` — some answers named a tracked competitor and some named none, in a proportion this much evidence cannot separate; an undecided reading, not a milder version of the next one. `answers_and_rival_list_disagree` — almost none of the answers named a tracked competitor. That last one does NOT assert that the prompts are wrong. It compares two things the customer supplied, the prompts and the tracked competitor list, so a disagreement means one of them does not match what the models said and this comparison cannot tell you which. A narrow market that genuinely does not come up in AI answers yet produces the same reading, and that is a real finding rather than a defect. Report the disjunction, and point at the stored answers (`includeAnswers=true`) — they are the evidence that settles it.
+     */
+    state: PromptMarketState;
+    /**
+     * The sentence to report for this reading, with a stable code beside it. This is payload rather than documentation: it is the only place the reading is expressed in words, and the app, this API and the MCP tools all say these same words. Render `text` verbatim.
+     */
+    explanation: AiVisibilityPromptMarketExplanationResponse;
+    /**
+     * How many of the answers behind this reading named at least one company the account tracks. Membership, not volume: an answer that named four tracked competitors counts once, exactly like an answer that named one. It says NOTHING about the customer's own visibility — a window in which every answer named a rival and none named the customer reads healthy here and 0% under `customer.mentionRate`. Never present it as a mention rate, and never pair it with `totalQueries`, which counts a different set over a different window.
+     */
+    answersNamingAnyRival: number;
+    /**
+     * Divide `answersNamingAnyRival` by THIS figure and nothing else. It is the universe that numerator is drawn from: answers across this reading's window of checks that were produced by the account's prompts as their text stands TODAY. Two exclusions. A query that produced no usable answer is out entirely and is never counted as an answer that named nobody. An answer produced before the customer last edited a prompt is also out, because it answers a question nobody is asking any more. THIS RESPONSE CARRIES A SECOND ANSWER COUNT drawn from the same window — `marketMap.answersReceived`, which pools every usable answer whatever wording produced it, and is the divisor for brand presence. This figure is never larger than that one and is EQUAL to it whenever no prompt has been reworded inside the window, which is the steady state; seeing the two agree does not mean they are the same field. A difference means a prompt's text changed inside the window, and the size of the difference is how many answers that edit orphaned. Also unrelated to `totalQueries` above, which counts ONE check's answers while this counts a window of them.
+     */
+    answersMatchingCurrentPromptText: number;
+    /**
+     * How many published checks this reading was drawn from. Checks, never days — checks are not daily, and the interval is a schedule setting. Quote it whenever you quote the reading: a low number is the usual reason a reading comes back `rival_match_too_close_to_call`, and that state describes thin evidence rather than weak prompts. Counts the checks that contributed an answer on today's prompt text, so it can sit BELOW `marketMap.checksAnalysed`, which counts every check that contributed any usable answer. The two are drawn from one window and agree unless a prompt was reworded inside it.
+     */
+    checksAnalysed: number;
+    /**
+     * One reading per prompt, each with its own `state` — every prompt this reading could attribute answers to appears here, whether it is reaching the tracked competitor list, failing to, or not yet separable. Read each entry's `state` and report its `explanation.text` verbatim: do NOT treat membership of this list as a fault, because the healthy and the undecided readings are in it too. A prompt is MISSING for exactly one reason — no answer in the window was produced by its current wording, which is what happens for a while after the customer edits it — so absence means 'no evidence for this prompt yet' and never a verdict. An empty array means that was true of every prompt; the array being absent means it was true of the check as a whole. An undecided entry still carries its counts, and those counts are evidence of how thin the sample is, never a position: three answers cannot rank one prompt against another, and presenting a partial share as a score is the error this state exists to prevent. Note that entries make a history row several times larger and appear on every project, so a page of history may hit the response size cap sooner — lower `limit` if `truncated` comes back true.
+     */
+    perPrompt?: Array<AiVisibilityPromptMarketPromptResponse>;
+};
+
+export type AiVisibilityMarketEngineCoverageResponse = {
+    /**
+     * Usable answers this model returned in the window — the total its readings of every brand divide by.
+     */
+    answersReceived: number;
+};
+
+export type AiVisibilityMarketPerEngineCoverageResponse = {
+    /**
+     * ChatGPT coverage.
+     */
+    openai?: AiVisibilityMarketEngineCoverageResponse;
+    /**
+     * Claude coverage.
+     */
+    claude?: AiVisibilityMarketEngineCoverageResponse;
+    /**
+     * Gemini coverage.
+     */
+    gemini?: AiVisibilityMarketEngineCoverageResponse;
+    /**
+     * Perplexity coverage.
+     */
+    perplexity?: AiVisibilityMarketEngineCoverageResponse;
+    /**
+     * Google AI Overviews coverage.
+     */
+    google_ai_overviews?: AiVisibilityMarketEngineCoverageResponse;
+};
+
+/**
+ * Where this share sits once the sample's uncertainty is taken into account. `named_in_a_quarter_or_more_of_answers`: the LOWER bound of the range is above 25% — these companies are the market as the AI models draw it. `named_in_under_a_tenth_of_answers`: the UPPER bound is below 10% — reachable only while `tailIsProvable` is true. `share_not_yet_separable`: the range straddles a line — a real company, sometimes named, that the evidence cannot yet place; this is the group that can still be moved. The token names a measured condition about a third party, never a verdict: say 'named in under a tenth of answers', never 'irrelevant' or 'tail'. Thresholds are the same for every project.
+ */
+export type AiMarketZone = 'named_in_a_quarter_or_more_of_answers' | 'named_in_under_a_tenth_of_answers' | 'share_not_yet_separable';
+
+export type AiVisibilityMarketPresenceResponse = {
+    /**
+     * Answers in this view — the pooled map, or one AI model's reading — that named the brand. Deduplicated within an answer — a brand named twice in one answer counts once — and matched on the domain, never on the brand's wording.
+     */
+    answersNaming: number;
+    /**
+     * The universe `answersNaming` is drawn from: usable answers in this view. Queries that produced no usable answer are out of it entirely. Quote it whenever you quote the share.
+     */
+    answersReceived: number;
+    /**
+     * `answersNaming / answersReceived × 100`, whole percent. THE ordering of every brand list here: how often a brand is named, never how high it sat. A share of answers analysed — never of queries sent, and never a probability. Always read with `presenceLow` / `presenceHigh` beside it.
+     */
+    presence: number;
+    /**
+     * Lower bound of a 95% interval on `presence`, in the same percent scale. Two brands whose ranges overlap are NOT ordered, whatever their rank says — never state that one is ahead of the other.
+     */
+    presenceLow: number;
+    /**
+     * Upper bound of the same interval. See `presenceLow`.
+     */
+    presenceHigh: number;
+    /**
+     * Where this share sits once the sample's uncertainty is taken into account. `named_in_a_quarter_or_more_of_answers`: the LOWER bound of the range is above 25% — these companies are the market as the AI models draw it. `named_in_under_a_tenth_of_answers`: the UPPER bound is below 10% — reachable only while `tailIsProvable` is true. `share_not_yet_separable`: the range straddles a line — a real company, sometimes named, that the evidence cannot yet place; this is the group that can still be moved. The token names a measured condition about a third party, never a verdict: say 'named in under a tenth of answers', never 'irrelevant' or 'tail'. Thresholds are the same for every project.
+     */
+    zone: AiMarketZone;
+};
+
+export type AiVisibilityMarketPerEngineResponse = {
+    /**
+     * ChatGPT's reading of this brand.
+     */
+    openai?: AiVisibilityMarketPresenceResponse;
+    /**
+     * Claude's reading of this brand.
+     */
+    claude?: AiVisibilityMarketPresenceResponse;
+    /**
+     * Gemini's reading of this brand.
+     */
+    gemini?: AiVisibilityMarketPresenceResponse;
+    /**
+     * Perplexity's reading of this brand.
+     */
+    perplexity?: AiVisibilityMarketPresenceResponse;
+    /**
+     * Google AI Overviews' reading of this brand.
+     */
+    google_ai_overviews?: AiVisibilityMarketPresenceResponse;
+};
+
+export type AiVisibilityBrandProfileReadingResponse = {
+    /**
+     * The reading, a whole number on its own scale — see the field that carries it for the scale. Always read with `answersRead` beside it.
+     */
+    value: number;
+    /**
+     * Answers in the window that carried this reading for the brand — the universe it was averaged over. Fewer than the answers that named the brand whenever a model that describes nobody (Google AI Overviews) did some of the naming. Under 6 answers the figure is a label, not a measurement: consecutive windows share most of their evidence, so it holds perfectly still until an answer leaves the window and then jumps — report it with its count, never as a position, and never compare two brands on it.
+     */
+    answersRead: number;
+    /**
+     * Lower bound of a 95% interval on `value`, in the same scale. THE RULE THAT BINDS `presence` BINDS THIS: two brands whose intervals overlap are NOT ordered on this reading, whatever their values say — never state that one is described more warmly, or read as pricier, than the other. `null` on a reading of one answer, which has no spread to measure; never a zero-width interval.
+     */
+    low: number | null;
+    /**
+     * Upper bound of the same interval. See `low`.
+     */
+    high: number | null;
+};
+
+export type AiVisibilityBrandPriceReadingResponse = {
+    /**
+     * The reading, a whole number on its own scale — see the field that carries it for the scale. Always read with `answersRead` beside it.
+     */
+    value: number;
+    /**
+     * Answers in the window that carried this reading for the brand — the universe it was averaged over. Fewer than the answers that named the brand whenever a model that describes nobody (Google AI Overviews) did some of the naming. Under 6 answers the figure is a label, not a measurement: consecutive windows share most of their evidence, so it holds perfectly still until an answer leaves the window and then jumps — report it with its count, never as a position, and never compare two brands on it.
+     */
+    answersRead: number;
+    /**
+     * Lower bound of a 95% interval on `value`, in the same scale. THE RULE THAT BINDS `presence` BINDS THIS: two brands whose intervals overlap are NOT ordered on this reading, whatever their values say — never state that one is described more warmly, or read as pricier, than the other. `null` on a reading of one answer, which has no spread to measure; never a zero-width interval.
+     */
+    low: number | null;
+    /**
+     * Upper bound of the same interval. See `low`.
+     */
+    high: number | null;
+    /**
+     * The tier the models stated MOST OFTEN — the word to report. `value` beside it is where the mean of every stated tier sits on the 0–100 line, which can land on a tier nothing stated when the models disagree; say the tier, not the number.
+     */
+    tier: 'free' | 'budget' | 'mid_range' | 'premium' | 'enterprise';
+    /**
+     * Answers, of `answersRead`, that stated `tier`. Under half means the models do not agree on the tier — say so rather than reporting the mean's position as a price.
+     */
+    tierAnswers: number;
+};
+
+export type AiVisibilityMarketMapBrandResponse = {
+    /**
+     * Answers in this view — the pooled map, or one AI model's reading — that named the brand. Deduplicated within an answer — a brand named twice in one answer counts once — and matched on the domain, never on the brand's wording.
+     */
+    answersNaming: number;
+    /**
+     * The universe `answersNaming` is drawn from: usable answers in this view. Queries that produced no usable answer are out of it entirely. Quote it whenever you quote the share.
+     */
+    answersReceived: number;
+    /**
+     * `answersNaming / answersReceived × 100`, whole percent. THE ordering of every brand list here: how often a brand is named, never how high it sat. A share of answers analysed — never of queries sent, and never a probability. Always read with `presenceLow` / `presenceHigh` beside it.
+     */
+    presence: number;
+    /**
+     * Lower bound of a 95% interval on `presence`, in the same percent scale. Two brands whose ranges overlap are NOT ordered, whatever their rank says — never state that one is ahead of the other.
+     */
+    presenceLow: number;
+    /**
+     * Upper bound of the same interval. See `presenceLow`.
+     */
+    presenceHigh: number;
+    /**
+     * Where this share sits once the sample's uncertainty is taken into account. `named_in_a_quarter_or_more_of_answers`: the LOWER bound of the range is above 25% — these companies are the market as the AI models draw it. `named_in_under_a_tenth_of_answers`: the UPPER bound is below 10% — reachable only while `tailIsProvable` is true. `share_not_yet_separable`: the range straddles a line — a real company, sometimes named, that the evidence cannot yet place; this is the group that can still be moved. The token names a measured condition about a third party, never a verdict: say 'named in under a tenth of answers', never 'irrelevant' or 'tail'. Thresholds are the same for every project.
+     */
+    zone: AiMarketZone;
+    /**
+     * Brand domain — the identity every count is matched on.
+     */
+    domain: string;
+    /**
+     * Brand name as the models most recently wrote it.
+     */
+    name: string;
+    /**
+     * Whether this is the customer's own row. The customer's row is ALWAYS on the map, at zero when no answer named them — that zero is a measured finding.
+     */
+    isOwn: boolean;
+    /**
+     * Rank by how often the brand is named: one plus the number of brands named more often. Ties SHARE a rank — several brands at the same share read as one rank, never as consecutive ones — so say '7th of 9 by how often it is named', and never break a tie.
+     */
+    rankByPresence: number;
+    /**
+     * This brand on each AI model that answered in the window. The pooled figures above are a vote across models — which AI models back a row — and a brand core to one model and a brand core to all of them look identical on the pooled figure, so read this before saying a brand is 'core to the market'. A model absent here returned no usable answer in the window; a slice at zero is a model that answered and never named the brand.
+     */
+    perEngine: AiVisibilityMarketPerEngineResponse;
+    /**
+     * How warmly the models that describe brands recommend this one, on a scale from 21 to 100: the tone each answer gave it (highly recommended down to merely mentioned) and the role (a direct pick down to a fallback), weighted and averaged over the answers in the window that carried both, pooled the same way as `presence`. THE SCALE HAS A FLOOR, NOT A ZERO — a bare mention offered as a fallback still scores 21 — so read a low figure against 21, never against 0, and NEVER set it against `presence`: the two are different units, and a brand named in under 21% of answers sits on one side of any such comparison by arithmetic alone. There is no gap between them to report. It is the models' own labels on their own answers, not an independent assessment of the brand. `null` means no answer in the window described the brand — named only by a model that describes nobody, or not named at all — never a low reading. Say 'the models describe it as a fallback option' from a figure near the floor, and 'as a leading choice' near 100; the state named on `customerStanding` is the comparison to make for the customer's own row.
+     */
+    endorsement: AiVisibilityBrandProfileReadingResponse | null;
+    /**
+     * Where the models that describe brands place this one's price (shown in the app as 'Price read') — the tier they stated most often, with the mean's position on a line from free (0) through budget, mid-range and premium to enterprise (100), pooled the same way as `presence`. What the models THINK it costs, never its price list: the scale has one thin independent witness and is not validated beyond the cheap end. `null` means no answer in the window stated a tier for it, never 'free'. Report the tier word with its share of the answers, and say the models disagree when `tierAnswers` is under half of `answersRead`.
+     */
+    pricePerception: AiVisibilityBrandPriceReadingResponse | null;
+};
+
+export type AiVisibilityMarketMapResponse = {
+    /**
+     * Published checks pooled into this map — this check plus up to the previous 4. Checks, never days: the interval is a schedule setting, and a three-day and a monthly project showing the same `answersReceived` are looking at equally trustworthy maps.
+     */
+    checksAnalysed: number;
+    /**
+     * Usable answers pooled across those checks and every AI model — the total every pooled `presence` on `brands` divides by. Quote it whenever you quote a share. This counts EVERY usable answer in the window, whatever prompt wording produced it, which is what a market picture needs: an answer naming a rival is evidence about the market even if the question that drew it has since been reworded. `promptMarket.answersMatchingCurrentPromptText` counts the narrower set produced by today's wording over the same window, so it is never larger than this and is equal whenever no prompt has been reworded — the two agreeing is the steady state, not a sign they are one field. Divide a brand's `answersNaming` by THIS figure and nothing else.
+     */
+    answersReceived: number;
+    /**
+     * Whether the sample is large enough for ANY brand to reach `named_in_under_a_tenth_of_answers` — the upper bound of a brand named in exactly one answer falls below 10% — 56 answers with the interval used, on the rounded bounds this response carries. While false no brand is in that zone, and the honest sentence is 'no brand can be ruled out of this market yet' — never 'tail', never 'irrelevant'.
+     */
+    tailIsProvable: boolean;
+    /**
+     * Brands in `named_in_a_quarter_or_more_of_answers` — the size of the market as the models draw it. Lead with it: 'Nine companies make up this market as the AI models draw it.'
+     */
+    coreSize: number;
+    /**
+     * Usable answers per AI model in the window. A model absent here returned no usable answer in the window.
+     */
+    perEngine: AiVisibilityMarketPerEngineCoverageResponse;
+    /**
+     * The AI models the `endorsement` and `pricePerception` readings on `brands` were read from — those with at least one usable answer in the window that described a company. A model that names companies without describing them (Google AI Overviews) is never here, and a model that returned no usable answer in the window is not here either. Name them whenever you quote a reading. Empty means no answer in the window described anybody, and every reading on `brands` is `null`.
+     */
+    profileEngines: Array<'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews'>;
+    /**
+     * Every brand any answer in the window named, plus the customer's own row, in the ORDER TO RENDER: `presence` desc, then domain. Never re-sort it by anything positional — there is nothing positional to sort by, by design. Read `isOwn` to find the customer; `rankByPresence` says where they sit and shares its value across ties.
+     */
+    brands: Array<AiVisibilityMarketMapBrandResponse>;
 };
 
 export type AiVisibilityDashboardSummaryResponse = {
@@ -1959,17 +2234,134 @@ export type AiVisibilityDashboardSummaryResponse = {
      */
     totalCompetitorsFound: number;
     /**
-     * Answers this check counted — the queries that came back with a usable answer. Despite the field name this is NOT the number of queries sent; that figure is not on this response and cannot be derived from it. This is the divisor of every rate and score here. Under the full-coverage gate the two are equal (3 AI providers x the project's prompt count); checks published before that gate stay published and can have counted fewer answers than they asked queries, so this can be lower than what that check sent. Never describe this number as the queries asked. When `latestCheckDataAvailable` is present, this count describes the earlier check the other fields came from. **Null on a check recorded before we stored this count**, and on such a check every rate and score that divides by it is null too — so there is nothing to divide and nothing to misread.
+     * Answers this check counted — the queries that came back with a usable answer. Despite the field name this is NOT the number of queries sent; that figure is not on this response and cannot be derived from it. This is the divisor of every rate and score here. Under the full-coverage gate it is the ask — every AI model the check asked × every prompt it ran — minus the queries a model was read for and had no answer to show (`noAnswerShown`); checks published before that gate stay published and can have counted fewer answers than they asked queries, so this can be lower than what that check sent. Never describe this number as the queries asked. When `latestCheckDataAvailable` is present, this count describes the earlier check the other fields came from.
      */
-    totalQueries: number | null;
+    totalQueries: number;
     /**
-     * Total brand entries across this check's counted answers. Also the size preview for `includeAnswers=true`: an entry serializes to roughly 200 tokens, so a 60-entry check runs around 12k tokens unfiltered, while `brand=` returns about one entry per answer and lands nearer 2k.
+     * Total brand entries across this check's counted answers. Also the size preview for `includeAnswers=true`: an entry serializes to roughly 375 tokens, so a 60-entry check runs around 25k tokens unfiltered and a five-engine check nearer 46k, while `brand=` returns about one entry per answer and lands nearer 2k — or roughly 9k when Google AI Overviews is in the ask, whose overview text and cited pages the brand filter keeps, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps.
      */
     totalEntries: number;
     /**
-     * Per-competitor ranking data
+     * Every brand this check's counted answers named, plus the customer's own row, in the ORDER TO RENDER: `mentionRate` desc, then `aiScore` desc, then domain. One check's view; the windowed view with its uncertainty is `marketMap`. Nothing here is positional, so never re-sort or compare rows by position.
      */
     competitorRankings: Array<AiVisibilityCompetitorRankingResponse>;
+    /**
+     * Whether this project's prompts are reaching the market its tracked competitor list describes — a reading about the QUESTIONS we ask, not about the brand's visibility. Every other number in this summary is arithmetic over those prompts, so this is the field that says whether they are measuring the right market at all. ABSENT means no reading could be produced: the account tracks no competitors to test the prompts against, or no answer came back to test them with. There is deliberately no token for that case, so absence is the only way it is expressed — and absence NEVER means the prompts are fine. Do not report a missing `promptMarket` as a pass, and do not infer one from the numbers beside it. This reading suppresses nothing: everything else in this summary is complete and published whatever it says, because a customer may have chosen unusual prompts deliberately and their data is the only evidence they can judge that on.
+     */
+    promptMarket?: AiVisibilityPromptMarketResponse;
+    /**
+     * THE MARKET MAP — which companies the AI models recommend in this project's category, how often each is named over the last few checks, where the customer sits among them, and which of those companies the project is not tracking. Lead with it: 'Nine companies make up this market as the AI models draw it; the customer is one of them, 7th of 9 by how often it is named.' Every share is a share of answers analysed with its range beside it; two brands whose ranges overlap are not ordered. Read `promptMarket` first: if it is not `rivals_named_in_most_answers`, say the prompts may not describe this project's market and that the map below cannot be trusted — a confident map of the wrong market is the worst output this product can produce. Not returned on history rows; see the dashboard or a check's detail.
+     */
+    marketMap: AiVisibilityMarketMapResponse;
+};
+
+export type AiVisibilityUntrackedCoreBrandResponse = {
+    /**
+     * Brand domain.
+     */
+    domain: string;
+    /**
+     * Brand name.
+     */
+    name: string;
+    /**
+     * Share of answers naming it — see `marketMap.brands[].presence`.
+     */
+    presence: number;
+    /**
+     * Lower bound of the range.
+     */
+    presenceLow: number;
+    /**
+     * Upper bound of the range.
+     */
+    presenceHigh: number;
+    /**
+     * Answers naming it.
+     */
+    answersNaming: number;
+    /**
+     * Answers analysed.
+     */
+    answersReceived: number;
+};
+
+export type AiVisibilityCustomerStandingExplanationResponse = {
+    /**
+     * Stable code for the sentence — the state token.
+     */
+    code: string;
+    /**
+     * The sentence, rendered verbatim by every surface.
+     */
+    text: string;
+};
+
+export type AiVisibilityCustomerEndorsementStandingResponse = {
+    explanation: AiVisibilityCustomerStandingExplanationResponse;
+    /**
+     * Answers in the window that carried this reading for the customer.
+     */
+    answersRead: number;
+    /**
+     * Core companies with a settled reading and an interval the customer's was set against — at least 3 whenever a comparison was made, and 0 in the too-few state, where nothing was compared. The three counts below sum to it.
+     */
+    coreCompared: number;
+    /**
+     * Core companies whose whole interval sits ABOVE the customer's — the customer is separably below each of them.
+     */
+    coreAboveYou: number;
+    /**
+     * Core companies whose whole interval sits BELOW the customer's.
+     */
+    coreBelowYou: number;
+    /**
+     * Core companies whose interval overlaps the customer's — no order between them and the customer may be stated. Usually most of the core: the customer is usually the least-described brand on their own map and so carries the widest interval.
+     */
+    coreNotSeparable: number;
+    /**
+     * `state` names a measured condition about the customer's OWN row against the companies at the core of this market (`named_in_a_quarter_or_more_of_answers`, never the customer), on this one reading — like against like, never a reading against a share of answers — and it says ONLY what the intervals separate: a core company counts as above the customer only when its whole interval sits above the customer's, below only when wholly below, and the rest are not separable. `explanation.text` is the sentence to report, VERBATIM: never paraphrase it and never build a claim of your own from the token or the counts. `answersRead` is how many answers the customer's reading rests on; `coreCompared` how many core companies carried an interval to compare against, split into `coreAboveYou`, `coreBelowYou` and `coreNotSeparable`; quote them as the sentence does. `too_few_answers_described_you` means fewer than 6 answers carried a reading for the customer, and the figure on their row is a label that will move when an answer leaves the window — not a comparison.
+     */
+    state: 'described_less_warmly_than_every_core_company' | 'described_less_warmly_than_some_core_companies' | 'not_separable_from_the_core' | 'described_more_warmly_than_some_core_companies' | 'described_more_warmly_than_every_core_company' | 'described_between_core_companies' | 'too_few_answers_described_you';
+};
+
+export type AiVisibilityCustomerPriceStandingResponse = {
+    explanation: AiVisibilityCustomerStandingExplanationResponse;
+    /**
+     * Answers in the window that carried this reading for the customer.
+     */
+    answersRead: number;
+    /**
+     * Core companies with a settled reading and an interval the customer's was set against — at least 3 whenever a comparison was made, and 0 in the too-few state, where nothing was compared. The three counts below sum to it.
+     */
+    coreCompared: number;
+    /**
+     * Core companies whose whole interval sits ABOVE the customer's — the customer is separably below each of them.
+     */
+    coreAboveYou: number;
+    /**
+     * Core companies whose whole interval sits BELOW the customer's.
+     */
+    coreBelowYou: number;
+    /**
+     * Core companies whose interval overlaps the customer's — no order between them and the customer may be stated. Usually most of the core: the customer is usually the least-described brand on their own map and so carries the widest interval.
+     */
+    coreNotSeparable: number;
+    /**
+     * `state` names a measured condition about the customer's OWN row against the companies at the core of this market (`named_in_a_quarter_or_more_of_answers`, never the customer), on this one reading — like against like, never a reading against a share of answers — and it says ONLY what the intervals separate: a core company counts as above the customer only when its whole interval sits above the customer's, below only when wholly below, and the rest are not separable. `explanation.text` is the sentence to report, VERBATIM: never paraphrase it and never build a claim of your own from the token or the counts. `answersRead` is how many answers the customer's reading rests on; `coreCompared` how many core companies carried an interval to compare against, split into `coreAboveYou`, `coreBelowYou` and `coreNotSeparable`; quote them as the sentence does. 'Read' is deliberate throughout: this is the tier the models think the customer charges, never what the customer charges. `too_few_answers_stated_your_price` means fewer than 6 answers stated a tier for the customer.
+     */
+    state: 'read_as_cheaper_than_every_core_company' | 'read_as_cheaper_than_some_core_companies' | 'price_not_separable_from_the_core' | 'read_as_pricier_than_some_core_companies' | 'read_as_pricier_than_every_core_company' | 'read_as_priced_between_core_companies' | 'too_few_answers_stated_your_price';
+};
+
+export type AiVisibilityCustomerStandingResponse = {
+    /**
+     * How warmly the models describe the customer against the core of this market. ABSENT when fewer than 3 core companies carry a settled endorsement reading, or the customer's row carries none — a comparison needs both sides, and absence never means 'level'. The sentence counts the core companies it could compare against, which can be fewer than marketMap.coreSize: a core company described in too few answers is left out, and the customer is never counted among them.
+     */
+    endorsement?: AiVisibilityCustomerEndorsementStandingResponse;
+    /**
+     * Where the models place the customer's price against the core of this market. ABSENT when fewer than 3 core companies carry a settled price reading, or the customer's row carries none. Its count of core companies follows the same rule as the endorsement standing's and can differ from marketMap.coreSize.
+     */
+    price?: AiVisibilityCustomerPriceStandingResponse;
 };
 
 export type AiVisibilityLatestCheckUnavailableResponse = {
@@ -1978,48 +2370,78 @@ export type AiVisibilityLatestCheckUnavailableResponse = {
      */
     available: boolean;
     /**
-     * Why the most recent check produced nothing. `incomplete_coverage` — we did not end up with a usable answer for every query it asked.
+     * Why the most recent check produced nothing. `incomplete_coverage` — at least one query it asked could not be read — no usable answer came back from it. A query the model was read for and had no answer to show does not count against coverage.
      */
     reason: 'incomplete_coverage';
     /**
-     * Answers that did come back usable in that check, or null on a check that predates the recorded query count. NOT a visibility figure — a check can be fully covered and still score zero.
+     * Answers that did come back usable in that check. NOT a visibility figure — a check can be fully covered and still score zero.
      */
-    measuredAnswers: number | null;
+    measuredAnswers: number;
     /**
-     * Answers that check asked for: 3 AI providers x the project's prompt count. The shortfall (expectedAnswers - measuredAnswers) is what did not arrive. Null on a check that predates the recorded query count — say the check did not complete and give no numbers. Never treat a null as 0: the subtraction would report no shortfall on a cycle that measurably failed.
+     * Answers that check asked for: every AI model it queried, against every prompt it ran — read the number from this field; do not recompute it from today's model count, which is not necessarily that check's. `expectedAnswers` − `measuredAnswers` is the uncounted total, and it is two facts added together: queries that could not be read, plus queries the model was read for that had no answer to show (`absentAnswers`). Subtract `absentAnswers` from that shortfall to get the number of queries that could not be read; report the two apart, never the total as answers that failed to arrive.
      */
-    expectedAnswers: number | null;
+    expectedAnswers: number;
+    /**
+     * Queries in that check the model was read for and had no answer to show — today, prompts for which Google's results page carried no AI Overview. They sit inside `expectedAnswers` − `measuredAnswers` without being failures: that shortfall minus this figure is the number of queries that could not be read.
+     */
+    absentAnswers: number;
+};
+
+export type AiVisibilityAnswerLocaleResponse = {
+    /**
+     * The country or region the question was asked from, as Google names its markets.
+     */
+    locationName: string;
+    /**
+     * The language the question was asked in, as Google names it.
+     */
+    languageName: string;
+};
+
+export type AiVisibilityAnswerSourceResponse = {
+    /**
+     * Address of the cited page.
+     */
+    url: string;
+    /**
+     * Domain of the cited page — the site Google cited.
+     */
+    domain: string;
+    /**
+     * Title of the cited page, as Google displayed it.
+     */
+    title: string;
 };
 
 export type AiVisibilityAnswerDifferentiationResponse = {
     /**
-     * The axis the model framed this brand as competing on.
+     * The axis the model framed this brand as competing on. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    axis: 'technology' | 'price' | 'service' | 'speed' | 'scale';
+    axis?: 'technology' | 'price' | 'service' | 'speed' | 'scale';
     /**
-     * What the model said sets this brand apart, in its own words. The model's claim, not a verified fact.
+     * What the model said sets this brand apart, in its own words. The model's claim, not a verified fact. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    uniqueValue: string;
+    uniqueValue?: string;
 };
 
 export type AiVisibilityAnswerMessagingResponse = {
     /**
-     * Keywords the model associated with this brand (up to 5).
+     * Keywords the model associated with this brand (up to 5). Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    keywords: Array<string>;
+    keywords?: Array<string>;
     /**
-     * Claims the model offered as evidence for this brand — certifications, customer counts, awards. The model asserts these; it does not source them and CompetLab does not verify them.
+     * Claims the model offered as evidence for this brand — certifications, customer counts, awards. The model asserts these; it does not source them and CompetLab does not verify them. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    credibilitySignals: Array<string>;
+    credibilitySignals?: Array<string>;
     /**
-     * Differentiation claims the model attributed to this brand (up to 3). The model's claims about the brand, not verified facts.
+     * Differentiation claims the model attributed to this brand (up to 3). The model's claims about the brand, not verified facts. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    differentiationClaims: Array<string>;
+    differentiationClaims?: Array<string>;
 };
 
 export type AiVisibilityAnswerBrandResponse = {
     /**
-     * Position in this model's ranked answer — 1 means named first. This is the rank among the brands recorded for this answer: brands are de-duplicated by domain before storage, so it is the position as recorded rather than necessarily the ordinal the model itself emitted. Stable under filtering — narrowing by `provider`, `brand` or `promptIndex` never renumbers it.
+     * Position in this model's answer — 1 means named first. For models that answer with a ranked list, this is the rank they gave. For Google AI Overviews, which answers in prose, it is the ORDER OF FIRST MENTION in `answerText`, computed by CompetLab — Google assigned no position, so never report it as a rank Google gave. This is the rank among the brands recorded for this answer: brands are de-duplicated by domain before storage, so it is the position as recorded rather than necessarily the ordinal the model itself emitted. Stable under filtering — narrowing by `provider`, `brand`, or `promptIndex` never renumbers it.
      */
     rank: number;
     /**
@@ -2031,52 +2453,52 @@ export type AiVisibilityAnswerBrandResponse = {
      */
     domain: string;
     /**
-     * One-sentence description of the brand, in the model's own words.
+     * One-sentence description of the brand, in the model's own words. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    description: string;
+    description?: string;
     /**
-     * The model's stated reason for placing this brand where it did. The single most useful field here for understanding WHY a ranking looks the way it does — and the model's reasoning, not a verified fact.
+     * The model's stated reason for placing this brand where it did. The single most useful field here for understanding WHY a ranking looks the way it does — and the model's reasoning, not a verified fact. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    rankingRationale: string;
+    rankingRationale?: string;
     /**
-     * How warmly the model spoke about this brand in this answer.
+     * How warmly the model spoke about this brand in this answer. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    sentiment: 'highly_recommended' | 'recommended' | 'mentioned' | 'alternative';
+    sentiment?: 'highly_recommended' | 'recommended' | 'mentioned' | 'alternative';
     /**
-     * The role this brand played in the answer.
+     * The role this brand played in the answer. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    mentionContext: 'direct_recommendation' | 'comparison' | 'alternative' | 'niche_fit';
+    mentionContext?: 'direct_recommendation' | 'comparison' | 'alternative' | 'niche_fit';
     /**
-     * Who the model said this brand is for.
+     * Who the model said this brand is for. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    targetAudience: string;
+    targetAudience?: string;
     /**
-     * The price tier the model placed this brand in.
+     * The price tier the model placed this brand in. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    pricingSignal: 'free' | 'budget' | 'mid_range' | 'premium' | 'enterprise' | 'unknown';
+    pricingSignal?: 'free' | 'budget' | 'mid_range' | 'premium' | 'enterprise' | 'unknown';
     /**
-     * 0-1. How confidently this brand's position could be read out of the model's answer. It is not a measure of whether the model's ranking is correct.
+     * 0-1. How confidently this brand's position could be read out of the model's answer. It is not a measure of whether the model's ranking is correct. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    positionConfidence: number;
+    positionConfidence?: number;
     /**
-     * Features the model highlighted for this brand (max 5).
+     * Features the model highlighted for this brand (max 5). Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    features: Array<string>;
+    features?: Array<string>;
     /**
-     * How the model framed this brand's differentiation.
+     * How the model framed this brand's differentiation. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    differentiation: AiVisibilityAnswerDifferentiationResponse;
+    differentiation?: AiVisibilityAnswerDifferentiationResponse;
     /**
-     * The messaging the model associated with this brand.
+     * The messaging the model associated with this brand. Absent when the model that produced this answer does not describe brands — Google AI Overviews names companies in prose and states nothing else about them.
      */
-    messaging: AiVisibilityAnswerMessagingResponse;
+    messaging?: AiVisibilityAnswerMessagingResponse;
 };
 
 export type AiVisibilityAnswerResponse = {
     /**
      * Which AI produced this answer.
      */
-    provider: 'openai' | 'claude' | 'gemini';
+    provider: 'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews';
     /**
      * Zero-based index of the project prompt this answer belongs to. The same index the summary's per-prompt breakdown uses. Stable under filtering.
      */
@@ -2086,7 +2508,19 @@ export type AiVisibilityAnswerResponse = {
      */
     promptText: string;
     /**
-     * Brands this model named, in the order it ranked them. Every answer in this array arrived — a query that produced nothing is not here at all, it is in `unansweredQueries`. So an EMPTY list is a measurement, never missing data: under a `brand` filter it means this model answered this question and did not name that domain, which is a real competitive finding and often the most actionable row in the response. Unfiltered it would mean the model named nobody at all. Report an empty list as 'this model answered and did not name them'; NEVER as 'no data', 'we could not measure', or a query that failed.
+     * The answer as the model wrote it. Present for Google AI Overviews: the overview text, verbatim, from which the brands below were read in order of first mention. Absent for models that answer in a ranked list. Model prose, attributed to the model that wrote it.
+     */
+    answerText?: string;
+    /**
+     * The Google market the question was asked in. Google AI Overviews only.
+     */
+    askedIn?: AiVisibilityAnswerLocaleResponse;
+    /**
+     * The pages cited beside this answer. Google AI Overviews only — the pages Google cited with the overview, distinct by URL, up to 20. ABSENT means either that Google listed no citations or that every one it listed was a masked redirect we could not resolve to a page — never that Google cited nothing. An EMPTY array is the measured 'it cited nothing'. Absent for every other model.
+     */
+    sources?: Array<AiVisibilityAnswerSourceResponse>;
+    /**
+     * Brands this model named, in the order it ranked them — for Google AI Overviews, in the order of first mention in `answerText`, each carrying only `name` and `domain`. Every answer in this array arrived — a query that produced nothing is not here at all, it is in `unansweredQueries`, and a query the model was read for and had no answer to show is in `noAnswerShown`. So an EMPTY list is a measurement, never missing data: under a `brand` filter it means this model answered this question and did not name that domain, which is a real competitive finding and often the most actionable row in the response. Unfiltered it would mean the model named nobody at all. Report an empty list as 'this model answered and did not name them'; NEVER as 'no data', 'we could not measure', or a query that failed.
      */
     brands: Array<AiVisibilityAnswerBrandResponse>;
 };
@@ -2095,7 +2529,7 @@ export type AiVisibilityUnansweredQueryResponse = {
     /**
      * Which AI this query was sent to.
      */
-    provider: 'openai' | 'claude' | 'gemini';
+    provider: 'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews';
     /**
      * Zero-based index of the project prompt this query was sent for.
      */
@@ -2105,14 +2539,33 @@ export type AiVisibilityUnansweredQueryResponse = {
      */
     promptText: string;
     /**
-     * `no_usable_answer` — we sent this query and did not end up with an answer we could use. It names no actor and makes no claim about the prompt or the model. Report it as 'no usable answer from this provider for this prompt — not counted'. NEVER report it as 'not mentioned', '0 mentions' or 'didn't appear', and never attach 'failed' to the prompt, which the customer authored. This query is excluded from every count and rate on this response.
+     * `no_usable_answer` — we sent this query and did not end up with an answer we could use. It names no actor and makes no claim about the prompt or the model. Report it as 'no usable answer from this model for this prompt — not counted'. NEVER report it as 'not mentioned', '0 mentions' or 'didn't appear', and never attach 'failed' to the prompt, which the customer authored. This query is excluded from every count and rate on this response.
      */
     reason: 'no_usable_answer';
 };
 
+export type AiVisibilityNoAnswerShownResponse = {
+    /**
+     * Which AI this query was sent to — we reached it and it had no answer to show.
+     */
+    provider: 'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews';
+    /**
+     * Zero-based index of the project prompt this query was sent for.
+     */
+    promptIndex: number;
+    /**
+     * The exact prompt that was sent.
+     */
+    promptText: string;
+    /**
+     * `no_ai_overview_shown` — Google's results page for this prompt carried no AI Overview. A measured fact about the prompt on Google that day: not a failure, not an answer, and nothing the customer's prompt did wrong. Report it as 'Google showed no AI Overview for this question — not counted'; NEVER as 'not mentioned', '0 mentions', or a query that failed. This query is excluded from every count and rate on this response.
+     */
+    reason: 'no_ai_overview_shown';
+};
+
 export type AiVisibilityProviderStatusResponse = {
     /**
-     * Whether this model produced a result record for this check. `false` means nothing came back from it at all. `true` does NOT mean it answered usefully: a model can be asked and have every one of its queries come back unusable, which appears here as `reported: true` with `answersCounted: 0`. Read the pair. `answersCounted: 0` means we got no usable answer from this model — NEVER that it answered and named nobody. Those queries are listed in `unansweredQueries`.
+     * Whether this model produced a result record for this check. `false` means nothing came back from it at all. `true` does NOT mean it answered usefully: a model can be asked and have every one of its queries come back unusable, which appears here as `reported: true` with `answersCounted: 0`. Read `answersCounted` and `noAnswerShown` together. `answersCounted: 0` beside `noAnswerShown: 0` means we got no usable answer from this model — NEVER that it answered and named nobody — and those queries are listed in `unansweredQueries`. `answersCounted: 0` beside a non-zero `noAnswerShown` means the model was read and had nothing to show, which is not a failure.
      */
     reported: boolean;
     /**
@@ -2120,37 +2573,49 @@ export type AiVisibilityProviderStatusResponse = {
      */
     completedAt?: string | null;
     /**
-     * Queries to this model that came back with an answer we could use. This is the discriminator to read `reported` and `brandsNamed` against.
+     * Queries to this model that came back with an answer we could use. This is the discriminator to read `reported` and `brandsNamed` against. A `0` here does not by itself mean failure: read `noAnswerShown` beside it.
      */
     answersCounted: number;
     /**
-     * Brand entries this model named across the answers that came back, counting a brand once per answer it appears in. `0` beside `answersCounted: 0` means this model produced no usable answer — not that it named nobody. Only `0` beside a non-zero `answersCounted` means it answered and named nobody.
+     * Queries to this model that were read and had no answer to show — the entries for this model in `noAnswerShown` on this response. Zero for every model but Google AI Overviews today. On a check published under the full-coverage gate, `answersCounted` plus this figure is the number of queries sent to it; on older checks a model that failed before answering anything recorded no slots at all, so the sum can fall short. None of these counts is ever a fraction of another.
+     */
+    noAnswerShown: number;
+    /**
+     * Brand entries this model named across the answers that came back, counting a brand once per answer it appears in. `0` beside `answersCounted: 0` means this model produced no answer to count — not that it named nobody. Only `0` beside a non-zero `answersCounted` means it answered and named nobody.
      */
     brandsNamed: number;
 };
 
 export type AiVisibilityProviderStatusMapResponse = {
     /**
-     * OpenAI (ChatGPT)
+     * ChatGPT
      */
-    openai: AiVisibilityProviderStatusResponse;
+    openai?: AiVisibilityProviderStatusResponse;
     /**
-     * Anthropic (Claude)
+     * Claude
      */
-    claude: AiVisibilityProviderStatusResponse;
+    claude?: AiVisibilityProviderStatusResponse;
     /**
-     * Google (Gemini)
+     * Gemini
      */
-    gemini: AiVisibilityProviderStatusResponse;
+    gemini?: AiVisibilityProviderStatusResponse;
+    /**
+     * Perplexity
+     */
+    perplexity?: AiVisibilityProviderStatusResponse;
+    /**
+     * Google AI Overviews
+     */
+    google_ai_overviews?: AiVisibilityProviderStatusResponse;
 };
 
 export type AiVisibilityAnswerCoverageResponse = {
     /**
-     * Queries this check sent: 3 AI providers x the prompt count stored on this check. Always read it from the check — do not assume 9. Checks keep the prompt count they were run with, and that count has not always been the same across a project's history.
+     * Queries this check sent: every AI model it queried, against every prompt it ran — read the number from this field; do not recompute it from today's model count, which is not necessarily that check's. Checks keep the model set and the prompt count they were run with.
      */
     queriesSent: number;
     /**
-     * Queries that came back with an answer we could use. The shortfall (`queriesSent` - `answersCounted`) is what did not arrive. On a check published under the full-coverage gate that shortfall equals the length of `unansweredQueries`; on older checks it can exceed it, because a model that failed before answering anything recorded no query slots to list. Trust the shortfall, not the array length. NEVER present these two numbers as a fraction: this dimension's headline metric is already an n-of-N over the same denominator, so '8 of 9' gets read as a visibility rate. State them as separate facts that cannot be divided by each other — "We sent all 9 queries, but 1 answer didn't come back." Always computed over the whole check, never over a filtered view.
+     * Queries that came back with an answer we could use. The shortfall is `queriesSent` − `answersCounted`, and it is two different facts added together: `queriesSent` − `answersCounted` = `unansweredQueries.length` + `noAnswerShown.length` — queries we could not measure, plus queries the model was read for and had no answer to show. On a check published under the full-coverage gate the whole shortfall is in `noAnswerShown`; on older checks it can exceed both arrays together, because a model that failed before answering anything recorded no query slots to list. Trust the shortfall, not the array lengths. NEVER present these numbers as a fraction: this dimension's headline metric is already an n-of-N over the same denominator, so any shortfall written as a fraction gets read as a visibility rate. State them as separate facts that cannot be divided by each other — "We sent every query we planned; Google showed no AI Overview for one of them, so it is not counted", or, for a query that could not be read, "one answer didn't come back." Always computed over the whole check, never over a filtered view.
      */
     answersCounted: number;
 };
@@ -2165,36 +2630,48 @@ export type AiVisibilityDashboardResponse = {
      */
     summary: AiVisibilityDashboardSummaryResponse;
     /**
-     * Present ONLY when the project's most recent check was abandoned as incomplete: it did not get a usable answer for every query it asked, so it was never scored. When present, every other field in this response comes from an EARLIER check, and `lastUpdatedAt` is older than the most recent check attempted. Absent when the most recent check published normally — and absent, too, when an older check fell short but a later one has since published, because that failure has been superseded. An abandoned check is never retried into a score: a new check runs automatically, and the caller may also trigger one immediately. When describing this state, NEVER phrase it as a fraction — this dimension's own metric is a count of queries, so "1 of 9" and "8 of 9" both get read as a visibility rate. State the two numbers as separate facts that cannot be divided by each other: "We sent all 9 queries, but 1 answer didn't come back." If `expectedAnswers` is null the check predates the recorded query count and there is no honest sentence to build — say the check did not complete and give no numbers.
+     * Companies the AI models place in the core of the customer's market that the project does NOT track — the highest-value line this dimension produces. Every other dimension benchmarks against the competitor list, so a core brand missing from it is a hole in the whole account, found here. Resolved against the project's CURRENT competitor list. ABSENT when `summary.promptMarket` is not `rivals_named_in_most_answers` or could not be produced — a recommendation drawn from a map that may describe the wrong market is withheld, and absence never means 'none'. An EMPTY list means the gate is healthy and every core brand is already tracked, which is a real finding. Report it as a recommendation to add these companies, never as a fact about them.
+     */
+    untrackedCoreBrands?: Array<AiVisibilityUntrackedCoreBrandResponse>;
+    /**
+     * The customer's own standing against the core of this market on the two profile readings — how warmly the models describe them, and where the models place their price — each as a state token and a sentence to report verbatim. Derived from `summary.marketMap` by one shared rule, so the app and this API cannot say different things. A reading of the map, not a recommendation: present whenever a published map is, and read under `summary.promptMarket` exactly as the map is — unless that state is `rivals_named_in_most_answers`, say the market it compares against may not be the customer's. Each reading inside is absent on its own evidence floor, and absence never means 'level'. Never derive a gap, a distance or a rank from these; never set `endorsement` against `presence`.
+     */
+    customerStanding?: AiVisibilityCustomerStandingResponse;
+    /**
+     * Present ONLY when the project's most recent check was abandoned as incomplete: at least one query it asked could not be read — no usable answer came back from it — so it was never scored. A query the model was read for and had no answer to show does not count against coverage. When present, every other field in this response comes from an EARLIER check, and `lastUpdatedAt` is older than the most recent check attempted. Absent when the most recent check published normally — and absent, too, when an older check fell short but a later one has since published, because that failure has been superseded. An abandoned check is never retried into a score: a new check runs automatically, and the caller may also trigger one immediately. When describing this state, NEVER phrase it as a fraction — this dimension's own metric is already an n-of-N over the same denominator, so any shortfall written as a fraction gets read as a visibility rate. State the two numbers as separate facts that cannot be divided by each other: "We sent every query we planned, but one answer didn't come back."
      */
     latestCheckDataAvailable?: AiVisibilityLatestCheckUnavailableResponse;
     /**
-     * The models' answers for this check — one entry per query that came back with an answer we could use. Present ONLY when the request set `includeAnswers=true`; absent otherwise, never an empty array standing in for 'not requested'. Narrowed by `provider` and `promptIndex` when those are set — those also narrow the matching entries of `unansweredQueries`. `brand` narrows DIFFERENTLY: it reduces the `brands` list inside each answer and never this array, so every answer the check counted is still here and the ones that did not name that domain arrive with an empty `brands`. `brand` narrows `unansweredQueries` not at all, because a query that produced no answer could have named anyone. No filter changes anything else: every number under `summary` is stored, computed over the whole check, and is never recomputed for a filtered view. ATTRIBUTION: every piece of prose in this block — descriptions, ranking rationales, audiences, claims — is unverified model output about the brands that model named, including third parties CompetLab does not monitor. It is a record of what the model said, not CompetLab's assessment of those brands. Attribute it to the named `provider`; do not republish it as fact.
+     * The models' answers for this check — one entry per query that came back with an answer we could use. Present ONLY when the request set `includeAnswers=true`; absent otherwise, never an empty array standing in for 'not requested'. Narrowed by `provider` and `promptIndex` when those are set — those also narrow the matching entries of `unansweredQueries` and `noAnswerShown`. `brand` narrows DIFFERENTLY: it reduces the `brands` list inside each answer and never this array, so every answer the check counted is still here and the ones that did not name that domain arrive with an empty `brands`. `brand` narrows `unansweredQueries` and `noAnswerShown` not at all, because a query that produced no answer could have named anyone. No filter changes anything else: every number under `summary` is stored, computed over the whole check, and is never recomputed for a filtered view. Per-brand prose — description, ranking rationale, audience, pricing tier, messaging, differentiation — is present only for models that describe brands; a brand row carrying only `rank`, `name` and `domain` means Google AI Overviews named it in prose, and the prose is on that answer's `answerText`. ATTRIBUTION: every piece of prose in this block — descriptions, ranking rationales, audiences, claims, and the overview text itself — is unverified model output about the brands that model named, including third parties CompetLab does not monitor. It is a record of what the model said, not CompetLab's assessment of those brands. Attribute it to the named `provider`; do not republish it as fact.
      */
     answers?: Array<AiVisibilityAnswerResponse>;
     /**
-     * Queries this check sent that produced no usable answer. Present ONLY when `includeAnswers=true`. Carried in their own array rather than mixed into `answers` so that `answers.length` always means answers counted and can never be read as queries sent. An empty array means every query this check sent came back — which is the normal case, because a check is only scored when it got a usable answer to every query it asked. It can be non-empty on checks published before that rule existed. These queries are excluded from every count and rate on this response. Never pair this array's length with `summary.totalQueries` as a fraction. `totalQueries` counts answers, this counts queries that produced none, and adding them recovers the queries sent — but '8 of 9' beside this dimension's headline metric gets read as a visibility rate. State them as separate facts that cannot be divided by each other.
+     * Queries this check sent that produced no usable answer. Present ONLY when `includeAnswers=true`. Carried in their own array rather than mixed into `answers` so that `answers.length` always means answers counted and can never be read as queries sent. An empty array means every query this check sent was read — answered, or listed under `noAnswerShown` — which is the normal case, because a check is only scored when every query it asked was read. It can be non-empty on checks published before that rule existed. These queries are excluded from every count and rate on this response. Never pair this array's length with `summary.totalQueries` as a fraction. `totalQueries` counts answers, this counts queries that produced none, and adding them and `noAnswerShown.length` recovers the queries sent — but a shortfall written as a fraction, beside this dimension's headline metric, gets read as a visibility rate. State them as separate facts that cannot be divided by each other.
      */
     unansweredQueries?: Array<AiVisibilityUnansweredQueryResponse>;
     /**
-     * Per-model reporting status for this check: which of the three models returned data, when, and how much. Present ONLY when `includeAnswers=true`. It carries no visibility judgement, and it is NOT narrowed by the filters — it always describes all three models across the whole check, so a filtered response still says what the full picture was.
+     * Queries the model was read for and had no answer to show — today, prompts for which Google's results page carried no AI Overview. Not a failure and not an answer: these slots are excluded from every count on this payload. Separate from `unansweredQueries`, which are queries we could not measure. Present ONLY when `includeAnswers=true`. Narrowed by `provider` and `promptIndex`, never by `brand`. An empty array means every query the check sent was either answered or could not be measured.
+     */
+    noAnswerShown?: Array<AiVisibilityNoAnswerShownResponse>;
+    /**
+     * Per-model reporting status for this check: which of the models this check asked returned data, when, and how much. One entry per model the check ASKED — a model is absent when the check did not ask it, because checks keep the model set they were run with; absent means not measured, never 'did not report'. Present ONLY when `includeAnswers=true`. It carries no visibility judgement, and it is NOT narrowed by the filters — it always describes every model the check asked across the whole check, so a filtered response still says what the full picture was.
      */
     providerStatus?: AiVisibilityProviderStatusMapResponse;
     /**
-     * How many queries this check sent, and how many came back. Present ONLY when `includeAnswers=true` AND the check recorded the number it sent. Absent on checks written before that count was recorded — there the figure is genuinely unknown and must not be inferred, least of all from the length of `answers`. Always describes the whole check, never a filtered view. Report the two numbers as separate facts, never as a fraction — see `answersCounted`.
+     * How many queries this check sent, and how many came back — both read from the check's own record of its ask, never inferred from the length of `answers`. Present ONLY when `includeAnswers=true`. Always describes the whole check, never a filtered view. Report the two numbers as separate facts, never as a fraction — see `answersCounted`.
      */
     answerCoverage?: AiVisibilityAnswerCoverageResponse;
     /**
-     * True when the answers payload hit the response size cap and whole answers were dropped from the end of `answers`. Individual `brands` lists are never partially truncated — a half-truncated ranked list would be a wrong list, not a short one. `summary`, `providerStatus` and `answerCoverage` are never affected. Narrow the response with `provider`, `brand` or `promptIndex` to get a complete view. Present ONLY when `includeAnswers=true`.
+     * True when the answers payload hit the response size cap and answers were dropped from the end of `answers`. The cut lands on a WHOLE PROMPT ROUND, never inside one: `answers` is ordered prompt by prompt across the models, so truncation drops the highest `promptIndex` values and no model is ever removed by truncation from a prompt that is still present — group the array by `promptIndex` and no round is short. A model missing from a prompt that IS present is in `unansweredQueries` or `noAnswerShown`, not cut; neither of those arrays is ever truncated, so a prompt absent from `answers` is not a prompt no model answered. Individual `brands` lists are never partially truncated. `summary`, `providerStatus` and `answerCoverage` are never affected. Narrow the response with `provider` or `promptIndex` to get a complete view — `brand` keeps every answer, and each Google AI Overviews answer's overview text and cited pages with it, so it shrinks the payload far less. Present ONLY when `includeAnswers=true`.
      */
     answersTruncated?: boolean;
 };
 
-export type AiProvider = 'openai' | 'claude' | 'gemini';
+export type AiProvider = 'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews';
 
 export type ApiValidationErrorResponse = {
     /**
-     * Machine-readable error code for a rejected request payload or query. `invalid_parameters` — a query parameter or body field failed validation. `invalid_run_id` — a path parameter naming a run is not a well-formed identifier. `invalid_check_id` — a path parameter naming an AI-visibility check is not a well-formed identifier.
+     * Machine-readable error code for a rejected request payload or query. `invalid_parameters` — a query parameter or body field failed validation. `invalid_run_id` — a path parameter naming a run is not a well-formed identifier. `invalid_check_id` — a path parameter naming an AI Visibility or AI Sources check is not a well-formed identifier.
      */
     code: 'invalid_parameters' | 'invalid_run_id' | 'invalid_check_id';
     /**
@@ -2211,6 +2688,41 @@ export type ApiValidationErrorEnvelope = {
     error: ApiValidationErrorResponse;
 };
 
+export type AiVisibilityHistorySummaryResponse = {
+    /**
+     * Customer metrics
+     */
+    customer: AiVisibilityCustomerMetricsResponse;
+    /**
+     * Top competitor by mention rate
+     */
+    topCompetitor?: AiVisibilityTopCompetitorResponse | null;
+    /**
+     * Gap between customer and top competitor mention rate (negative means customer is behind), or null when this check found no competitor to compare against — `topCompetitor` is null on the same response. A `0` means genuinely level; a null means there was nobody to be level with.
+     */
+    mentionRateGap: number | null;
+    /**
+     * Total unique competitors found across AI responses
+     */
+    totalCompetitorsFound: number;
+    /**
+     * Answers this check counted — the queries that came back with a usable answer. Despite the field name this is NOT the number of queries sent; that figure is not on this response and cannot be derived from it. This is the divisor of every rate and score here. Under the full-coverage gate it is the ask — every AI model the check asked × every prompt it ran — minus the queries a model was read for and had no answer to show (`noAnswerShown`); checks published before that gate stay published and can have counted fewer answers than they asked queries, so this can be lower than what that check sent. Never describe this number as the queries asked. When `latestCheckDataAvailable` is present, this count describes the earlier check the other fields came from.
+     */
+    totalQueries: number;
+    /**
+     * Total brand entries across this check's counted answers. Also the size preview for `includeAnswers=true`: an entry serializes to roughly 375 tokens, so a 60-entry check runs around 25k tokens unfiltered and a five-engine check nearer 46k, while `brand=` returns about one entry per answer and lands nearer 2k — or roughly 9k when Google AI Overviews is in the ask, whose overview text and cited pages the brand filter keeps, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps.
+     */
+    totalEntries: number;
+    /**
+     * Every brand this check's counted answers named, plus the customer's own row, in the ORDER TO RENDER: `mentionRate` desc, then `aiScore` desc, then domain. One check's view; the windowed view with its uncertainty is `marketMap`. Nothing here is positional, so never re-sort or compare rows by position.
+     */
+    competitorRankings: Array<AiVisibilityCompetitorRankingResponse>;
+    /**
+     * Whether this project's prompts are reaching the market its tracked competitor list describes — a reading about the QUESTIONS we ask, not about the brand's visibility. Every other number in this summary is arithmetic over those prompts, so this is the field that says whether they are measuring the right market at all. ABSENT means no reading could be produced: the account tracks no competitors to test the prompts against, or no answer came back to test them with. There is deliberately no token for that case, so absence is the only way it is expressed — and absence NEVER means the prompts are fine. Do not report a missing `promptMarket` as a pass, and do not infer one from the numbers beside it. This reading suppresses nothing: everything else in this summary is complete and published whatever it says, because a customer may have chosen unusual prompts deliberately and their data is the only evidence they can judge that on.
+     */
+    promptMarket?: AiVisibilityPromptMarketResponse;
+};
+
 export type AiVisibilityHistoryItemResponse = {
     /**
      * Check ID
@@ -2221,9 +2733,9 @@ export type AiVisibilityHistoryItemResponse = {
      */
     completedAt: string;
     /**
-     * Check summary statistics
+     * Check summary statistics — the dashboard summary without `marketMap`, which is on the dashboard and on a check's detail.
      */
-    summary: AiVisibilityDashboardSummaryResponse;
+    summary: AiVisibilityHistorySummaryResponse;
 };
 
 export type AiVisibilityCheckDetailResponse = {
@@ -2240,25 +2752,191 @@ export type AiVisibilityCheckDetailResponse = {
      */
     summary: AiVisibilityDashboardSummaryResponse;
     /**
-     * The models' answers for this check — one entry per query that came back with an answer we could use. Present ONLY when the request set `includeAnswers=true`; absent otherwise, never an empty array standing in for 'not requested'. Narrowed by `provider` and `promptIndex` when those are set — those also narrow the matching entries of `unansweredQueries`. `brand` narrows DIFFERENTLY: it reduces the `brands` list inside each answer and never this array, so every answer the check counted is still here and the ones that did not name that domain arrive with an empty `brands`. `brand` narrows `unansweredQueries` not at all, because a query that produced no answer could have named anyone. No filter changes anything else: every number under `summary` is stored, computed over the whole check, and is never recomputed for a filtered view. ATTRIBUTION: every piece of prose in this block — descriptions, ranking rationales, audiences, claims — is unverified model output about the brands that model named, including third parties CompetLab does not monitor. It is a record of what the model said, not CompetLab's assessment of those brands. Attribute it to the named `provider`; do not republish it as fact.
+     * The models' answers for this check — one entry per query that came back with an answer we could use. Present ONLY when the request set `includeAnswers=true`; absent otherwise, never an empty array standing in for 'not requested'. Narrowed by `provider` and `promptIndex` when those are set — those also narrow the matching entries of `unansweredQueries` and `noAnswerShown`. `brand` narrows DIFFERENTLY: it reduces the `brands` list inside each answer and never this array, so every answer the check counted is still here and the ones that did not name that domain arrive with an empty `brands`. `brand` narrows `unansweredQueries` and `noAnswerShown` not at all, because a query that produced no answer could have named anyone. No filter changes anything else: every number under `summary` is stored, computed over the whole check, and is never recomputed for a filtered view. Per-brand prose — description, ranking rationale, audience, pricing tier, messaging, differentiation — is present only for models that describe brands; a brand row carrying only `rank`, `name` and `domain` means Google AI Overviews named it in prose, and the prose is on that answer's `answerText`. ATTRIBUTION: every piece of prose in this block — descriptions, ranking rationales, audiences, claims, and the overview text itself — is unverified model output about the brands that model named, including third parties CompetLab does not monitor. It is a record of what the model said, not CompetLab's assessment of those brands. Attribute it to the named `provider`; do not republish it as fact.
      */
     answers?: Array<AiVisibilityAnswerResponse>;
     /**
-     * Queries this check sent that produced no usable answer. Present ONLY when `includeAnswers=true`. Carried in their own array rather than mixed into `answers` so that `answers.length` always means answers counted and can never be read as queries sent. An empty array means every query this check sent came back — which is the normal case, because a check is only scored when it got a usable answer to every query it asked. It can be non-empty on checks published before that rule existed. These queries are excluded from every count and rate on this response. Never pair this array's length with `summary.totalQueries` as a fraction. `totalQueries` counts answers, this counts queries that produced none, and adding them recovers the queries sent — but '8 of 9' beside this dimension's headline metric gets read as a visibility rate. State them as separate facts that cannot be divided by each other.
+     * Queries this check sent that produced no usable answer. Present ONLY when `includeAnswers=true`. Carried in their own array rather than mixed into `answers` so that `answers.length` always means answers counted and can never be read as queries sent. An empty array means every query this check sent was read — answered, or listed under `noAnswerShown` — which is the normal case, because a check is only scored when every query it asked was read. It can be non-empty on checks published before that rule existed. These queries are excluded from every count and rate on this response. Never pair this array's length with `summary.totalQueries` as a fraction. `totalQueries` counts answers, this counts queries that produced none, and adding them and `noAnswerShown.length` recovers the queries sent — but a shortfall written as a fraction, beside this dimension's headline metric, gets read as a visibility rate. State them as separate facts that cannot be divided by each other.
      */
     unansweredQueries?: Array<AiVisibilityUnansweredQueryResponse>;
     /**
-     * Per-model reporting status for this check: which of the three models returned data, when, and how much. Present ONLY when `includeAnswers=true`. It carries no visibility judgement, and it is NOT narrowed by the filters — it always describes all three models across the whole check, so a filtered response still says what the full picture was.
+     * Queries the model was read for and had no answer to show — today, prompts for which Google's results page carried no AI Overview. Not a failure and not an answer: these slots are excluded from every count on this payload. Separate from `unansweredQueries`, which are queries we could not measure. Present ONLY when `includeAnswers=true`. Narrowed by `provider` and `promptIndex`, never by `brand`. An empty array means every query the check sent was either answered or could not be measured.
+     */
+    noAnswerShown?: Array<AiVisibilityNoAnswerShownResponse>;
+    /**
+     * Per-model reporting status for this check: which of the models this check asked returned data, when, and how much. One entry per model the check ASKED — a model is absent when the check did not ask it, because checks keep the model set they were run with; absent means not measured, never 'did not report'. Present ONLY when `includeAnswers=true`. It carries no visibility judgement, and it is NOT narrowed by the filters — it always describes every model the check asked across the whole check, so a filtered response still says what the full picture was.
      */
     providerStatus?: AiVisibilityProviderStatusMapResponse;
     /**
-     * How many queries this check sent, and how many came back. Present ONLY when `includeAnswers=true` AND the check recorded the number it sent. Absent on checks written before that count was recorded — there the figure is genuinely unknown and must not be inferred, least of all from the length of `answers`. Always describes the whole check, never a filtered view. Report the two numbers as separate facts, never as a fraction — see `answersCounted`.
+     * How many queries this check sent, and how many came back — both read from the check's own record of its ask, never inferred from the length of `answers`. Present ONLY when `includeAnswers=true`. Always describes the whole check, never a filtered view. Report the two numbers as separate facts, never as a fraction — see `answersCounted`.
      */
     answerCoverage?: AiVisibilityAnswerCoverageResponse;
     /**
-     * True when the answers payload hit the response size cap and whole answers were dropped from the end of `answers`. Individual `brands` lists are never partially truncated — a half-truncated ranked list would be a wrong list, not a short one. `summary`, `providerStatus` and `answerCoverage` are never affected. Narrow the response with `provider`, `brand` or `promptIndex` to get a complete view. Present ONLY when `includeAnswers=true`.
+     * True when the answers payload hit the response size cap and answers were dropped from the end of `answers`. The cut lands on a WHOLE PROMPT ROUND, never inside one: `answers` is ordered prompt by prompt across the models, so truncation drops the highest `promptIndex` values and no model is ever removed by truncation from a prompt that is still present — group the array by `promptIndex` and no round is short. A model missing from a prompt that IS present is in `unansweredQueries` or `noAnswerShown`, not cut; neither of those arrays is ever truncated, so a prompt absent from `answers` is not a prompt no model answered. Individual `brands` lists are never partially truncated. `summary`, `providerStatus` and `answerCoverage` are never affected. Narrow the response with `provider` or `promptIndex` to get a complete view — `brand` keeps every answer, and each Google AI Overviews answer's overview text and cited pages with it, so it shrinks the payload far less. Present ONLY when `includeAnswers=true`.
      */
     answersTruncated?: boolean;
+};
+
+export type AiVisibilityTrendWindowResponse = {
+    /**
+     * When the first published check in the window completed (ISO-8601); null when the window holds none.
+     */
+    from: string | null;
+    /**
+     * When the last published check in the window completed (ISO-8601); null when the window holds none.
+     */
+    to: string | null;
+    /**
+     * Published checks in the window — the checks the readings were taken at.
+     */
+    checks: number;
+    /**
+     * Usable answers pooled on the latest map on this scope — the denominator of every `now` reading. Null under a `provider` filter for a model with no usable answer in the latest window.
+     */
+    answersReceived: number | null;
+    /**
+     * Published checks pooled into the latest map — every reading is over a window of up to this many checks, never one check alone.
+     */
+    checksAnalysed: number;
+    /**
+     * The models the latest check asked, as recorded on it. A check keeps the model set it ran with.
+     */
+    providersAsked: Array<'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews'>;
+};
+
+export type AiVisibilityTrendPresenceResponse = {
+    /**
+     * Answers in the check's window that named the company — the numerator. Every prompt asks for a recommendation, so a company named in an answer is one the model recommended. Deduplicated within an answer, matched on the domain.
+     */
+    answersNaming: number;
+    /**
+     * Usable answers pooled in that window on this scope — the denominator, and the universe of every figure on this reading. Never the number of queries sent.
+     */
+    answersReceived: number;
+    /**
+     * `answersNaming` / `answersReceived` × 100, rounded to a whole percent. A share of answers, never a probability.
+     */
+    presence: number;
+    /**
+     * The lower bound of a 95% interval on that share, in whole percent. Two companies whose intervals overlap are NOT in a settled order, whatever the shares say.
+     */
+    presenceLow: number;
+    /**
+     * The upper bound of the same interval, in whole percent.
+     */
+    presenceHigh: number;
+    /**
+     * Where the share sits once the sample's uncertainty is allowed for — a measured condition, never a verdict. `named_in_a_quarter_or_more_of_answers`: the lower bound is above 25%, the company is part of the market as the models draw it. `named_in_under_a_tenth_of_answers`: the upper bound is below 10%. `share_not_yet_separable`: the interval straddles a line — recommended sometimes, but too few answers to say whether that is often or rarely. Report the condition in those words; never 'irrelevant', 'tail' or 'core' as a judgement.
+     */
+    zone: AiMarketZone;
+};
+
+export type AiVisibilityTrendReadingResponse = {
+    /**
+     * When the published check this reading is from completed (ISO-8601).
+     */
+    date: string;
+    /**
+     * That check's id — pass it to the check-detail route to read the answers behind the reading.
+     */
+    checkId: string;
+    /**
+     * How often the company was recommended in that check's window, with its range and zone.
+     */
+    presence: AiVisibilityTrendPresenceResponse;
+    /**
+     * The company's rank by how often it was recommended on that check's map: one plus the companies recommended more often, ties sharing a rank. Null where the company was not on that map (no answer in the window named it), and null under a `provider` filter — a rank exists only across every model.
+     */
+    rank: number | null;
+    /**
+     * The company's AI Visibility Score on that check (0-100). The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it sat only in the tail of AI recommendations — below the top 5, or too seldom inside it for the average to register. Null where the check's rows carry none — no counted answer on that check named the company; the customer's own is present on every check — and null under a `provider` filter, since the score is one figure across every model.
+     */
+    score: number | null;
+};
+
+export type AiVisibilityTrendSeriesPointResponse = {
+    /**
+     * When the published check completed (ISO-8601).
+     */
+    date: string;
+    /**
+     * The share of answers recommending the company in that check's window, in whole percent — or null where this scope was not measured on that check (the model returned no usable answer in the window). Null is a break in the line, never a zero; a measured zero ships as 0.
+     */
+    presence: number | null;
+    /**
+     * The lower bound of the 95% interval on that share; null with `presence`.
+     */
+    presenceLow: number | null;
+    /**
+     * The upper bound of the same interval; null with `presence`.
+     */
+    presenceHigh: number | null;
+};
+
+export type AiVisibilityTrendCompanyResponse = {
+    /**
+     * The company's name as the latest map in the window labels it — a label, not an identity; match companies on `domain`.
+     */
+    name: string;
+    /**
+     * The company's domain — its identity across every check and every surface.
+     */
+    domain: string;
+    /**
+     * True on the project's own company — the row every other row is read against.
+     */
+    isOwn: boolean;
+    /**
+     * True when the project tracks this domain as a competitor today. False means the AI models raised it unprompted.
+     */
+    isTracked: boolean;
+    /**
+     * The models that recommended the company at least once in the latest check's window, in a fixed order. A company named by one model and one named by all of them read the same on the pooled share, so read this before saying a company is named across the market rather than by one model. An empty list means no model named the company on the latest map — a measured absence. ABSENT under a `provider` filter: one model's slice cannot say which models back a company, so the key is left off rather than emptied.
+     */
+    enginesBacking?: Array<'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews'>;
+    /**
+     * The latest measured reading in the window.
+     */
+    now: AiVisibilityTrendReadingResponse;
+    /**
+     * The earliest measured reading in the window, when it is a different check from `now`. Null when the window holds a single measured reading — there is no movement to report then, and every `*Change` field is null with it.
+     */
+    start: AiVisibilityTrendReadingResponse | null;
+    /**
+     * `now.presence.presence` minus `start.presence.presence`, in points of share. Positive means recommended more often now. Null without a `start`.
+     */
+    presenceChange: number | null;
+    /**
+     * Whether the two readings' ranges separate — `now`'s 95% interval sits wholly above or wholly below `start`'s. True: the change is a settled move and may be reported as one. False: the ranges overlap, so `presenceChange` is the difference between two readings and never 'rose' or 'fell' — say the share now and at the start, and that the ranges overlap. Null without a `start`.
+     */
+    presenceChangeSeparable: boolean | null;
+    /**
+     * `start.rank` minus `now.rank` — places moved, positive means the company climbed. Null without a rank on both ends, and always null under a `provider` filter.
+     */
+    rankChange: number | null;
+    /**
+     * `now.score` minus `start.score`. Null without a score on both ends, and always null under a `provider` filter.
+     */
+    scoreChange: number | null;
+    /**
+     * Only with `detail=series`: the company's share check by check, oldest first, at most 12 points spread evenly over the window with the first and the last always included. Read the ends from `start` and `now`; this is for the shape between them.
+     */
+    series?: Array<AiVisibilityTrendSeriesPointResponse>;
+};
+
+export type AiVisibilityStandingChangeResponse = {
+    /**
+     * When the change was announced (ISO-8601) — the second check the new standing held on.
+     */
+    date: string;
+    /**
+     * The customer's zone before the change; null when the customer was on no map before — a measured absence, not a failed measurement.
+     */
+    from: AiMarketZone | null;
+    /**
+     * The customer's zone after the change — the state that held.
+     */
+    to: AiMarketZone;
 };
 
 export type AiVisibilityIncompleteCycleResponse = {
@@ -2267,48 +2945,1149 @@ export type AiVisibilityIncompleteCycleResponse = {
      */
     date: string;
     /**
-     * Why this cycle produced no point. `incomplete_coverage` — we did not end up with a usable answer for every query it asked. Absent on cycles recorded before this was stored; absence means the reason was not recorded, never that there wasn't one.
+     * Why this cycle produced no reading. `incomplete_coverage` — at least one query it asked could not be read — no usable answer came back from it. A query the model was read for and had no answer to show does not count against coverage.
      */
-    reason?: 'incomplete_coverage';
+    reason: 'incomplete_coverage';
     /**
-     * Answers that came back usable in this cycle, or null on a cycle that predates the recorded query count. Not a visibility figure — a cycle can be fully covered and score zero.
+     * Answers that came back usable in this cycle. Not a visibility figure — a cycle can be fully covered and score zero.
      */
-    measuredAnswers: number | null;
+    measuredAnswers: number;
     /**
-     * Answers the cycle asked for: 3 AI providers x the project's prompt count at the time. The shortfall (expectedAnswers - measuredAnswers) is what did not arrive. Null on a cycle that predates the recorded query count — say the cycle did not complete and give no numbers. Never treat a null as 0: the subtraction would report no shortfall on a cycle that measurably failed. This endpoint is where cycles are enumerated for plotting, so it is where that subtraction is most likely to run.
+     * Answers the cycle asked for: every AI model it queried, against every prompt it ran — read the number from this field; do not recompute it from today's model count, which is not necessarily that cycle's. `expectedAnswers` − `measuredAnswers` is the uncounted total, and it is two facts added together: queries that could not be read, plus queries the model was read for that had no answer to show (`absentAnswers`). Subtract `absentAnswers` from that shortfall to get the number of queries that could not be read; report the two apart, never the total as answers that failed to arrive.
      */
-    expectedAnswers: number | null;
+    expectedAnswers: number;
+    /**
+     * Queries in this cycle the model was read for and had no answer to show — today, prompts for which Google's results page carried no AI Overview. They sit inside `expectedAnswers` − `measuredAnswers` without being failures: that shortfall minus this figure is the number of queries that could not be read.
+     */
+    absentAnswers: number;
 };
 
-export type AiVisibilityTrendDataPointResponse = {
+export type AiVisibilityTrendEventsResponse = {
     /**
-     * Data point date (ISO-8601)
+     * The customer's own standing on the market map moving to a different zone and holding there — the alerts the customer received, as dated marks. A standing is announced only once it has held for two consecutive published checks, so a one-check blip never appears here. Empty when none in the window.
      */
-    date: string;
+    standingChanges: Array<AiVisibilityStandingChangeResponse>;
     /**
-     * Customer mention rate percentage (0-100), or null when this point has no denominator to divide by: a check recorded before we stored its answer count, or — under a provider filter — a provider whose every slot on that check was unmeasured. A `0` means the models answered and named nobody; a null means there was nothing to compute a rate from. Plot a null as a break in the line, never as a zero.
+     * Monitoring cycles inside the window that produced no reading, because at least one query they asked could not be read. Reported so a gap between two readings is distinguishable from a period when nothing was scheduled. The newest 200 in the window, oldest first — the same end the readings are cut from, so on a long history set `dateFrom`/`dateTo` to keep both on one span. Empty for a window with none — an empty array never means "we know there were no gaps".
      */
-    customerMentionRate: number | null;
+    incompleteCycles: Array<AiVisibilityIncompleteCycleResponse>;
     /**
-     * Top competitor mention rate percentage (0-100), or null when this check found no top competitor, or when there is no denominator (see `customerMentionRate`). `topCompetitorDomain` is null on the same points. A forced `0` here used to draw the market leader flat along the bottom of the chart and the customer ahead of everyone.
+     * When the project's prompts were last edited (ISO-8601), or null when never. Readings before that date are answers to different questions; do not read a move across it as the market moving.
      */
-    topCompetitorMentionRate: number | null;
+    promptsLastChangedAt: string | null;
+};
+
+export type AiVisibilityTrendResponse = {
     /**
-     * Top competitor domain at this data point
+     * The window the readings were taken over.
      */
-    topCompetitorDomain?: string | null;
+    window: AiVisibilityTrendWindowResponse;
     /**
-     * Gap between customer and top competitor (negative means customer is behind), or null when this check had no top competitor to compare against — `topCompetitorDomain` is null on the same points. A `0` means genuinely level; a null means there was nobody to be level with. Plot a null as a break in the line, never as a point at zero.
+     * Every AI model at once (`all`), or the one asked for with `provider`. Under one model the readings are that model's own slices of each map, and rank and score are absent.
      */
-    gap: number | null;
+    scope: 'all' | 'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews';
     /**
-     * Customer AI Visibility Score (0-100). A single weighted composite across all providers — null when a provider filter is applied, since no per-provider score exists.
+     * One row per company, in the order of how often each is recommended on the latest map — ties are ties. The project's own company and its tracked competitors are always here; the rest are the most recommended companies in the window, up to 10 rows in all. A company with no measured reading on this scope in the window is left out.
      */
-    customerAiScore?: number | null;
+    companies: Array<AiVisibilityTrendCompanyResponse>;
     /**
-     * Top competitor AI Visibility Score (0-100). A single weighted composite across all providers — null when a provider filter is applied, since no per-provider score exists.
+     * What happened on the time axis, as facts — the consumer writes the sentence.
      */
-    topCompetitorAiScore?: number | null;
+    events: AiVisibilityTrendEventsResponse;
+};
+
+/**
+ * The one reading of the customer's standing this check, decided when the summary was built and carried here as stored — a consumer never re-derives it from the numbers. Each value names a CONDITION over fields on this same object, never a rating: `recommended_nowhere` — no answer in the window named the customer (the row on `brands` with `isOwn: true` has `answers.answersNaming` of 0). `named_on_most_core_hosts` — the customer is named on at least half of the core hosts (`funnel.alreadyNamingCustomer × 2` is at least `funnel.coreHosts`, with a core to speak of): a short work list under this value is the finding, because there is little left to win. `missing_from_most_core_hosts` — otherwise: named somewhere in the window, and absent from most of the hosts more than one engine read. State the condition beside the two counts it rests on; it ranks nobody and is not a score.
+ */
+export type AiSourcesVerdict = 'recommended_nowhere' | 'named_on_most_core_hosts' | 'missing_from_most_core_hosts';
+
+export type AiSourcesCheckIdsResponse = {
+    /**
+     * Check identifiers. Membership; the count is the array's length.
+     */
+    checkIds: Array<string>;
+};
+
+export type AiSourcesPerEngineCheckIdsResponse = {
+    /**
+     * Perplexity.
+     */
+    perplexity?: AiSourcesCheckIdsResponse;
+    /**
+     * Google AI Overviews.
+     */
+    google_ai_overviews?: AiSourcesCheckIdsResponse;
+};
+
+export type AiSourcesWindowResponse = {
+    /**
+     * The published checks pooled into this summary — this check first, then the previous published checks, up to 5 in all. Checks, never days: the interval is a schedule setting, so a three-day and a monthly project with the same window are equally trustworthy. Membership; the count is the array's length. A single entry is the first check, and every "seen in" figure then reads 1 of 1 — `limits.sentences` says so.
+     */
+    checkIds: Array<string>;
+    /**
+     * When the oldest check in the window started (ISO-8601).
+     */
+    since: string;
+    /**
+     * Per engine, the checks in the window on which that engine received at least one answer — the M of that engine's "seen in N of M" on `coreHosts[].seenInChecks`. It moves between checks where an engine showed no answer on a whole check. Keyed by engine. A key is ABSENT for an engine this check did not ask — a check keeps the engine set it was run with — and absent means not measured, never a zero. Never add the engines' page figures together.
+     */
+    perEngine: AiSourcesPerEngineCheckIdsResponse;
+};
+
+export type AiSourcesEngineUnavailableResponse = {
+    /**
+     * Always false. This object exists only to say the engine produced nothing usable this check.
+     */
+    available: boolean;
+    /**
+     * `no_usable_answer` — every question this engine was asked came back unmeasured, so there is no reading of it this check. Our problem, not the engine's verdict on anyone: report it as 'we could not read this engine this check', never as 'the engine named nobody'. An engine read for every question that showed no answer on any of them is NOT this — that publishes as measured absences.
+     */
+    reason: 'no_usable_answer';
+};
+
+export type AiSourcesCountRangeResponse = {
+    /**
+     * The corroborated count. Where a brand's name is also ordinary language, a page counts here only when it corroborates the name — the brand's domain in its text or its links, or its name in the page title. For a brand whose name is unambiguous, `floor` equals `ceiling`.
+     */
+    floor: number;
+    /**
+     * The naive count: every page whose text matches the name, corroborated or not. Never quote it alone for an ambiguous brand; quote the pair as a range.
+     */
+    ceiling: number;
+};
+
+/**
+ * The OTHER engines that also retrieved this host this check. Empty means only this engine did. Membership, never a count.
+ */
+export type AiSourcesEngine = 'perplexity' | 'google_ai_overviews';
+
+export type AiSourcesTopHostResponse = {
+    /**
+     * The host, lower-case, without `www.`.
+     */
+    host: string;
+    /**
+     * Distinct pages THIS engine retrieved on this host this check.
+     */
+    pages: number;
+    /**
+     * The questions whose answers retrieved a page on this host, on this engine. Membership; the count is the array's length.
+     */
+    promptIds: Array<string>;
+    /**
+     * The OTHER engines that also retrieved this host this check. Empty means only this engine did. Membership, never a count.
+     */
+    alsoRetrievedBy: Array<AiSourcesEngine>;
+};
+
+export type AiSourcesEngineSummaryResponse = {
+    /**
+     * Present ONLY when this engine produced nothing usable this check. When present, no other field on this object is, and the card for this engine reads as unmeasured with this reason — never as zeros.
+     */
+    engineDataAvailable?: AiSourcesEngineUnavailableResponse;
+    /**
+     * Questions this engine was asked — the check's own recorded question count, read off the check.
+     */
+    answersAsked?: number;
+    /**
+     * Questions this engine answered. THE denominator for every 'answers' figure on this engine. State the shortfall against `answersAsked` as two facts, never as a ratio.
+     */
+    answersReceived?: number;
+    /**
+     * Questions the engine was read for and showed no answer to — today, questions Google's results page carried no AI Overview for. Measured absences: not answers, not failures, and in no denominator.
+     */
+    answersAbsent?: number;
+    /**
+     * Questions we could not read this engine's answer to. In no denominator. Our problem, never a fact about the question or the engine's view of anyone.
+     */
+    answersUnmeasured?: number;
+    /**
+     * Of `answersReceived`: answers the engine wrote without retrieving any page — it reported no page, and has not said how it answered; say `no pages reported`, never `from memory`. Still answers; they contribute no page.
+     */
+    answersWithoutRetrieval?: number;
+    /**
+     * Of `answersReceived`: answers that named the customer.
+     */
+    answersNamingCustomer?: number;
+    /**
+     * Of `answersReceived`: answers in which the engine retrieved at least one page on the customer's own site. Being read is not being recommended — compare with `answersNamingCustomer`.
+     */
+    answersRetrievingOwnPage?: number;
+    /**
+     * Distinct pages this engine RETRIEVED this check across its answers. Retrieved, never cited: the engine does not say which it leaned on. This engine's number alone — never add it to another engine's.
+     */
+    pagesRetrieved?: number;
+    /**
+     * Distinct hosts among `pagesRetrieved`.
+     */
+    hostsRetrieved?: number;
+    /**
+     * Of `hostsRetrieved`: hosts no other engine retrieved this check.
+     */
+    hostsOnlyThisEngine?: number;
+    /**
+     * Hosts this engine retrieved for at least 2 of the questions — this engine's own core, this check. The universe of that engine's "seen in N of M" on the core hosts. Small on some engines by nature: quote it beside any "seen in" figure.
+     */
+    engineCoreSize?: number;
+    /**
+     * Of `pagesRetrieved`: pages whose body we read. The universe of `independentPagesNamingCustomer`.
+     */
+    pagesRead?: number;
+    /**
+     * Of `pagesRetrieved`: pages we could not read. Listed, never counted — an unreadable page is never a page the customer is absent from.
+     */
+    pagesUnreadable?: number;
+    /**
+     * Of `pagesRetrieved`: pages whose fetch never reported. Kept apart from `pagesUnreadable` because 'we stopped' and 'we could not read it' are different facts.
+     */
+    pagesNotFetched?: number;
+    /**
+     * Of `pagesRetrieved`: pages on the customer's own site, subdomains included. Never counted as independent.
+     */
+    ownPagesRetrieved?: number;
+    /**
+     * Independent pages this engine retrieved whose text names the customer — pages not on the customer's own site — over `pagesRead`. A range: `floor` is the corroborated count, `ceiling` the naive one; equal for an unambiguous name. Named on a page the engine retrieved, not necessarily in the passage it read.
+     */
+    independentPagesNamingCustomer?: AiSourcesCountRangeResponse;
+    /**
+     * The hosts this engine leaned on most this check, at most 10, by pages retrieved then host name. Each says which other engines also retrieved it.
+     */
+    topHosts?: Array<AiSourcesTopHostResponse>;
+};
+
+export type AiSourcesPerEngineSummaryResponse = {
+    /**
+     * Perplexity's reading of this check.
+     */
+    perplexity?: AiSourcesEngineSummaryResponse;
+    /**
+     * Google AI Overviews' reading of this check.
+     */
+    google_ai_overviews?: AiSourcesEngineSummaryResponse;
+};
+
+/**
+ * The question's angle. The intents are fixed across every project — one question per intent — and the token names the angle and nothing else.
+ */
+export type AiSourcesPromptIntent = 'general_choice' | 'problem_driven' | 'price_constraint' | 'company_size' | 'feature' | 'free_tier' | 'safety' | 'category_compare';
+
+/**
+ * One of three states, never two. `answered` — the engine answered; every other field on this cell is present. `no_answer_shown` — the engine was read and showed no answer for this question (today: Google's results page carried no AI Overview). Measured; not an answer, not a failure, in no denominator. `not_measured` — we could not read this cell. Not a zero; in no count. Never collapse the middle state into either neighbour: into `not_measured` it discards a fact about the engine's page; into `answered` it divides the customer's number by answers that never existed.
+ */
+export type AiSourcesSlotState = 'answered' | 'no_answer_shown' | 'not_measured';
+
+/**
+ * Present iff `state` is not `answered`. For `no_answer_shown`: `no_ai_overview_shown`. For `not_measured`: `no_usable_answer` (we asked and did not end up with an answer we could use — names no actor) or `transcription_failed` (the engine answered and its pages were captured, but the step that reads the companies out of the text failed; the slot enters no count until a recompute repairs it). Copy built on either says WE could not read this cell — never that the question failed, and never a fact about any brand.
+ */
+export type AiSourcesSlotStateReason = 'no_ai_overview_shown' | 'no_usable_answer' | 'transcription_failed';
+
+export type AiSourcesWebSearchResponse = {
+    /**
+     * Whether a live search RAN while the engine wrote this answer. `true` records that a search ran, not that the answer rests on what it found. For an engine read off a results page the search is the request, so it is true whenever the page came back.
+     */
+    performed: boolean;
+    /**
+     * How many searches the engine reports — each engine's own quantity, and NOT comparable across engines: one reports billable requests, another only the query strings it lists. Compare an engine against itself over time; never compare engines with each other and never sum them. `0` beside `performed: false`.
+     */
+    completedSearchCount: number;
+    /**
+     * Present iff `performed` is false. `NO_SEARCH_ATTEMPTED` — the search tool was offered and went unused. `SEARCH_FAILED` — retrieval was attempted and did not succeed. `NO_SEARCH_REPORTED` — the answer carries no evidence of a search and the engine discloses no cause. None of these means the engine chose to answer from memory; they record that no retrieval is evidenced, and why is not something the data answers.
+     */
+    reason?: 'NO_SEARCH_ATTEMPTED' | 'SEARCH_FAILED' | 'NO_SEARCH_REPORTED';
+};
+
+export type AiSourcesMatrixCellResponse = {
+    /**
+     * One of three states, never two. `answered` — the engine answered; every other field on this cell is present. `no_answer_shown` — the engine was read and showed no answer for this question (today: Google's results page carried no AI Overview). Measured; not an answer, not a failure, in no denominator. `not_measured` — we could not read this cell. Not a zero; in no count. Never collapse the middle state into either neighbour: into `not_measured` it discards a fact about the engine's page; into `answered` it divides the customer's number by answers that never existed.
+     */
+    state: AiSourcesSlotState;
+    /**
+     * Present iff `state` is not `answered`. For `no_answer_shown`: `no_ai_overview_shown`. For `not_measured`: `no_usable_answer` (we asked and did not end up with an answer we could use — names no actor) or `transcription_failed` (the engine answered and its pages were captured, but the step that reads the companies out of the text failed; the slot enters no count until a recompute repairs it). Copy built on either says WE could not read this cell — never that the question failed, and never a fact about any brand.
+     */
+    reason?: AiSourcesSlotStateReason;
+    /**
+     * Whether this answer named the customer. A measured boolean: `false` is 'answered and did not name them'. Independent of `pagesNamingCustomer` — an engine can read pages naming the customer and still not recommend them, and the reverse.
+     */
+    named?: boolean;
+    /**
+     * Companies this answer named. `0` is the answer that explained a concept and recommended nobody — a real finding, not a gap.
+     */
+    companiesNamed?: number;
+    /**
+     * The retrieval signal, verbatim from the stored answer. `performed: false` is the answer the engine's own record says it wrote without a search — kept as it is, never retried away.
+     */
+    webSearch?: AiSourcesWebSearchResponse;
+    /**
+     * Distinct pages the engine RETRIEVED for this answer. `0` beside `answered` is the 'search did not run' cell: an answer received, contributing no page.
+     */
+    pagesRetrieved?: number;
+    /**
+     * Of `pagesRetrieved`: pages whose body we read. The universe of `pagesNamingCustomer`.
+     */
+    pagesRead?: number;
+    /**
+     * Of `pagesRetrieved`: pages we could not read. Listed, not counted.
+     */
+    pagesUnreadable?: number;
+    /**
+     * Of `pagesRetrieved`: pages whose fetch never reported.
+     */
+    pagesNotFetched?: number;
+    /**
+     * Pages retrieved for this answer whose text names the customer — independent pages only, the customer's own site excluded — over `pagesRead`. A range; see `floor` / `ceiling`.
+     */
+    pagesNamingCustomer?: AiSourcesCountRangeResponse;
+    /**
+     * Pages retrieved for this answer that are on the customer's own site.
+     */
+    ownPagesRetrieved?: number;
+};
+
+export type AiSourcesPerEngineCellResponse = {
+    /**
+     * Perplexity's cell for this question.
+     */
+    perplexity?: AiSourcesMatrixCellResponse;
+    /**
+     * Google AI Overviews' cell for this question.
+     */
+    google_ai_overviews?: AiSourcesMatrixCellResponse;
+};
+
+export type AiSourcesMatrixRowResponse = {
+    /**
+     * Stable identifier of the question, kept across edits of its wording. The handle to join this row with `answers[]`, `coreHosts[].promptIds` and `pages[].promptIds`.
+     */
+    promptId: string;
+    /**
+     * The question as it was asked — one of the project's own buying questions.
+     */
+    promptText: string;
+    /**
+     * The question's angle. The intents are fixed across every project — one question per intent — and the token names the angle and nothing else.
+     */
+    intent: AiSourcesPromptIntent;
+    /**
+     * One cell per engine this check asked. Keyed by engine. A key is ABSENT for an engine this check did not ask — a check keeps the engine set it was run with — and absent means not measured, never a zero. Never add the engines' page figures together.
+     */
+    cells: AiSourcesPerEngineCellResponse;
+};
+
+/**
+ * How the brand came to be listed: the customer, a tracked competitor, or a company an engine's answer named in the window that is not on the competitor list.
+ */
+export type AiSourcesBrandOrigin = 'customer' | 'tracked_competitor' | 'named_by_engines';
+
+export type AiSourcesAnswerShareResponse = {
+    /**
+     * Answers in this scope that named the brand — counted once per answer, matched on the brand's domain, never on its wording.
+     */
+    answersNaming: number;
+    /**
+     * The universe `answersNaming` is drawn from: answers received in this scope. Questions that produced no answer, or that the engine was read for and had nothing to show, are not in it. Quote it whenever you quote the share.
+     */
+    answersReceived: number;
+    /**
+     * `answersNaming / answersReceived × 100`, whole percent. A share of answers received — never of questions asked, and never a probability. Always read with `presenceLow` / `presenceHigh` beside it.
+     */
+    presence: number;
+    /**
+     * Lower bound of a 95% interval on `presence`, same percent scale. Two brands whose ranges overlap are NOT ordered, whatever their rank says.
+     */
+    presenceLow: number;
+    /**
+     * Upper bound of the same interval. See `presenceLow`.
+     */
+    presenceHigh: number;
+};
+
+export type AiSourcesBrandEngineReadingResponse = {
+    /**
+     * Answers from THIS engine in the window that named the brand, over the answers it received there, with the interval.
+     */
+    answers: AiSourcesAnswerShareResponse;
+    /**
+     * Independent pages this engine retrieved THIS CHECK whose text names the brand — pages not on the brand's own site — over `pagesRead` on this same object. A range. This engine's number alone: never add it to another engine's.
+     */
+    independentPagesNaming: AiSourcesCountRangeResponse;
+    /**
+     * The universe of `independentPagesNaming`: this engine's read pages this check.
+     */
+    pagesRead: number;
+    /**
+     * Pages this engine retrieved this check that are on the brand's own site.
+     */
+    ownPagesRetrieved: number;
+};
+
+export type AiSourcesPerEngineBrandReadingResponse = {
+    /**
+     * Perplexity's reading of this brand.
+     */
+    perplexity?: AiSourcesBrandEngineReadingResponse;
+    /**
+     * Google AI Overviews' reading of this brand.
+     */
+    google_ai_overviews?: AiSourcesBrandEngineReadingResponse;
+};
+
+export type AiSourcesBrandRowResponse = {
+    /**
+     * Brand domain — the identity every count is matched on.
+     */
+    domain: string;
+    /**
+     * Brand name as the engines most often wrote it. Decoration: it can change between checks while the domain does not. Never match or join on it.
+     */
+    name: string;
+    /**
+     * Whether this is the customer's own row. The customer's row is ALWAYS present, at zero when nothing named them — that zero is a measured finding.
+     */
+    isOwn: boolean;
+    /**
+     * How the brand came to be listed: the customer, a tracked competitor, or a company an engine's answer named in the window that is not on the competitor list.
+     */
+    origin: AiSourcesBrandOrigin;
+    /**
+     * The name is ordinary language (every word of it is a common word or a word of the category), so every page count for this brand is a range with an open ceiling: quote `floor` and `ceiling` together, never one alone. Inferred, and fails closed.
+     */
+    ambiguous: boolean;
+    /**
+     * Rank by how often the brand is named in answers: one plus the number of brands named more often. Ties SHARE a rank — never break one. Presence, never position: nothing on this surface records how high a brand sat.
+     */
+    rankByPresence: number;
+    /**
+     * Answers in the window that named the brand, pooled across engines as a vote, with the interval. Pooling ANSWERS is legitimate; `perEngine` beside it says which engines back the row, because a brand named by one engine and a brand named by both look identical on the pooled figure.
+     */
+    answers: AiSourcesAnswerShareResponse;
+    /**
+     * Answers in the window in which an engine retrieved at least one page on the brand's own site, pooled the same way. Being read is not being recommended — compare with `answers`.
+     */
+    answersRetrievingOwnSite: AiSourcesAnswerShareResponse;
+    /**
+     * The engines on which at least one answer in the window named the brand. Membership, never a count.
+     */
+    enginesNaming: Array<AiSourcesEngine>;
+    /**
+     * This brand on each engine. A key is absent for an engine that received no answer in the window. Page counts are per engine and are never summed across keys. Keyed by engine. A key is ABSENT for an engine this check did not ask — a check keeps the engine set it was run with — and absent means not measured, never a zero. Never add the engines' page figures together.
+     */
+    perEngine: AiSourcesPerEngineBrandReadingResponse;
+};
+
+export type AiSourcesOverlapEngineResponse = {
+    /**
+     * Distinct hosts this engine retrieved this check.
+     */
+    hostsRetrieved: number;
+    /**
+     * Of `hostsRetrieved`: hosts no other engine retrieved this check.
+     */
+    hostsOnlyThisEngine: number;
+};
+
+export type AiSourcesPerEngineOverlapResponse = {
+    /**
+     * Perplexity.
+     */
+    perplexity?: AiSourcesOverlapEngineResponse;
+    /**
+     * Google AI Overviews.
+     */
+    google_ai_overviews?: AiSourcesOverlapEngineResponse;
+};
+
+export type AiSourcesOverlapResponse = {
+    /**
+     * Hosts retrieved by at least 2 engines this check — the core, and the ONE cross-engine object on this surface. Render the overlap as 'only one engine / both / only the other' with absolute counts; there is deliberately no union total, because no engine produced that list.
+     */
+    hostsInCore: number;
+    /**
+     * Per engine this check asked: hosts retrieved, and how many of them no other engine retrieved. Keyed by engine. A key is ABSENT for an engine this check did not ask — a check keeps the engine set it was run with — and absent means not measured, never a zero. Never add the engines' page figures together.
+     */
+    perEngine: AiSourcesPerEngineOverlapResponse;
+};
+
+export type AiSourcesFunnelResponse = {
+    /**
+     * Hosts retrieved by at least 2 engines this check — the start of the narrowing, and the universe every other field here is a filter over. Equals `alreadyNamingCustomer + missing + unreadable`, and equals `coreHosts.length`.
+     */
+    coreHosts: number;
+    /**
+     * Of `coreHosts`: hosts on which at least one page names the customer. Already won — never a target.
+     */
+    alreadyNamingCustomer: number;
+    /**
+     * Of `coreHosts`: hosts on which no page could be read and none names the customer from its title or passage. Listed, never counted as missing — an unread page is never a page the customer is absent from.
+     */
+    unreadable: number;
+    /**
+     * Of `coreHosts`: hosts on which at least one page was READ and none names the customer — the pages the customer is genuinely missing from. Equals `missingPublishers + missingCompetitorOwned`. Small on a market leader: 'already on 19 of the 25 hosts more than one engine read' is the finding, not an empty state.
+     */
+    missing: number;
+    /**
+     * Of `missing`: third-party hosts — publishers, communities, review sites. The work list: addressable by outreach.
+     */
+    missingPublishers: number;
+    /**
+     * Of `missing`: a competitor's own site. Not won by outreach; listed so the narrowing is complete.
+     */
+    missingCompetitorOwned: number;
+};
+
+/**
+ * The host's standing for the customer. `already_named` — at least one page on it names the customer: won. `missing` — at least one page was read and none names the customer: the work list, and the only status that supports 'get onto this'. `unreadable` — no page on the host could be read and none names the customer from its title or passage: listed, not counted, never a target.
+ */
+export type AiSourcesCoreHostStatus = 'already_named' | 'missing' | 'unreadable';
+
+/**
+ * `third_party` — nobody on the leaderboard owns it: a publisher, a community, a review site; addressable. `competitor_owned` — a competitor's own site; not won by outreach. The customer's own hosts are never on this list.
+ */
+export type AiSourcesHostOwnership = 'third_party' | 'competitor_owned';
+
+/**
+ * What kind of site the host is, from a dated table of known hosts; anything not in the table is a `publisher`. The kind chooses the action hint; it never changes a count.
+ */
+export type AiSourcesHostKind = 'review_site' | 'community' | 'video' | 'publisher';
+
+export type AiSourcesExplanationResponse = {
+    /**
+     * Stable identifier for this sentence. Branch on it if you need to; never substitute your own wording for it.
+     */
+    code: string;
+    /**
+     * The sentence to report, in the words every CompetLab surface uses. Render it VERBATIM — do not paraphrase, shorten, or compose your own from the code. It names no row's numbers on purpose; the fields beside it carry those.
+     */
+    text: string;
+};
+
+/**
+ * `read` — the body was fetched and read. `unreadable` — we could not read it; `unreadableReason` says what was observed. `not_fetched` — no fetch ever reported for it. Kept apart from `unreadable` because 'we stopped' and 'we could not read it' are different facts.
+ */
+export type AiSourcesPageReadState = 'read' | 'unreadable' | 'not_fetched';
+
+/**
+ * Present iff `readState` is `unreadable`. Each names what was OBSERVED about the fetch, never a fact about the page's content: `bot_protection` — the site refused an automated reader; `host_blocked_recently` — not fetched, because the host refused us within the last month; `text_too_short` — a body arrived with too few readable characters; `not_found_page` — the server answered with a page that says the resource does not exist; `consent_wall` — the server answered with a consent interstitial in place of the page; `unreachable` — the host could not be reached; `timeout` — the page did not finish loading in time; `fetch_failed` — any other failure to obtain a body; `unresolved` — the engine returned a redirect we could not resolve to a page.
+ */
+export type AiSourcesPageUnreadableReason = 'bot_protection' | 'host_blocked_recently' | 'text_too_short' | 'not_found_page' | 'consent_wall' | 'unreachable' | 'timeout' | 'fetch_failed' | 'unresolved';
+
+/**
+ * What text this page was judged on. `body` — the fetched page plus the title and passage the engine handed back. `snippet_only` — the title and passage alone, for a page we could not read. `none` — a page with neither.
+ */
+export type AiSourcesPageTextSource = 'body' | 'snippet_only' | 'none';
+
+/**
+ * Whether this page's text names the customer. `named` — it does, and where the name is ordinary language the page corroborates it. `named_uncorroborated` — the name matched but nothing corroborates it; reachable only for an ambiguous brand, and in the ceiling of every range rather than the floor. `not_named` — the page was READ and does not name the customer: the ONLY value that supports 'get onto this page'. `null` — the page was not read (unreadable or not fetched), so nothing can be said. An unread page can still be `named` from the title and passage the engine handed back: an unread page can prove presence, never absence.
+ */
+export type AiSourcesPageNaming = 'named' | 'named_uncorroborated' | 'not_named';
+
+export type AiSourcesCheckPageResponse = {
+    /**
+     * The page's identity: the canonical form of its address — lower-case host without `www.`, no scheme, tracking parameters removed, no fragment. One page listed under two addresses is read once and counted once.
+     */
+    key: string;
+    /**
+     * The address as an engine returned it.
+     */
+    url: string;
+    /**
+     * The host, lower-case, without `www.`.
+     */
+    host: string;
+    /**
+     * The page's title — its own when we read it, else the title an engine reported. Absent when neither exists.
+     */
+    title?: string;
+    /**
+     * The engines that retrieved this page this check. Membership, never a count; its length is how many engines read it.
+     */
+    engines: Array<AiSourcesEngine>;
+    /**
+     * The questions whose answers retrieved this page, on any engine. Join on `matrix[].promptId`.
+     */
+    promptIds: Array<string>;
+    /**
+     * The domain of the brand whose own site this page is on, when it is on one — the customer's or a competitor's. Absent for a third-party page. A page on a brand's own site is never an independent source naming that brand.
+     */
+    ownedBy?: string;
+    /**
+     * `read` — the body was fetched and read. `unreadable` — we could not read it; `unreadableReason` says what was observed. `not_fetched` — no fetch ever reported for it. Kept apart from `unreadable` because 'we stopped' and 'we could not read it' are different facts.
+     */
+    readState: AiSourcesPageReadState;
+    /**
+     * Present iff `readState` is `unreadable`. Each names what was OBSERVED about the fetch, never a fact about the page's content: `bot_protection` — the site refused an automated reader; `host_blocked_recently` — not fetched, because the host refused us within the last month; `text_too_short` — a body arrived with too few readable characters; `not_found_page` — the server answered with a page that says the resource does not exist; `consent_wall` — the server answered with a consent interstitial in place of the page; `unreachable` — the host could not be reached; `timeout` — the page did not finish loading in time; `fetch_failed` — any other failure to obtain a body; `unresolved` — the engine returned a redirect we could not resolve to a page.
+     */
+    unreadableReason?: AiSourcesPageUnreadableReason;
+    /**
+     * When this page's verdict was taken (ISO-8601) — the age of the evidence. A page is re-read after a month. Absent when not fetched.
+     */
+    fetchedAt?: string;
+    /**
+     * What text this page was judged on. `body` — the fetched page plus the title and passage the engine handed back. `snippet_only` — the title and passage alone, for a page we could not read. `none` — a page with neither.
+     */
+    textSource: AiSourcesPageTextSource;
+    /**
+     * Whether this page's text names the customer. `named` — it does, and where the name is ordinary language the page corroborates it. `named_uncorroborated` — the name matched but nothing corroborates it; reachable only for an ambiguous brand, and in the ceiling of every range rather than the floor. `not_named` — the page was READ and does not name the customer: the ONLY value that supports 'get onto this page'. `null` — the page was not read (unreadable or not fetched), so nothing can be said. An unread page can still be `named` from the title and passage the engine handed back: an unread page can prove presence, never absence.
+     */
+    namesCustomer: AiSourcesPageNaming | null;
+    /**
+     * Domains of the OTHER brands on the leaderboard that this page's text names. Membership; the count is the array's length. Empty is measured: we looked and found none.
+     */
+    brandsNamed: Array<string>;
+    /**
+     * A short passage around the first mention of the customer where named, else of the first other brand named — at most 240 characters. Third-party text, quoted as evidence. Absent where no brand was found in the text.
+     */
+    excerpt?: string;
+};
+
+export type AiSourcesCoreHostResponse = {
+    /**
+     * The host, lower-case, without `www.`.
+     */
+    host: string;
+    /**
+     * The host's standing for the customer. `already_named` — at least one page on it names the customer: won. `missing` — at least one page was read and none names the customer: the work list, and the only status that supports 'get onto this'. `unreadable` — no page on the host could be read and none names the customer from its title or passage: listed, not counted, never a target.
+     */
+    status: AiSourcesCoreHostStatus;
+    /**
+     * `third_party` — nobody on the leaderboard owns it: a publisher, a community, a review site; addressable. `competitor_owned` — a competitor's own site; not won by outreach. The customer's own hosts are never on this list.
+     */
+    ownership: AiSourcesHostOwnership;
+    /**
+     * The competitor's domain, present iff `ownership` is `competitor_owned`.
+     */
+    ownedBy?: string;
+    /**
+     * What kind of site the host is, from a dated table of known hosts; anything not in the table is a `publisher`. The kind chooses the action hint; it never changes a count.
+     */
+    kind: AiSourcesHostKind;
+    /**
+     * Present iff the kind came from the table: the date (YYYY-MM-DD) a person last checked what this host is. The kind was true on that date; it is not a claim about today.
+     */
+    kindCheckedAt?: string;
+    /**
+     * What the customer can do about this host, as a stable code with its sentence beside it. Render `text` verbatim; it is identical for every host in the same state and names no host's numbers. `pitch_publisher` — a third-party page we read that does not name the customer. `claim_review_profile` — a review site, whether or not we could read it. `join_community` — a community. `not_addressable_by_text` — a video. `check_manually` — we could not read the page: open it and check. `competitor_owned` — not a target. `already_named` — nothing to do.
+     */
+    actionHint: AiSourcesExplanationResponse;
+    /**
+     * The engines that retrieved a page on this host this check. Its length is at least 2 — that is what makes the host core. Membership, never a count.
+     */
+    engines: Array<AiSourcesEngine>;
+    /**
+     * The questions whose answers retrieved a page on this host, on any engine. Membership; its length is 'N of the project's questions'.
+     */
+    promptIds: Array<string>;
+    /**
+     * Per engine, the checks in the window in which this host was in THAT engine's OWN core — the hosts it retrieved on several of the questions — "seen in N of M": N is that engine's array length here, M is `window.perEngine[engine].checkIds.length`. A key is absent for an engine that never had this host in its own core, and absence is never a zero of anything. This is a different core from the row's: a host is on `coreHosts` for being retrieved by two or more engines at any question count, so a host each engine retrieved once is core by overlap and core to neither alone, and carries an empty object here — correct, and read as "in no engine's own core", never as 0 of 1. State N and M only for the engines present; never add the engines together.
+     */
+    seenInChecks: AiSourcesPerEngineCheckIdsResponse;
+    /**
+     * Domains of the other leaderboard brands named on this host's pages. Membership; the count is the array's length.
+     */
+    brandsNamed: Array<string>;
+    /**
+     * This host's pages this check, each with its own read state and naming. A host is `missing` when at least one of these was read and none is `named`.
+     */
+    pages: Array<AiSourcesCheckPageResponse>;
+};
+
+export type AiSourcesOwnPageRefResponse = {
+    /**
+     * The page's identity — see `pages[].key`.
+     */
+    key: string;
+    /**
+     * The address as the engine returned it.
+     */
+    url: string;
+    /**
+     * The page's title, when known.
+     */
+    title?: string;
+};
+
+export type AiSourcesOwnPageRetrievalResponse = {
+    /**
+     * The engine that opened the customer's site for this answer.
+     */
+    engine: AiSourcesEngine;
+    /**
+     * The question this answer was for. Join on `matrix[].promptId`.
+     */
+    promptId: string;
+    /**
+     * The customer's own pages the engine retrieved for this answer.
+     */
+    pages: Array<AiSourcesOwnPageRefResponse>;
+    /**
+     * Domains the answer then named, in order of first mention. The evidence and the recommendation side by side: it opened the customer's page, then recommended these.
+     */
+    companiesNamed: Array<string>;
+    /**
+     * Whether the customer was among them.
+     */
+    namedCustomer: boolean;
+};
+
+export type AiSourcesUnreadableByReasonResponse = {
+    /**
+     * Pages a site refused to an automated reader.
+     */
+    bot_protection?: number;
+    /**
+     * Pages recorded without a request, because their host refused us within the last month.
+     */
+    host_blocked_recently?: number;
+    /**
+     * Pages whose body carried too few readable characters.
+     */
+    text_too_short?: number;
+    /**
+     * Pages the server answered with a page saying the resource does not exist. Listed, never counted.
+     */
+    not_found_page?: number;
+    /**
+     * Pages the server answered with a consent interstitial in place of the page. Listed, never counted.
+     */
+    consent_wall?: number;
+    /**
+     * Pages whose host could not be reached.
+     */
+    unreachable?: number;
+    /**
+     * Pages that did not finish loading in time.
+     */
+    timeout?: number;
+    /**
+     * Pages that failed to fetch for any other reason.
+     */
+    fetch_failed?: number;
+    /**
+     * Redirect wrappers an engine returned that we could not resolve to a page.
+     */
+    unresolved?: number;
+};
+
+export type AiSourcesTextSourceMixResponse = {
+    /**
+     * Pages judged on the fetched body plus the engine's title and passage.
+     */
+    body: number;
+    /**
+     * Pages judged on the engine's title and passage alone, because the body could not be read.
+     */
+    snippet_only: number;
+    /**
+     * Pages with neither.
+     */
+    none: number;
+};
+
+export type AiSourcesLimitsResponse = {
+    /**
+     * Distinct pages retrieved this check, across engines. A fact about the FETCH STAGE — one stage over every engine's pages — and never a headline: it is not a pooled page figure and must not be quoted as 'the pages the engines read'. Per-engine page counts are under `perEngine`.
+     */
+    pagesRetrieved: number;
+    /**
+     * Of `pagesRetrieved`: pages whose body we read.
+     */
+    pagesRead: number;
+    /**
+     * Of `pagesRetrieved`: pages we could not read. `unreadableByReason` breaks it down.
+     */
+    pagesUnreadable: number;
+    /**
+     * Of `pagesRetrieved`: pages whose fetch never reported.
+     */
+    pagesNotFetched: number;
+    /**
+     * Of `pagesRead`: pages whose text was cut at the length cap before matching.
+     */
+    pagesTruncated: number;
+    /**
+     * `pagesUnreadable` by reason. A reason with no page is absent.
+     */
+    unreadableByReason: AiSourcesUnreadableByReasonResponse;
+    /**
+     * What text each page was judged on, over `pagesRetrieved`.
+     */
+    textSourceMix: AiSourcesTextSourceMixResponse;
+    /**
+     * The standing sentences under every number here, as payload. Each that applies to this check is included; the app, this API and the MCP tools render them VERBATIM and compose none of their own. Among them: retrieved is not cited; named on a page the engine retrieved, not necessarily in the passage it read; a floor for an ambiguous name; per engine, never pooled; an unread page is listed, not counted; a brand's own pages are never independent; and, on a first check, that every 'seen in' reads 1 of 1.
+     */
+    sentences: Array<AiSourcesExplanationResponse>;
+};
+
+export type AiSourcesSummaryResponse = {
+    /**
+     * The customer's domain, normalised.
+     */
+    customerDomain: string;
+    /**
+     * The one reading of the customer's standing this check, decided when the summary was built and carried here as stored — a consumer never re-derives it from the numbers. Each value names a CONDITION over fields on this same object, never a rating: `recommended_nowhere` — no answer in the window named the customer (the row on `brands` with `isOwn: true` has `answers.answersNaming` of 0). `named_on_most_core_hosts` — the customer is named on at least half of the core hosts (`funnel.alreadyNamingCustomer × 2` is at least `funnel.coreHosts`, with a core to speak of): a short work list under this value is the finding, because there is little left to win. `missing_from_most_core_hosts` — otherwise: named somewhere in the window, and absent from most of the hosts more than one engine read. State the condition beside the two counts it rests on; it ranks nobody and is not a score.
+     */
+    verdict: AiSourcesVerdict;
+    /**
+     * The checks this summary pools over, and per engine the checks that engine answered on.
+     */
+    window: AiSourcesWindowResponse;
+    /**
+     * One reading per engine this check asked — Perplexity and Google AI Overviews today. Every number under a key is that engine's alone. Keyed by engine. A key is ABSENT for an engine this check did not ask — a check keeps the engine set it was run with — and absent means not measured, never a zero. Never add the engines' page figures together. Nothing on this surface is a citation count, and no field sums the engines' pages.
+     */
+    perEngine: AiSourcesPerEngineSummaryResponse;
+    /**
+     * One row per question the check asked, in question order, with one cell per engine. Two independent facts sit in an answered cell — whether the answer named the customer, and how many retrieved pages name them — and neither is derived from the other.
+     */
+    matrix: Array<AiSourcesMatrixRowResponse>;
+    /**
+     * Who else this market names: the customer, the tracked competitors, and every company an engine named in the window. In the ORDER TO RENDER — answers naming desc, then domain — and never re-sorted by anything positional. The customer's row is always present; read `isOwn` to find it. Ties share a `rankByPresence`.
+     */
+    brands: Array<AiSourcesBrandRowResponse>;
+    /**
+     * How the engines' host sets overlap this check — the one cross-engine object.
+     */
+    overlap: AiSourcesOverlapResponse;
+    /**
+     * The narrowing from 'hosts more than one engine read' to 'hosts the customer is genuinely missing from', in four counts that are each a filter over `coreHosts`. Show the narrowing, not only its end: on a market leader the end is small because most of the core already names them.
+     */
+    funnel: AiSourcesFunnelResponse;
+    /**
+     * Every core host with its standing — the work list (`missing`), the won list (`already_named`) and the hosts we could not read (`unreadable`) in ONE array, in the ORDER TO RENDER: the work list first (third-party before competitor-owned), then unreadable, then already named. `status` is the column that separates them. Never tell a customer to get onto a host whose status is not `missing`.
+     */
+    coreHosts: Array<AiSourcesCoreHostResponse>;
+    /**
+     * Every answer in which an engine opened one of the customer's own pages, with who it then recommended. Empty is measured: no engine retrieved a page of theirs this check.
+     */
+    ownPageRetrievals: Array<AiSourcesOwnPageRetrievalResponse>;
+    /**
+     * Every page retrieved this check by any engine, with its read state and naming — the pages-read list. Each says which engines retrieved it; the list itself is a fetch-stage inventory, not a per-engine count, so never quote its length as an engine's number.
+     */
+    pages: Array<AiSourcesCheckPageResponse>;
+    /**
+     * What the numbers rest on, and the sentences to render beside them.
+     */
+    limits: AiSourcesLimitsResponse;
+};
+
+export type AiSourcesLatestCheckUnavailableResponse = {
+    /**
+     * Always false. This object exists only to say the most recent check produced nothing publishable.
+     */
+    available: boolean;
+    /**
+     * `no_usable_answer_from_any_engine` — every engine the check asked came back with no usable answer, so nothing was measured and the check was abandoned. Our problem: it never locks the customer out, a new check runs automatically, and the caller may trigger one. A check where ONE engine came back empty is not this — it publishes with that engine marked unmeasured. `page_stage_failed` — the engines answered, but the stage that reads the retrieved pages could not be closed, so no summary was built and the check was abandoned. Ours, never the engines' or the customer's; a new check runs automatically. A page stage that merely ran out of time is not this: it closes with the pages it has, the rest recorded as not fetched, and the check publishes.
+     */
+    reason: 'no_usable_answer_from_any_engine' | 'page_stage_failed';
+    /**
+     * The engines that check asked, read off the check. Membership, never a count.
+     */
+    enginesAsked: Array<AiSourcesEngine>;
+};
+
+export type AiSourcesAnswerLocaleResponse = {
+    /**
+     * The country the question was asked from, as the engine names its markets.
+     */
+    locationName: string;
+    /**
+     * The language the question was asked in, as the engine names it.
+     */
+    languageName: string;
+};
+
+export type AiSourcesAnswerCompanyResponse = {
+    /**
+     * Position among the companies this answer named — 1 means named first. The ORDER OF FIRST MENTION in `answerText`, computed by CompetLab from the text: the engine assigned no position, so never report it as a rank the engine gave. Stable under filtering.
+     */
+    rank: number;
+    /**
+     * The company's name as the answer wrote it.
+     */
+    name: string;
+    /**
+     * The company's primary domain, normalised — the identity.
+     */
+    domain: string;
+};
+
+export type AiSourcesAnswerSourceResponse = {
+    /**
+     * Address of the retrieved page, after any redirect the engine returned was resolved.
+     */
+    url: string;
+    /**
+     * Domain of the retrieved page.
+     */
+    domain: string;
+    /**
+     * Title of the page as the engine reported it. Empty when the engine reported none.
+     */
+    title: string;
+    /**
+     * The passage the engine handed back for this page beside its answer, verbatim. Present only where the engine reports one; absent means the engine reports none, never that the page has no text.
+     */
+    snippet?: string;
+    /**
+     * The page's publication date as the engine reports it, verbatim — the engine's string, not a measurement of ours. Present only where the engine reports one.
+     */
+    publishedAt?: string;
+    /**
+     * The address the engine actually returned, when `url` is the page it resolved to. Absent on a direct URL.
+     */
+    resolvedFrom?: string;
+};
+
+export type AiSourcesAnswerResponse = {
+    /**
+     * Which engine produced this answer.
+     */
+    engine: AiSourcesEngine;
+    /**
+     * Zero-based position of the question in this check's question list, as the engine's answers are stored. The value the `promptIndex` filter matches. Stable under filtering. Use `promptId` to join this row with the summary's matrix and pages.
+     */
+    promptIndex: number;
+    /**
+     * Stable identifier of the question, kept across edits of its wording.
+     */
+    promptId: string;
+    /**
+     * The question as it was sent — one of the project's own buying questions.
+     */
+    promptText: string;
+    /**
+     * The question's angle. Fixed across every project; the token names the angle and nothing else.
+     */
+    intent: AiSourcesPromptIntent;
+    /**
+     * Where the engine was asked. Both engines are asked from the project's market, so the retrieved pages are that market's web.
+     */
+    askedIn: AiSourcesAnswerLocaleResponse;
+    /**
+     * The answer as the engine wrote it, verbatim — the evidence the companies below were read from. Engine prose, attributed to the engine that wrote it, never to CompetLab.
+     */
+    answerText: string;
+    /**
+     * The companies the answer named, in order of first mention in `answerText`, each verified present in the text. An EMPTY list is a measurement, never missing data: the engine answered and named no company — it explained a concept and recommended nobody. A question that produced no answer is not here at all; it is in `unansweredQueries`, and a question the engine showed no answer to is in `noAnswerShown`.
+     */
+    companiesNamed: Array<AiSourcesAnswerCompanyResponse>;
+    /**
+     * The pages the engine RETRIEVED while it answered, distinct by URL, each with whatever the engine reports about it. Retrieved, never cited: the engine does not say which of them it leaned on, and nothing here may be called a citation. ABSENT means the engine reported no retrieval for this answer — it reported none, and has not said how it answered — never that it read nothing we could see. An EMPTY array is the measured 'it reported retrieving nothing'.
+     */
+    sources?: Array<AiSourcesAnswerSourceResponse>;
+    /**
+     * The search strings the engine itself issued, as it reports them. Absent where the engine reports none. Strings, not a search count: one search can fan out into several.
+     */
+    searchQueries?: Array<string>;
+    /**
+     * Whether a live search ran for this answer. Absent means not recorded, never 'did not search'. `performed: false` is the engine's own record that no search ran, kept as it is.
+     */
+    webSearch?: AiSourcesWebSearchResponse;
+};
+
+export type AiSourcesUnansweredQueryResponse = {
+    /**
+     * Which engine this question was sent to.
+     */
+    engine: AiSourcesEngine;
+    /**
+     * Zero-based position of the question in this check's question list.
+     */
+    promptIndex: number;
+    /**
+     * Stable identifier of the question.
+     */
+    promptId: string;
+    /**
+     * The question as it was sent.
+     */
+    promptText: string;
+    /**
+     * `no_usable_answer` — we sent this question and did not end up with an answer we could use; names no actor and makes no claim about the question or the engine. `transcription_failed` — the engine answered and its pages were captured, but the step that reads the companies out of the text failed; the answer is kept as evidence and the slot enters no count until a recompute repairs it. Report either as 'we could not read this engine's answer to this question — not counted'. NEVER as 'not named' or '0 pages', and never attach 'failed' to the question, which the customer wrote.
+     */
+    reason: 'no_usable_answer' | 'transcription_failed';
+};
+
+export type AiSourcesNoAnswerShownResponse = {
+    /**
+     * Which engine this question was sent to — we reached it and it showed no answer.
+     */
+    engine: AiSourcesEngine;
+    /**
+     * Zero-based position of the question in this check's question list.
+     */
+    promptIndex: number;
+    /**
+     * Stable identifier of the question.
+     */
+    promptId: string;
+    /**
+     * The question as it was sent.
+     */
+    promptText: string;
+    /**
+     * `no_ai_overview_shown` — Google's results page for this question carried no AI Overview. A measured fact about the question on Google that day: not a failure, not an answer, and nothing the customer's question did wrong. Report it as 'Google showed no AI Overview for this question — not counted'; NEVER as 'not named' or a question that failed. This slot is in no count on this response.
+     */
+    reason: 'no_ai_overview_shown';
+};
+
+export type AiSourcesEngineStatusResponse = {
+    /**
+     * Whether this engine stored a result for this check. `false` means nothing came back from it at all. `true` does NOT mean it answered usefully — read the three counts beside it.
+     */
+    reported: boolean;
+    /**
+     * When this engine finished (ISO-8601). Null when it never reported.
+     */
+    completedAt?: string | null;
+    /**
+     * Questions this engine was asked — the check's own recorded question count.
+     */
+    questionsAsked: number;
+    /**
+     * Of `questionsAsked`: questions it answered — the entries for this engine in `answers`, before any filter. The three counts here are separate facts; state the shortfall against `questionsAsked` as a count, never as a ratio.
+     */
+    answersReceived: number;
+    /**
+     * Of `questionsAsked`: questions the engine was read for and showed no answer to — the entries for this engine in `noAnswerShown`. Not failures.
+     */
+    answersAbsent: number;
+    /**
+     * Of `questionsAsked`: questions we could not read the answer to — the entries for this engine in `unansweredQueries`. Our problem, and in no count.
+     */
+    answersUnmeasured: number;
+};
+
+export type AiSourcesEngineStatusMapResponse = {
+    /**
+     * Perplexity
+     */
+    perplexity?: AiSourcesEngineStatusResponse;
+    /**
+     * Google AI Overviews
+     */
+    google_ai_overviews?: AiSourcesEngineStatusResponse;
+};
+
+export type AiSourcesDashboardResponse = {
+    /**
+     * When the data below was measured (ISO-8601): the completion time of the check the summary comes from, which is NOT necessarily the most recent cycle — see `latestCheckDataAvailable`.
+     */
+    lastUpdatedAt: string;
+    /**
+     * The stored summary of the latest published check, exactly as the app shows it: per engine, who was named, what was read, and which of the pages more than one engine read name the customer's competitors and not them.
+     */
+    summary: AiSourcesSummaryResponse;
+    /**
+     * The domains the project tracks RIGHT NOW — the competitors plus the customer's own — normalised as the summary's domains are. Resolved against today's roster, not the one stored with the check, so a brand on `summary.brands` whose `origin` is `named_by_engines` and whose domain is here was added to the list after the check.
+     */
+    trackedDomains: Array<string>;
+    /**
+     * Present ONLY when the project's most recent check was abandoned — because no engine produced a usable answer, or because its page stage could not be closed; `reason` says which. When present, every other field in this response comes from an EARLIER check and `lastUpdatedAt` is older than the most recent check attempted. Absent when the most recent check published normally — and absent when an older check was abandoned but a later one has since published, because that failure is superseded.
+     */
+    latestCheckDataAvailable?: AiSourcesLatestCheckUnavailableResponse;
+    /**
+     * The engines' answers for this check — one entry per question that came back with an answer, with the pages the engine RETRIEVED to write it. Present ONLY when the request set `includeAnswers=true`; absent otherwise, never an empty array standing in for 'not requested'. Narrowed by `engine` and `promptIndex` when those are set — they narrow `unansweredQueries` and `noAnswerShown` the same way. No filter changes anything under `summary`: every number there is stored, computed over the whole check, and never recomputed for a filtered view. The pages on an answer are the pages the engine retrieved while answering, never a list of citations — the engines do not disclose which pages they leaned on. Never count pages across engines. ATTRIBUTION: the answer text and the companies read out of it are what that engine said, including about third parties CompetLab does not monitor. Attribute it to the named `engine`; do not republish it as fact.
+     */
+    answers?: Array<AiSourcesAnswerResponse>;
+    /**
+     * Questions this check sent that we could not read an answer to. Present ONLY when `includeAnswers=true`. Carried in their own array rather than mixed into `answers`, so that `answers.length` always means answers received. These slots are in no count on this response. Never quote this array's length as a fraction of anything: state it as a separate fact.
+     */
+    unansweredQueries?: Array<AiSourcesUnansweredQueryResponse>;
+    /**
+     * Questions an engine was read for and showed no answer to — today, questions Google's results page carried no AI Overview for. Not a failure and not an answer: in no count on this response. Separate from `unansweredQueries`, which are questions we could not read. Present ONLY when `includeAnswers=true`. Narrowed by `engine` and `promptIndex`.
+     */
+    noAnswerShown?: Array<AiSourcesNoAnswerShownResponse>;
+    /**
+     * Per-engine reporting status for this check: whether each engine this check asked stored a result, when, and how its questions split between answered, no answer shown and unmeasured. One entry per engine the check ASKED — an engine is absent when the check did not ask it; absent means not measured, never 'did not report'. Present ONLY when `includeAnswers=true`. NOT narrowed by the filters: it always describes the whole check.
+     */
+    engineStatus?: AiSourcesEngineStatusMapResponse;
+    /**
+     * True when the answers payload hit the response size cap and answers were dropped from the end of `answers`. The cut lands on a WHOLE QUESTION ROUND, never inside one: `answers` is ordered question by question across the engines, so truncation drops the highest `promptIndex` values and no engine is ever removed by truncation from a question that is still present — group the array by `promptIndex` and no round is short. Neither `unansweredQueries` nor `noAnswerShown` is ever truncated, so a question absent from `answers` is not a question no engine answered. An engine missing from a question that IS present is in one of those two arrays, not cut; an engine missing from EVERY question stored nothing for this check, which `engineStatus` reports as its three counts summing below `questionsAsked`. An answer's page list is never partially truncated. `summary` and `engineStatus` are never affected. Narrow with `engine` or `promptIndex` to get a complete view. Present ONLY when `includeAnswers=true`.
+     */
+    answersTruncated?: boolean;
+};
+
+export type AiSourcesHistoryEngineResponse = {
+    /**
+     * Questions this engine answered on this check — the denominator of `answersNamingCustomer`.
+     */
+    answersReceived: number;
+    /**
+     * Of `answersReceived`: answers that named the customer.
+     */
+    answersNamingCustomer: number;
+    /**
+     * Pages this engine retrieved on this check whose body we read — the universe of `independentPagesNamingCustomer`.
+     */
+    pagesRead: number;
+    /**
+     * Independent pages this engine retrieved on this check whose text names the customer, over `pagesRead`. A range; this engine's number alone.
+     */
+    independentPagesNamingCustomer: AiSourcesCountRangeResponse;
+};
+
+export type AiSourcesHistoryPerEngineResponse = {
+    /**
+     * Perplexity.
+     */
+    perplexity?: AiSourcesHistoryEngineResponse;
+    /**
+     * Google AI Overviews.
+     */
+    google_ai_overviews?: AiSourcesHistoryEngineResponse;
+};
+
+export type AiSourcesHistoryItemResponse = {
+    /**
+     * Check ID — pass it to the check-detail route.
+     */
+    checkId: string;
+    /**
+     * When this check published (ISO-8601).
+     */
+    completedAt: string;
+    /**
+     * Per engine, the four measured figures for this check. A key is ABSENT for an engine the check did not ask, and for an engine that produced nothing usable on it — absent means not measured, never a zero. Nothing here is summed across engines.
+     */
+    perEngine: AiSourcesHistoryPerEngineResponse;
+    /**
+     * The narrowing from core hosts to hosts the customer is genuinely missing from, on this check.
+     */
+    funnel: AiSourcesFunnelResponse;
+};
+
+export type AiSourcesCheckDetailResponse = {
+    /**
+     * Check ID
+     */
+    checkId: string;
+    /**
+     * When this check published (ISO-8601).
+     */
+    completedAt: string;
+    /**
+     * The summary stored on this check, exactly as the app shows it — the same shape as the dashboard's `summary`, as of this check.
+     */
+    summary: AiSourcesSummaryResponse;
+    /**
+     * The engines' answers for this check — one entry per question that came back with an answer, with the pages the engine RETRIEVED to write it. Present ONLY when the request set `includeAnswers=true`; absent otherwise, never an empty array standing in for 'not requested'. Narrowed by `engine` and `promptIndex` when those are set — they narrow `unansweredQueries` and `noAnswerShown` the same way. No filter changes anything under `summary`: every number there is stored, computed over the whole check, and never recomputed for a filtered view. The pages on an answer are the pages the engine retrieved while answering, never a list of citations — the engines do not disclose which pages they leaned on. Never count pages across engines. ATTRIBUTION: the answer text and the companies read out of it are what that engine said, including about third parties CompetLab does not monitor. Attribute it to the named `engine`; do not republish it as fact.
+     */
+    answers?: Array<AiSourcesAnswerResponse>;
+    /**
+     * Questions this check sent that we could not read an answer to. Present ONLY when `includeAnswers=true`. Carried in their own array rather than mixed into `answers`, so that `answers.length` always means answers received. These slots are in no count on this response. Never quote this array's length as a fraction of anything: state it as a separate fact.
+     */
+    unansweredQueries?: Array<AiSourcesUnansweredQueryResponse>;
+    /**
+     * Questions an engine was read for and showed no answer to — today, questions Google's results page carried no AI Overview for. Not a failure and not an answer: in no count on this response. Separate from `unansweredQueries`, which are questions we could not read. Present ONLY when `includeAnswers=true`. Narrowed by `engine` and `promptIndex`.
+     */
+    noAnswerShown?: Array<AiSourcesNoAnswerShownResponse>;
+    /**
+     * Per-engine reporting status for this check: whether each engine this check asked stored a result, when, and how its questions split between answered, no answer shown and unmeasured. One entry per engine the check ASKED — an engine is absent when the check did not ask it; absent means not measured, never 'did not report'. Present ONLY when `includeAnswers=true`. NOT narrowed by the filters: it always describes the whole check.
+     */
+    engineStatus?: AiSourcesEngineStatusMapResponse;
+    /**
+     * True when the answers payload hit the response size cap and answers were dropped from the end of `answers`. The cut lands on a WHOLE QUESTION ROUND, never inside one: `answers` is ordered question by question across the engines, so truncation drops the highest `promptIndex` values and no engine is ever removed by truncation from a question that is still present — group the array by `promptIndex` and no round is short. Neither `unansweredQueries` nor `noAnswerShown` is ever truncated, so a question absent from `answers` is not a question no engine answered. An engine missing from a question that IS present is in one of those two arrays, not cut; an engine missing from EVERY question stored nothing for this check, which `engineStatus` reports as its three counts summing below `questionsAsked`. An answer's page list is never partially truncated. `summary` and `engineStatus` are never affected. Narrow with `engine` or `promptIndex` to get a complete view. Present ONLY when `includeAnswers=true`.
+     */
+    answersTruncated?: boolean;
 };
 
 export type AlertListItemResponse = {
@@ -2319,13 +4098,13 @@ export type AlertListItemResponse = {
     /**
      * Monitoring dimension that generated this alert
      */
-    dimension: 'tech-trust' | 'content' | 'positioning' | 'pricing' | 'ai-visibility';
+    dimension: 'tech-trust' | 'content' | 'positioning' | 'pricing' | 'ai-visibility' | 'ai-sources';
     /**
-     * Competitor domain
+     * Domain of the company the alert is about. On an ai-visibility untracked_brand_recommended alert this is the company that is NOT on the competitor list, while competitorId is the customer's own row.
      */
     competitorDomain: string;
     /**
-     * Competitor ID
+     * ID of the competitor row the alert hangs on. The customer's own row for their own AI Visibility standing, the prompt-market reading, and untracked_brand_recommended.
      */
     competitorId: string;
     /**
@@ -2349,11 +4128,11 @@ export type AlertListItemResponse = {
      */
     runId: string;
     /**
-     * Alert sub-type classifier. Values vary by dimension — e.g., price_change, plan_restructure, feature_toggle (pricing), messaging_shift, positioning_change (positioning), content_growth, content_removal (content), tech_stack_evolution, crawl_strategy (tech-trust), score_shift, provider_change (ai-visibility).
+     * Alert sub-type classifier. Values vary by dimension — e.g., price_change, plan_restructure, feature_toggle (pricing), messaging_shift, positioning_change (positioning), content_growth, content_removal (content), tech_stack_evolution, crawl_strategy (tech-trust), own_standing_changed, rival_standing_changed, untracked_brand_recommended, prompt_market_changed (ai-visibility). AI Visibility alerts report who the AI models recommend, never score movement.
      */
     alertType?: string;
     /**
-     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries a scoreShift with scoreFrom/scoreTo.
+     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state).
      */
     context: {
         [key: string]: unknown;
@@ -2372,7 +4151,7 @@ export type ScheduleItemResponse = {
     /**
      * Monitoring dimension
      */
-    dimension: 'tech-trust' | 'content' | 'positioning' | 'pricing' | 'ai-visibility';
+    dimension: 'tech-trust' | 'content' | 'positioning' | 'pricing' | 'ai-visibility' | 'ai-sources';
     /**
      * Whether scheduled monitoring is enabled
      */
@@ -2402,13 +4181,13 @@ export type ScheduleItemResponse = {
 export type BriefingRunStatus = 'running' | 'done' | 'failed';
 
 /**
- * Coarse activity label for the run in flight. `researching` gathers evidence per dimension, `verifying` cross-checks it, `composing` writes the edition. Treat it as a label, not a progress percentage.
+ * Coarse activity label for the run in flight, in the order they occur: `researching` gathers evidence per dimension, `composing` writes the edition, `verifying` checks the draft's load-bearing claims against their sources and repairs what the check found. Treat it as a label, not a progress percentage.
  */
-export type BriefingProgressStep = 'researching' | 'verifying' | 'composing';
+export type BriefingProgressStep = 'researching' | 'composing' | 'verifying';
 
 export type BriefingProgressResponse = {
     /**
-     * Coarse activity label for the run in flight. `researching` gathers evidence per dimension, `verifying` cross-checks it, `composing` writes the edition. Treat it as a label, not a progress percentage.
+     * Coarse activity label for the run in flight, in the order they occur: `researching` gathers evidence per dimension, `composing` writes the edition, `verifying` checks the draft's load-bearing claims against their sources and repairs what the check found. Treat it as a label, not a progress percentage.
      */
     step: BriefingProgressStep;
     /**
@@ -2456,7 +4235,7 @@ export type BriefingMetaResponse = {
 /**
  * Manifest of what this edition actually holds — every section it contains, whether or not you requested it. Values are exactly the tokens the `sections` parameter accepts, so you can pass one straight back. Use it to decide what to fetch next rather than requesting slots blind: a section absent from this list does not exist for this edition, and requesting it is not an error — the key is simply missing from `item`. Null whenever `meta.status` is not `done`. That means *this run* holds no content — **not** that the project has no editions; check `GET /strategic-briefing/history`.
  */
-export type BriefingSectionName = 'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status';
+export type BriefingSectionName = 'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-ai-sources' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status';
 
 export type BriefingEnvelopeResponse = {
     /**
@@ -4630,7 +6409,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data = {
     };
     query?: {
         /**
-         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large: roughly 12k tokens unfiltered, against roughly 2k with `brand=`. Read `summary.totalEntries` to size it first (about 200 tokens per entry). The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
+         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large: roughly 25k tokens unfiltered on a three-engine check and 46k on a five-engine one, against roughly 2k with `brand=`, or 9k once Google AI Overviews is in the ask. Read `summary.totalEntries` to size it first (about 375 tokens per entry, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps and which `totalEntries` does not predict). The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
          */
         includeAnswers?: boolean;
         /**
@@ -4638,7 +6417,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data = {
          */
         provider?: AiProvider;
         /**
-         * Return only the entries for this domain, across every answer. Requires `includeAnswers=true`. Matches `brands[].domain`, case-insensitively; brand NAMES are the model's own wording and vary between answers, so they are never matched. EVERY answer is still returned — the ones that did not name this domain come back with an empty `brands`, because 'this model answered and did not name them' is a finding, not an absence of data. A query that produced no answer at all is in `unansweredQueries` instead and asserts nothing about anyone. Ranks are unaffected: an entry keeps the position it held in the full answer. This is the cheapest way to ask where a competitor wins and where they are invisible.
+         * Return only the entries for this domain, across every answer. Requires `includeAnswers=true`. Matches `brands[].domain`, case-insensitively; brand NAMES are the model's own wording and vary between answers, so they are never matched. EVERY answer is still returned — the ones that did not name this domain come back with an empty `brands`, because 'this model answered and did not name them' is a finding, not an absence of data. A query that produced no answer at all is in `unansweredQueries` instead and asserts nothing about anyone. Ranks are unaffected: an entry keeps the position it held in the full answer. This is the cheapest way to ask where a competitor wins and where they are invisible — roughly 2k tokens, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps.
          */
         brand?: string;
         /**
@@ -4725,7 +6504,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data = {
     };
     query?: {
         /**
-         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large: roughly 12k tokens unfiltered, against roughly 2k with `brand=`. Read `summary.totalEntries` to size it first (about 200 tokens per entry). The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
+         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large: roughly 25k tokens unfiltered on a three-engine check and 46k on a five-engine one, against roughly 2k with `brand=`, or 9k once Google AI Overviews is in the ask. Read `summary.totalEntries` to size it first (about 375 tokens per entry, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps and which `totalEntries` does not predict). The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
          */
         includeAnswers?: boolean;
         /**
@@ -4733,7 +6512,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data = {
          */
         provider?: AiProvider;
         /**
-         * Return only the entries for this domain, across every answer. Requires `includeAnswers=true`. Matches `brands[].domain`, case-insensitively; brand NAMES are the model's own wording and vary between answers, so they are never matched. EVERY answer is still returned — the ones that did not name this domain come back with an empty `brands`, because 'this model answered and did not name them' is a finding, not an absence of data. A query that produced no answer at all is in `unansweredQueries` instead and asserts nothing about anyone. Ranks are unaffected: an entry keeps the position it held in the full answer. This is the cheapest way to ask where a competitor wins and where they are invisible.
+         * Return only the entries for this domain, across every answer. Requires `includeAnswers=true`. Matches `brands[].domain`, case-insensitively; brand NAMES are the model's own wording and vary between answers, so they are never matched. EVERY answer is still returned — the ones that did not name this domain come back with an empty `brands`, because 'this model answered and did not name them' is a finding, not an absence of data. A query that produced no answer at all is in `unansweredQueries` instead and asserts nothing about anyone. Ranks are unaffected: an entry keeps the position it held in the full answer. This is the cheapest way to ask where a competitor wins and where they are invisible — roughly 2k tokens, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps.
          */
         brand?: string;
         /**
@@ -4773,17 +6552,21 @@ export type PublicAiVisibilityControllerGetAiVisibilityTrendV1Data = {
     };
     query?: {
         /**
-         * Start date for trend data (ISO-8601)
+         * Start of the window (ISO-8601). Omit for the whole history: the newest 200 published checks, and the newest 200 cycles that produced no reading — on a longer history set both dates so the two cover one span.
          */
         dateFrom?: string;
         /**
-         * End date for trend data (ISO-8601)
+         * End of the window (ISO-8601).
          */
         dateTo?: string;
         /**
-         * Filter by AI provider. Omit to get aggregated trend across all providers.
+         * Read one AI model's own slice of every map instead of the pooled map. Omit for every model at once. Under one model `rank` and `score` are null on every reading and `enginesBacking` is left off the rows — they exist only across every model; never read that as 'no model named them'.
          */
         provider?: AiProvider;
+        /**
+         * `series` adds each company's share check by check, downsampled to at most 12 points spread evenly over the window. Omit it unless the shape between the two ends matters: the rows already carry the reading now, the reading at the start and the difference.
+         */
+        detail?: 'series';
     };
     url: '/v1/projects/{projectId}/ai-visibility/trend';
 };
@@ -4796,18 +6579,149 @@ export type PublicAiVisibilityControllerGetAiVisibilityTrendV1Error = PublicAiVi
 
 export type PublicAiVisibilityControllerGetAiVisibilityTrendV1Responses = {
     /**
-     * ListResponseOfAiVisibilityTrendDataPointResponse
+     * ItemResponseOfAiVisibilityTrendResponse
      */
     200: {
-        items: Array<AiVisibilityTrendDataPointResponse>;
-        /**
-         * Monitoring cycles inside the requested window that produced no data point, because we did not get a usable answer to every query they asked. Reported here rather than omitted so a gap in the line is distinguishable from a period when nothing was scheduled. Empty for a window with no such cycles, and empty for windows predating this field — an empty array never means "we know there were no gaps".
-         */
-        incompleteCycles: Array<AiVisibilityIncompleteCycleResponse>;
+        item: AiVisibilityTrendResponse;
     };
 };
 
 export type PublicAiVisibilityControllerGetAiVisibilityTrendV1Response = PublicAiVisibilityControllerGetAiVisibilityTrendV1Responses[keyof PublicAiVisibilityControllerGetAiVisibilityTrendV1Responses];
+
+export type PublicAiSourcesControllerGetAiSourcesDashboardV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: {
+        /**
+         * Set true to include what the engines actually said — every question sent, the answer text, the companies read out of it in order of first mention, and the pages the engine RETRIEVED to write it, with the passage it handed back for each. Off by default because the block is large: up to 8 answers per engine, each carrying the engine's full retrieved page list, which for a searching engine can run to dozens of pages with a passage each. Narrow with `engine=` or `promptIndex=` rather than fetching everything. The answer text is the engine's wording, not CompetLab's assessment; the pages are retrieved, never cited.
+         */
+        includeAnswers?: boolean;
+        /**
+         * Return only this engine's answers. Requires `includeAnswers=true`. Narrows `answers`, `unansweredQueries` and `noAnswerShown`; changes nothing under `summary` and does not narrow `engineStatus`.
+         */
+        engine?: AiSourcesEngine;
+        /**
+         * Return only the answers for this question, across every engine. Requires `includeAnswers=true`. Zero-based: the question's position in the check's question list, matching `promptIndex` on each answer.
+         */
+        promptIndex?: number;
+    };
+    url: '/v1/projects/{projectId}/ai-sources';
+};
+
+export type PublicAiSourcesControllerGetAiSourcesDashboardV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+};
+
+export type PublicAiSourcesControllerGetAiSourcesDashboardV1Error = PublicAiSourcesControllerGetAiSourcesDashboardV1Errors[keyof PublicAiSourcesControllerGetAiSourcesDashboardV1Errors];
+
+export type PublicAiSourcesControllerGetAiSourcesDashboardV1Responses = {
+    /**
+     * ItemResponseOfAiSourcesDashboardResponse
+     */
+    200: {
+        item: AiSourcesDashboardResponse;
+    };
+};
+
+export type PublicAiSourcesControllerGetAiSourcesDashboardV1Response = PublicAiSourcesControllerGetAiSourcesDashboardV1Responses[keyof PublicAiSourcesControllerGetAiSourcesDashboardV1Responses];
+
+export type PublicAiSourcesControllerGetAiSourcesHistoryV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: {
+        /**
+         * Page number (1-indexed)
+         */
+        page?: number;
+        /**
+         * Number of items per page
+         */
+        limit?: number;
+    };
+    url: '/v1/projects/{projectId}/ai-sources/history';
+};
+
+export type PublicAiSourcesControllerGetAiSourcesHistoryV1Errors = {
+    401: ApiUnauthorizedErrorEnvelope;
+};
+
+export type PublicAiSourcesControllerGetAiSourcesHistoryV1Error = PublicAiSourcesControllerGetAiSourcesHistoryV1Errors[keyof PublicAiSourcesControllerGetAiSourcesHistoryV1Errors];
+
+export type PublicAiSourcesControllerGetAiSourcesHistoryV1Responses = {
+    /**
+     * PaginatedResponseOfAiSourcesHistoryItemResponse
+     */
+    200: {
+        items: Array<AiSourcesHistoryItemResponse>;
+        pagination: PaginationMeta;
+        /**
+         * True when the page exceeded the response size cap and whole entries were dropped from the end of `items`. `pagination.total` still reports the true number of checks, so a withheld entry is distinguishable from one that does not exist — but `pagination.hasMore` does NOT account for dropped rows, so paging forward on `hasMore` alone would skip them silently. Lower `limit` and re-request this page instead.
+         */
+        truncated: boolean;
+    };
+};
+
+export type PublicAiSourcesControllerGetAiSourcesHistoryV1Response = PublicAiSourcesControllerGetAiSourcesHistoryV1Responses[keyof PublicAiSourcesControllerGetAiSourcesHistoryV1Responses];
+
+export type PublicAiSourcesControllerGetAiSourcesCheckDetailV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Check ID
+         */
+        checkId: string;
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: {
+        /**
+         * Set true to include what the engines actually said — every question sent, the answer text, the companies read out of it in order of first mention, and the pages the engine RETRIEVED to write it, with the passage it handed back for each. Off by default because the block is large: up to 8 answers per engine, each carrying the engine's full retrieved page list, which for a searching engine can run to dozens of pages with a passage each. Narrow with `engine=` or `promptIndex=` rather than fetching everything. The answer text is the engine's wording, not CompetLab's assessment; the pages are retrieved, never cited.
+         */
+        includeAnswers?: boolean;
+        /**
+         * Return only this engine's answers. Requires `includeAnswers=true`. Narrows `answers`, `unansweredQueries` and `noAnswerShown`; changes nothing under `summary` and does not narrow `engineStatus`.
+         */
+        engine?: AiSourcesEngine;
+        /**
+         * Return only the answers for this question, across every engine. Requires `includeAnswers=true`. Zero-based: the question's position in the check's question list, matching `promptIndex` on each answer.
+         */
+        promptIndex?: number;
+    };
+    url: '/v1/projects/{projectId}/ai-sources/history/{checkId}';
+};
+
+export type PublicAiSourcesControllerGetAiSourcesCheckDetailV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+};
+
+export type PublicAiSourcesControllerGetAiSourcesCheckDetailV1Error = PublicAiSourcesControllerGetAiSourcesCheckDetailV1Errors[keyof PublicAiSourcesControllerGetAiSourcesCheckDetailV1Errors];
+
+export type PublicAiSourcesControllerGetAiSourcesCheckDetailV1Responses = {
+    /**
+     * ItemResponseOfAiSourcesCheckDetailResponse
+     */
+    200: {
+        item: AiSourcesCheckDetailResponse;
+    };
+};
+
+export type PublicAiSourcesControllerGetAiSourcesCheckDetailV1Response = PublicAiSourcesControllerGetAiSourcesCheckDetailV1Responses[keyof PublicAiSourcesControllerGetAiSourcesCheckDetailV1Responses];
 
 export type PublicAlertsControllerListAlertsV1Data = {
     body?: never;
@@ -4827,9 +6741,9 @@ export type PublicAlertsControllerListAlertsV1Data = {
          */
         limit?: number;
         /**
-         * Filter by monitoring dimension (tech-trust, content, positioning, pricing, ai-visibility)
+         * Filter by monitoring dimension (tech-trust, content, positioning, pricing, ai-visibility, ai-sources)
          */
-        dimension?: 'tech-trust' | 'content' | 'positioning' | 'pricing' | 'ai-visibility';
+        dimension?: 'tech-trust' | 'content' | 'positioning' | 'pricing' | 'ai-visibility' | 'ai-sources';
         /**
          * Filter by alert severity (critical, high, medium, info)
          */
@@ -4901,7 +6815,7 @@ export type PublicBriefingControllerGetStrategicBriefingV1Data = {
         /**
          * Which sections to return. Defaults to ["hub"] — the executive digest and navigation map. Pass specific sections to go deeper (e.g. a hub diagnosis pointer of `ai-visibility` maps to `deep-ai-visibility`), or `all` for the full document. Prefer deriving deep-<dimension> values from the hub diagnosis pointers rather than requesting slots blind — the response's `contains` array lists exactly which sections exist for this edition, in this same vocabulary.
          */
-        sections?: Array<'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status' | 'all'>;
+        sections?: Array<'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-ai-sources' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status' | 'all'>;
         /**
          * Include full chart series data. Defaults to false — each chart returns its title and note only, with no underlying numbers. Pass true for the full series.
          */
@@ -4978,7 +6892,7 @@ export type PublicBriefingControllerGetStrategicBriefingEditionV1Data = {
         /**
          * Which sections to return. Defaults to ["hub"] — the executive digest and navigation map. Pass specific sections to go deeper (e.g. a hub diagnosis pointer of `ai-visibility` maps to `deep-ai-visibility`), or `all` for the full document. Prefer deriving deep-<dimension> values from the hub diagnosis pointers rather than requesting slots blind — the response's `contains` array lists exactly which sections exist for this edition, in this same vocabulary.
          */
-        sections?: Array<'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status' | 'all'>;
+        sections?: Array<'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-ai-sources' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status' | 'all'>;
         /**
          * Include full chart series data. Defaults to false — each chart returns its title and note only, with no underlying numbers. Pass true for the full series.
          */

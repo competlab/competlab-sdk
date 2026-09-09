@@ -9,10 +9,10 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![36 Methods](https://img.shields.io/badge/Methods-36-brightgreen)](#available-resources)
+[![39 Methods](https://img.shields.io/badge/Methods-39-brightgreen)](#available-resources)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-0-brightgreen)]()
 
-> Track what ChatGPT, Claude, and Gemini say about your brand — programmatically.
+> Track what ChatGPT, Claude, Gemini, Perplexity and Google AI Overviews say about your brand — programmatically.
 
 40% of B2B buyers ask AI before they Google. This SDK gives you typed access to everything CompetLab monitors: AI visibility, competitor pricing, content changes, positioning shifts, and tech stack signals. 3 lines to your first insight.
 
@@ -30,13 +30,13 @@ import CompetLab from '@competlab/sdk';
 // The SDK does not read environment variables for you — pass the key explicitly.
 const cl = new CompetLab({ apiKey: process.env.COMPETLAB_API_KEY! });
 
-// See how 3 AI systems rank your brand vs competitors
+// See how 5 AI engines rank your brand vs competitors
 const visibility = await cl.aiVisibility.dashboard('proj_abc');
 ```
 
 ## What is CompetLab?
 
-Competitive intelligence for the AI era. One platform, 5 dimensions, monitored automatically:
+Competitive intelligence for the AI era. One platform, 6 dimensions, monitored automatically:
 
 | Dimension | What It Tracks |
 |-----------|---------------|
@@ -44,9 +44,10 @@ Competitive intelligence for the AI era. One platform, 5 dimensions, monitored a
 | **Content** | Sitemaps, content categories, publishing cadence |
 | **Positioning** | Homepage messaging, value props, CTAs |
 | **Pricing** | Plans, pricing models, feature comparisons |
-| **AI Visibility** | How ChatGPT, Claude, and Gemini rank your brand vs competitors |
+| **AI Visibility** | How ChatGPT, Claude, Gemini, Perplexity and Google AI Overviews recommend your brand vs competitors |
+| **AI Sources** | The pages Perplexity and Google AI Overviews retrieve while answering, and whether they name you |
 
-AI Visibility is what makes CompetLab unique — no other CI platform tracks how LLMs recommend brands in real time.
+AI Visibility is what makes CompetLab unique — no other CI platform tracks how LLMs recommend brands in real time. AI Sources is its companion: the pages the engines retrieved on the way to those answers, and where your brand stands on them.
 
 > [Start free trial](https://app.competlab.com/register) | [Learn more](https://competlab.com)
 
@@ -60,14 +61,15 @@ cl.techTrust         // Tech stack & trust signals
 cl.content           // Content analysis & changelog
 cl.positioning       // Homepage messaging analysis
 cl.pricing           // Pricing intelligence
-cl.aiVisibility      // AI visibility scores & trends
+cl.aiVisibility      // AI visibility scores, the market map & trends
+cl.aiSources         // Pages the engines retrieve while answering, and who they name
 cl.strategicBriefing // Synthesized competitive briefing — what changed, what it means, what to do
 cl.alerts            // Competitive change alerts
 cl.schedules         // Monitoring schedules
 cl.tools             // Free tools — sitemap, AI crawlers, tech stack, trust signals, agent adoption, fetch URL
 ```
 
-**12 resources. 36 methods. Zero dependencies.** Uses native `fetch` — no axios, no bloat.
+**13 resources. 39 methods. Zero dependencies.** Uses native `fetch` — no axios, no bloat.
 
 ## Examples
 
@@ -102,7 +104,8 @@ const { data } = await cl.aiVisibility.dashboard('proj_abc', {
   brand: 'rival.com',   // one competitor across every answer — the cheap, targeted read
 });
 
-// Also available: provider ('openai' | 'claude' | 'gemini') and promptIndex (zero-based).
+// Also available: provider ('openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews')
+// and promptIndex (zero-based).
 // provider and promptIndex narrow the answers array; brand does NOT — it empties the
 // `brands` list on answers that didn't name that domain, so you see the silences too.
 ```
@@ -115,14 +118,79 @@ The block is large — roughly 12k tokens unfiltered against ~2k with `brand=`. 
 > parties CompetLab does not monitor. It is a record of what the model said, not CompetLab's
 > assessment. Attribute it to the named `provider`; do not republish it as fact.
 
-### Track how your AI ranking changes over time
+### Track how your AI standing changes over time
 
 ```typescript
-const trend = await cl.aiVisibility.trend('proj_abc', {
-  provider: 'openai'
-});
-// Weekly snapshots of your visibility score — spot drops before they cost you deals
+const { data } = await cl.aiVisibility.trend('proj_abc');
+
+// data.item => a digest, not a plot: one row per company with its reading now,
+// its reading at the start of the window, and the difference.
+// {
+//   window:    { from, to, checks, answersReceived, providersAsked: [...] },
+//   scope:     'all',
+//   companies: [
+//     { name: 'You', domain: 'you.com', isOwn: true,
+//       now:   { presence: { answersNaming: 14, answersReceived: 20, presence: 70 }, rank: 1 },
+//       start: { presence: { answersNaming:  6, answersReceived: 18, presence: 33 }, rank: 3 },
+//       presenceChange: 37, presenceChangeSeparable: true, rankChange: 2 }
+//   ],
+//   events:    { standingChanges: [...], incompleteCycles: [...], promptsLastChangedAt }
+// }
 ```
+
+**Only report a rise or fall when `presenceChangeSeparable` is `true`.** Presence carries a 95%
+interval; when the two intervals overlap the move is not separable from noise, and
+`presenceChange` is a number you must not narrate. Under a `provider` scope, `rank` and `score`
+are `null` and `enginesBacking` is omitted — there is no per-engine score, by design.
+
+```typescript
+// One engine's view, and the per-company share downsampled to at most 12 points:
+const { data } = await cl.aiVisibility.trend('proj_abc', {
+  provider: 'perplexity',
+  detail: 'series',
+});
+```
+
+### See which pages the engines read to answer
+
+```typescript
+const { data } = await cl.aiSources.dashboard('proj_abc');
+
+// data.item.summary.verdict =>
+//   'recommended_nowhere' | 'named_on_most_core_hosts' | 'missing_from_most_core_hosts'
+
+// The work list: core hosts — pages more than one engine retrieved — that you are missing from.
+const work = data.item.summary.coreHosts.filter((h) => h.status === 'missing');
+
+for (const host of work) {
+  console.log(host.host, host.ownership, host.actionHint.text);
+}
+```
+
+Three rules govern every figure here, and each is easy to break by accident:
+
+- **Retrieved, never cited.** An engine hands back the pages it pulled while answering; it does
+  not say which it leaned on. No count here is a citation count.
+- **Per engine, never pooled.** The engines read different pages, so page counts are per engine.
+  Adding them describes a list neither produced. Answers may pool as a vote; pages may not.
+- **Counts, never rates.** Report `n of N answers`. The question set is small by design, so a
+  share computed from it is false precision.
+
+A page that could not be read is listed with its reason and is **never** a page you are absent
+from — only `status: 'missing'` supports "get onto this page":
+
+```typescript
+const hosts = data.item.summary.coreHosts;
+
+// WRONG — sweeps in 'unreadable', turning a page we could not read into one that omits you
+const wrong = hosts.filter((h) => h.status !== 'already_named');
+
+// right: 'unreadable' is its own answer, and it is not an absence
+const toWork = hosts.filter((h) => h.status === 'missing');
+```
+
+`actionHint.text` on each core host, and the sentences under `summary.limits.sentences`, are
+payload — render them verbatim rather than composing your own.
 
 ### Get a strategic briefing
 
@@ -219,7 +287,7 @@ Same shape applies to `cl.tools.trustSignals.{startScan,getScan}` and `cl.tools.
 
 ## MCP Server
 
-Prefer AI-native access? CompetLab also offers an MCP server with 35 tools — connect Claude Code, Cursor, or VS Code directly.
+Prefer AI-native access? CompetLab also offers an MCP server with 38 tools — connect Claude Code, Cursor, or VS Code directly.
 
 > [competlab.com/developers/mcp](https://competlab.com/developers/mcp)
 
@@ -347,7 +415,7 @@ Full details in the [CHANGELOG](./CHANGELOG.md).
 ## Links
 
 - [REST API Reference](https://competlab.com/developers/api)
-- [MCP Server](https://competlab.com/developers/mcp) (AI-native access with 35 tools)
+- [MCP Server](https://competlab.com/developers/mcp) (AI-native access with 38 tools)
 - [GitHub — MCP Server](https://github.com/competlab/competlab-mcp-server)
 - [Privacy Policy](https://competlab.com/privacy-policy)
 - [Start Free Trial](https://app.competlab.com/register)

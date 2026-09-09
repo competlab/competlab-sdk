@@ -9,6 +9,7 @@ import {
   Positioning as GenPositioning,
   PricingIntelligence as GenPricing,
   AiVisibility as GenAiVisibility,
+  AiSources as GenAiSources,
   StrategicBriefing as GenStrategicBriefing,
   Alerts as GenAlerts,
   Schedules as GenSchedules,
@@ -27,6 +28,9 @@ import type {
   PublicBriefingControllerGetStrategicBriefingEditionV1Data,
   PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data,
   PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data,
+  PublicAiSourcesControllerGetAiSourcesDashboardV1Data,
+  PublicAiSourcesControllerGetAiSourcesHistoryV1Data,
+  PublicAiSourcesControllerGetAiSourcesCheckDetailV1Data,
   PublicAlertsControllerListAlertsV1Data,
   PtTechStackRequestDto,
   PtTrustSignalsRequestDto,
@@ -146,6 +150,7 @@ class CompetLab {
   readonly positioning: CompetLab.Positioning;
   readonly pricing: CompetLab.Pricing;
   readonly aiVisibility: CompetLab.AiVisibility;
+  readonly aiSources: CompetLab.AiSources;
   readonly strategicBriefing: CompetLab.StrategicBriefing;
   readonly alerts: CompetLab.Alerts;
   readonly schedules: CompetLab.Schedules;
@@ -207,6 +212,7 @@ class CompetLab {
     this.positioning = new CompetLab.Positioning(this.#client);
     this.pricing = new CompetLab.Pricing(this.#client);
     this.aiVisibility = new CompetLab.AiVisibility(this.#client);
+    this.aiSources = new CompetLab.AiSources(this.#client);
     this.strategicBriefing = new CompetLab.StrategicBriefing(this.#client);
     this.alerts = new CompetLab.Alerts(this.#client);
     this.schedules = new CompetLab.Schedules(this.#client);
@@ -432,6 +438,61 @@ namespace CompetLab {
         client: this.client,
         throwOnError: true,
         path: { projectId },
+        query,
+      });
+    }
+  }
+
+  /**
+   * The pages Perplexity and Google AI Overviews retrieved while answering a
+   * project's buying questions, and whether those pages name the brand.
+   *
+   * Three rules govern every figure this returns, and all three are easy to
+   * break by accident when reading the payload:
+   *
+   * - **Retrieved, never cited.** An engine hands back the pages it pulled
+   *   while answering; it does not say which of them it leaned on. No count
+   *   here is a citation count.
+   * - **Per engine, never pooled.** The engines read different pages, so page
+   *   counts are per engine and adding them describes a list neither produced.
+   *   Answers may pool as a vote; pages may not.
+   * - **Counts, never rates.** Report figures as `n of N answers`. The question
+   *   set is small by design, so a share computed from it is false precision.
+   *
+   * A page that could not be read is listed with its reason and is never a page
+   * the brand is absent from — only a core host whose `status` is `missing`
+   * supports "get onto this page".
+   */
+  export class AiSources {
+    constructor(private readonly client: Client) {}
+
+    dashboard(projectId: string, query?: PublicAiSourcesControllerGetAiSourcesDashboardV1Data['query']) {
+      return GenAiSources.publicAiSourcesControllerGetAiSourcesDashboardV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId },
+        query,
+      });
+    }
+
+    history(projectId: string, query?: PublicAiSourcesControllerGetAiSourcesHistoryV1Data['query']) {
+      return GenAiSources.publicAiSourcesControllerGetAiSourcesHistoryV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId },
+        query,
+      });
+    }
+
+    checkDetail(
+      projectId: string,
+      checkId: string,
+      query?: PublicAiSourcesControllerGetAiSourcesCheckDetailV1Data['query'],
+    ) {
+      return GenAiSources.publicAiSourcesControllerGetAiSourcesCheckDetailV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId, checkId },
         query,
       });
     }
