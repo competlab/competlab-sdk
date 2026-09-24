@@ -4,38 +4,33 @@ on:
   push:
     tags: ['v*']
 
+permissions:
+  id-token: write # the OIDC token npm exchanges for publish rights (trusted publishing)
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write # the OIDC token npm exchanges for publish rights, and provenance
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: https://registry.npmjs.org
+      - uses: actions/checkout@v6
 
-      # Trusted publishing is an npm-CLI feature, not a registry-only one: the CLI is
-      # what exchanges the Actions OIDC token for a short-lived publish credential, and
-      # it only learned how in 11.5.1. Node 20 ships npm 10.x, which would fall back to
-      # looking for a token that no longer exists and fail as a 401 — the same 401 a
-      # stale NPM_TOKEN gives, which makes the cause easy to misread. Pin the floor here
-      # rather than chasing the Node image's npm. Pinned to 11, not `latest`: npm 12 refuses to
-      # install on Node 20 (EBADENGINE), which failed the 6.0.0 publish before it started.
+      # npm's own trusted-publishing example: Node 24 ships an npm that does the OIDC exchange
+      # (>= 11.5.1), so nothing is upgraded here. No token anywhere — the trusted publisher on
+      # npmjs.com (this repo, this workflow filename) is the only publish right.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false # never use caching in release builds
+
       - name: npm new enough for trusted publishing
         run: |
-          npm install -g npm@11
           V="$(npm --version)"
           echo "npm $V"
           node -e "
             const [a,b,c] = process.argv[1].split('.').map(Number);
             const ok = a > 11 || (a === 11 && (b > 5 || (b === 5 && c >= 1)));
-            if (!ok) {
-              console.error('::error::npm ' + process.argv[1] + ' is too old; trusted publishing needs >= 11.5.1');
-              process.exit(1);
-            }
+            if (!ok) { console.error('::error::npm ' + process.argv[1] + ' is too old; trusted publishing needs >= 11.5.1'); process.exit(1); }
           " "$V"
 
       - run: npm ci
@@ -59,11 +54,4 @@ jobs:
 
       - run: npm run typecheck
       - run: npm run build
-
-      # Trusted publishing: npm exchanges the OIDC token above for a short-lived
-      # credential, matched against the publisher configured on npmjs.com (this repo,
-      # this workflow filename). Deliberately NO NODE_AUTH_TOKEN — a token in the
-      # environment takes precedence over OIDC, so leaving the old stale secret wired
-      # here would silently defeat trusted publishing and fail as a 401. Provenance is
-      # generated automatically from the same OIDC identity.
       - run: npm publish --access public
