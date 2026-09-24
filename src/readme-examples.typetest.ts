@@ -91,3 +91,38 @@ const everyEngine: Record<AiProvider, true> = {
 };
 
 export { aiSourcesExamples, trendExamples, perProviderExample, everyEngine };
+
+async function ticketExamples() {
+  const { data } = await cl.strategicBriefing.get('proj_abc');
+
+  const deep = await cl.strategicBriefing.get('proj_abc', {
+    sections: ['deep-ai-visibility'],
+    includeCharts: true,
+  });
+  report(String(deep.data.meta.status));
+
+  const { data: board } = await cl.tickets.list('proj_abc', {
+    origin: 'briefing',
+    briefingRunId: data.meta.runId!,
+  });
+  report(String(board.items.length));
+
+  const { data: created } = await cl.tickets.create('proj_abc', {
+    title: 'Answer the pricing-page objection Acme now leads with',
+    status: 'todo',
+  });
+  const ticketId = created.item.id;
+
+  // A move names neighbours, not a position. Naming neither puts it at the bottom of the column.
+  await cl.tickets.move('proj_abc', ticketId, { status: 'in_progress' });
+
+  // On an update, null clears a field and an omitted field is left alone.
+  await cl.tickets.update('proj_abc', ticketId, { dueDate: null });
+
+  await cl.tickets.comments.create('proj_abc', ticketId, { body: 'Draft is in the doc.' });
+
+  // After (v6.x) — the recommendations are tickets on the board:
+  const recs = await cl.tickets.list('proj_abc', { origin: 'briefing' });
+  report(String(recs.data.items.length));
+}
+void ticketExamples;

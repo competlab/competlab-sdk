@@ -9,12 +9,12 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![39 Methods](https://img.shields.io/badge/Methods-39-brightgreen)](#available-resources)
+[![54 Methods](https://img.shields.io/badge/Methods-54-brightgreen)](#available-resources)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-0-brightgreen)]()
 
 > Track what ChatGPT, Claude, Gemini, Perplexity and Google AI Overviews say about your brand — programmatically.
 
-40% of B2B buyers ask AI before they Google. This SDK gives you typed access to everything CompetLab monitors: AI visibility, competitor pricing, content changes, positioning shifts, and tech stack signals. 3 lines to your first insight.
+This SDK gives you typed access to everything CompetLab monitors: AI visibility, AI sources, competitor pricing, content changes, positioning shifts, and tech stack signals. 3 lines to your first insight.
 
 ## Install
 
@@ -30,7 +30,7 @@ import CompetLab from '@competlab/sdk';
 // The SDK does not read environment variables for you — pass the key explicitly.
 const cl = new CompetLab({ apiKey: process.env.COMPETLAB_API_KEY! });
 
-// See how 5 AI engines rank your brand vs competitors
+// See who AI models recommend in your category, and where you stand among them
 const visibility = await cl.aiVisibility.dashboard('proj_abc');
 ```
 
@@ -47,7 +47,7 @@ Competitive intelligence for the AI era. One platform, 6 dimensions, monitored a
 | **AI Visibility** | How ChatGPT, Claude, Gemini, Perplexity and Google AI Overviews recommend your brand vs competitors |
 | **AI Sources** | The pages Perplexity and Google AI Overviews retrieve while answering, and whether they name you |
 
-AI Visibility is what makes CompetLab unique — no other CI platform tracks how LLMs recommend brands in real time. AI Sources is its companion: the pages the engines retrieved on the way to those answers, and where your brand stands on them.
+AI Visibility answers who the AI models recommend in your category, and where you stand among them. AI Sources is its companion: the pages the engines retrieved on the way to those answers, and where your brand stands on them.
 
 > [Start free trial](https://app.competlab.com/register) | [Learn more](https://competlab.com)
 
@@ -64,12 +64,13 @@ cl.pricing           // Pricing intelligence
 cl.aiVisibility      // AI visibility scores, the market map & trends
 cl.aiSources         // Pages the engines retrieve while answering, and who they name
 cl.strategicBriefing // Synthesized competitive briefing — what changed, what it means, what to do
+cl.tickets           // Strategic Tickets board — read and write tickets, comments, labels
 cl.alerts            // Competitive change alerts
 cl.schedules         // Monitoring schedules
 cl.tools             // Free tools — sitemap, AI crawlers, tech stack, trust signals, agent adoption, fetch URL
 ```
 
-**13 resources. 39 methods. Zero dependencies.** Uses native `fetch` — no axios, no bloat.
+**14 resources. 54 methods. Zero dependencies.** Uses native `fetch` — no axios, no bloat.
 
 ## Examples
 
@@ -207,8 +208,19 @@ const { data } = await cl.strategicBriefing.get('proj_abc');
 
 // Follow a hub diagnosis pointer deeper, and pull full chart series:
 const deep = await cl.strategicBriefing.get('proj_abc', {
-  sections: ['deep-ai-visibility', 'actions'],
+  sections: ['deep-ai-visibility'],
   includeCharts: true,
+});
+```
+
+Every recommendation in a finished edition opens as a ticket on the project's Strategic Tickets
+board, most important first, and lives nowhere else; `data.tickets` (`{ total, byStatus }`) says
+how they stand right now. Read them from the board:
+
+```typescript
+const { data: board } = await cl.tickets.list('proj_abc', {
+  origin: 'briefing',
+  briefingRunId: data.meta.runId!,
 });
 ```
 
@@ -240,6 +252,33 @@ A `runId` for a failed or still-running edition resolves successfully with `meta
 > [MCP server](https://competlab.com/developers/mcp). Branch on the strongly-typed
 > `meta.status` / `meta.briefingDate`, and treat the body as structured JSON you narrow at
 > the point of use.
+
+### Work the Strategic Tickets board
+
+The board is the only part of the API that changes a project. Every ticket route needs an active
+subscription (`402 subscription_required`), and every write needs a `read_write` key — a `read`
+key gets `403 insufficient_scope`. A comment a person wrote in the app cannot be edited through
+the API, whatever the key (`403 forbidden`).
+
+```typescript
+const { data: created } = await cl.tickets.create('proj_abc', {
+  title: 'Answer the pricing-page objection Acme now leads with',
+  status: 'todo',
+});
+const ticketId = created.item.id;
+
+// A move names neighbours, not a position. Naming neither puts it at the bottom of the column.
+await cl.tickets.move('proj_abc', ticketId, { status: 'in_progress' });
+
+// On an update, null clears a field and an omitted field is left alone.
+await cl.tickets.update('proj_abc', ticketId, { dueDate: null });
+
+await cl.tickets.comments.create('proj_abc', ticketId, { body: 'Draft is in the doc.' });
+```
+
+A ticket a Strategic Briefing opened cannot be deleted — read `deletable`, and dismiss it
+(`move` to `dismissed`) instead. `number` is the ticket's number on the board (`#14` in the app):
+`list(projectId, { number: 14 })` finds it, and every method that acts on a ticket takes its `id`.
 
 ### Catch competitor pricing changes
 
@@ -287,7 +326,7 @@ Same shape applies to `cl.tools.trustSignals.{startScan,getScan}` and `cl.tools.
 
 ## MCP Server
 
-Prefer AI-native access? CompetLab also offers an MCP server with 38 tools — connect Claude Code, Cursor, or VS Code directly.
+Prefer AI-native access? CompetLab also offers an MCP server with 48 tools — connect Claude Code, Cursor, or VS Code directly.
 
 > [competlab.com/developers/mcp](https://competlab.com/developers/mcp)
 
@@ -392,8 +431,9 @@ const plan = await cl.analysis.actionPlan('proj_abc');
 
 // After (v2.x):
 const { data } = await cl.strategicBriefing.get('proj_abc');
-// ...or just the prioritized action list:
-const actions = await cl.strategicBriefing.get('proj_abc', { sections: ['actions'] });
+
+// After (v6.x) — the recommendations are tickets on the board:
+const recs = await cl.tickets.list('proj_abc', { origin: 'briefing' });
 ```
 
 Full details in the [CHANGELOG](./CHANGELOG.md).
@@ -415,7 +455,7 @@ Full details in the [CHANGELOG](./CHANGELOG.md).
 ## Links
 
 - [REST API Reference](https://competlab.com/developers/api)
-- [MCP Server](https://competlab.com/developers/mcp) (AI-native access with 38 tools)
+- [MCP Server](https://competlab.com/developers/mcp) (AI-native access with 48 tools)
 - [GitHub — MCP Server](https://github.com/competlab/competlab-mcp-server)
 - [Privacy Policy](https://competlab.com/privacy-policy)
 - [Start Free Trial](https://app.competlab.com/register)

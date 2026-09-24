@@ -141,7 +141,7 @@ export type ProjectDetailResponse = {
      */
     dimensions: DimensionFreshnessResponse;
     /**
-     * The project's 3 AI monitoring prompt texts — the questions put to each model. Always exactly 3; a project cannot be created or edited to hold any other number.
+     * The project's AI monitoring prompt texts — the questions put to each model. How many a project carries is set per account, so the length varies between accounts and changes when someone edits the prompts: size on the array, never on a constant. These are the CURRENT wordings — a published check keeps the prompts it ran with, so its `perPrompt` rows and its `promptIndex` filter follow that check's own count, not this array. Nothing on this list carries an id: to line a check up with it, match `summary.promptMarket.perPrompt[].promptTextInProject`, or fetch `includeAnswers=true` and match `answers[].promptText`. Do not join on `summary.customer.perPrompt[].promptLabel` — it is truncated to 80 characters.
      */
     prompts: Array<string>;
     /**
@@ -152,9 +152,9 @@ export type ProjectDetailResponse = {
 
 export type ApiNotFoundErrorResponse = {
     /**
-     * Machine-readable code identifying which resource was not found. The last two are NOT missing resources and must not be reported as one: `run_not_summarized` — the run exists and completed, but produced no published summary, which is a different fact from `run_not_found`; `no_data_available` — the project has no published data for this dimension yet.
+     * Machine-readable code identifying which resource was not found. `not_found` — the named resource does not exist in this project, which includes an ID that belongs to another project: the two are deliberately indistinguishable. Two of these are NOT missing resources and must not be reported as one: `run_not_summarized` — the run exists and completed, but produced no published summary, which is a different fact from `run_not_found`; `no_data_available` — the project has no published data for this dimension yet.
      */
-    code: 'project_not_found' | 'competitor_not_found' | 'run_not_found' | 'check_not_found' | 'scan_not_found' | 'run_not_summarized' | 'no_data_available';
+    code: 'project_not_found' | 'competitor_not_found' | 'run_not_found' | 'check_not_found' | 'scan_not_found' | 'run_not_summarized' | 'no_data_available' | 'not_found';
     /**
      * Human-readable error message
      */
@@ -1090,11 +1090,11 @@ export type ContentCompetitorResponse = {
         [key: string]: number;
     } | null;
     /**
-     * Up to 5 real URLs sampled from this competitor's `programmatic` pages, spread across the sections they came from. Empty when the competitor publishes none.
+     * Up to 5 real URLs sampled from this competitor's `programmatic` pages, spread across the sections they came from. Empty where this row's `programmatic` count is 0.
      *
      * Why these ship: the platform reports templated pages WITHOUT judging why a vendor generates them, because a URL shape cannot show intent — for a programmatic-SEO player it is the growth engine, for a reference database it is plumbing. That refusal is only honest if you can settle it yourself, and these URLs do that in seconds. **Open two or three before characterising a large `programmatic` count.** They are evidence for a count, not a measurement of their own — sampled at read time, never stored, so they may differ between calls.
      *
-     * `null` exactly when `contentDataAvailable` is present: we read no sitemap, so there is nothing to sample. An empty ARRAY is the different, measured fact that we read the sitemap and it has no programmatic pages.
+     * `null` exactly when `contentDataAvailable` is present: we read no sitemap, so there is nothing to sample. An empty ARRAY means `categorizedCounts.programmatic` is 0 across the sitemaps this row counts — read the two together, and never read an empty array as a stronger claim than that count.
      */
     programmaticExampleUrls: Array<string> | null;
     /**
@@ -1851,7 +1851,7 @@ export type AiVisibilityPerPromptResponse = {
      */
     mentionedBy: Array<'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews'>;
     /**
-     * 0-100 position score for this prompt, averaged over the models whose answers this check counted — never over a fixed model count. Higher is better. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. So it is not a rank and not a percentage of anything. A score of 0 for a brand the answers did name means it sat only in the tail of AI recommendations — below the top 5, or too seldom inside it for the average to register. `mentionedBy` separates the two: non-empty means the models named them here. If `mentionedBy` is empty and you need certainty, fetch `includeAnswers=true&promptIndex=<n>` — a prompt that was answered and did not rank the customer has entries in `answers`, while one that was never measured is in `unansweredQueries`.
+     * 0-100 position score for this prompt, averaged over the models whose answers this check counted — never over a fixed model count. Higher is better. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. So it is not a rank and not a percentage of anything. A score of 0 for a brand the answers did name means it was named only below the top 5, or too seldom inside them for the average to register. `mentionedBy` separates the two: non-empty means the models named them here. If `mentionedBy` is empty and you need certainty, fetch `includeAnswers=true&promptIndex=<n>` — a prompt that was answered and did not rank the customer has entries in `answers`, while one that was never measured is in `unansweredQueries`.
      */
     score: number;
 };
@@ -1870,7 +1870,7 @@ export type AiVisibilityCustomerMetricsResponse = {
      */
     mentionCount: number;
     /**
-     * AI Visibility Score, 0-100. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. Averaged over the answers this check counted and smoothed over up to the last 5 published checks. Present on every published check, and a `0` is a measured score — never 'unscored'. A score of 0 for a brand the answers did name means it sat only in the tail of AI recommendations — below the top 5, or too seldom inside it for the average to register. Read `mentionRate` beside it to tell that case from a brand no counted answer named.
+     * AI Visibility Score, 0-100. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. Averaged over the answers this check counted and smoothed over up to the last 5 published checks. Present on every published check, and a `0` is a measured score — never 'unscored'. A score of 0 for a brand the answers did name means it was named only below the top 5, or too seldom inside them for the average to register. Read `mentionRate` beside it to tell that case from a brand no counted answer named.
      */
     aiScore: number;
     /**
@@ -1920,7 +1920,7 @@ export type AiVisibilityCompetitorRankingResponse = {
      */
     mentionRate: number;
     /**
-     * AI Visibility Score (0-100), on the same rule as `customer.aiScore`. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. This row names a THIRD PARTY, so the reading matters more here than anywhere else on the response. A score of 0 for a brand the answers did name means it sat only in the tail of AI recommendations — below the top 5, or too seldom inside it for the average to register. Reporting a `0` as 'never named' is a false claim about another company published under our name. Read `mentionRate` beside a `0` score: a non-zero rate means the brand was named, and a `0` rate means no counted answer named it.
+     * AI Visibility Score (0-100), on the same rule as `customer.aiScore`. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. This row names a THIRD PARTY, so the reading matters more here than anywhere else on the response. A score of 0 for a brand the answers did name means it was named only below the top 5, or too seldom inside them for the average to register. Reporting a `0` as 'never named' is a false claim about another company published under our name. Read `mentionRate` beside a `0` score: a non-zero rate means the brand was named, and a `0` rate means no counted answer named it.
      */
     aiScore: number;
     /**
@@ -2238,7 +2238,7 @@ export type AiVisibilityDashboardSummaryResponse = {
      */
     totalQueries: number;
     /**
-     * Total brand entries across this check's counted answers. Also the size preview for `includeAnswers=true`: an entry serializes to roughly 375 tokens, so a 60-entry check runs around 25k tokens unfiltered and a five-engine check nearer 46k, while `brand=` returns about one entry per answer and lands nearer 2k — or roughly 9k when Google AI Overviews is in the ask, whose overview text and cited pages the brand filter keeps, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps.
+     * Total brand entries across this check's counted answers — one per brand a model named, summed over every answer. This is the size preview for `includeAnswers=true`: an entry serializes to roughly 375 tokens. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which this count does not predict and which the `brand=` filter keeps by design.
      */
     totalEntries: number;
     /**
@@ -2671,9 +2671,9 @@ export type AiProvider = 'openai' | 'claude' | 'gemini' | 'perplexity' | 'google
 
 export type ApiValidationErrorResponse = {
     /**
-     * Machine-readable error code for a rejected request payload or query. `invalid_parameters` — a query parameter or body field failed validation. `invalid_run_id` — a path parameter naming a run is not a well-formed identifier. `invalid_check_id` — a path parameter naming an AI Visibility or AI Sources check is not a well-formed identifier.
+     * Machine-readable error code for a rejected request payload or query. `invalid_parameters` — a query parameter or body field failed validation. `invalid_run_id` — a path parameter naming a run is not a well-formed identifier. `invalid_check_id` — a path parameter naming an AI Visibility or AI Sources check is not a well-formed identifier. `bad_request` — the request reached the endpoint and was refused for a reason the message states: a path parameter that is not a well-formed identifier, or a value the endpoint cannot act on (a due date that is not a real calendar day, a label the project's list does not hold, deleting a ticket a Strategic Briefing opened).
      */
-    code: 'invalid_parameters' | 'invalid_run_id' | 'invalid_check_id';
+    code: 'invalid_parameters' | 'invalid_run_id' | 'invalid_check_id' | 'bad_request';
     /**
      * Human-readable validation message (joined when multiple fields fail).
      */
@@ -2710,7 +2710,7 @@ export type AiVisibilityHistorySummaryResponse = {
      */
     totalQueries: number;
     /**
-     * Total brand entries across this check's counted answers. Also the size preview for `includeAnswers=true`: an entry serializes to roughly 375 tokens, so a 60-entry check runs around 25k tokens unfiltered and a five-engine check nearer 46k, while `brand=` returns about one entry per answer and lands nearer 2k — or roughly 9k when Google AI Overviews is in the ask, whose overview text and cited pages the brand filter keeps, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps.
+     * Total brand entries across this check's counted answers — one per brand a model named, summed over every answer. This is the size preview for `includeAnswers=true`: an entry serializes to roughly 375 tokens. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which this count does not predict and which the `brand=` filter keeps by design.
      */
     totalEntries: number;
     /**
@@ -2748,7 +2748,7 @@ export type AiVisibilityCheckDetailResponse = {
      */
     completedAt: string;
     /**
-     * Check summary statistics, including this check's per-competitor rankings under `summary.competitorRankings`.
+     * Check summary statistics, including the market map as it stood at this check under `summary.marketMap`, and each competitor's mention rate and AI Visibility Score under `summary.competitorRankings` — in the order to render, nothing positional.
      */
     summary: AiVisibilityDashboardSummaryResponse;
     /**
@@ -2849,7 +2849,7 @@ export type AiVisibilityTrendReadingResponse = {
      */
     rank: number | null;
     /**
-     * The company's AI Visibility Score on that check (0-100). The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it sat only in the tail of AI recommendations — below the top 5, or too seldom inside it for the average to register. Null where the check's rows carry none — no counted answer on that check named the company; the customer's own is present on every check — and null under a `provider` filter, since the score is one figure across every model.
+     * The company's AI Visibility Score on that check (0-100). The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it was named only below the top 5, or too seldom inside them for the average to register. Null where the check's rows carry none — no counted answer on that check named the company; the customer's own is present on every check — and null under a `provider` filter, since the score is one figure across every model.
      */
     score: number | null;
 };
@@ -2987,7 +2987,7 @@ export type AiVisibilityTrendResponse = {
      */
     scope: 'all' | 'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews';
     /**
-     * One row per company, in the order of how often each is recommended on the latest map — ties are ties. The project's own company and its tracked competitors are always here; the rest are the most recommended companies in the window, up to 10 rows in all. A company with no measured reading on this scope in the window is left out.
+     * One row per company, in the order of how often each is recommended on the latest map — ties are ties. The project's own company and its tracked competitors are always here, however many there are; the rest are the most recommended companies in the window, filling up to 10 rows in all — a roster larger than that returns more rows, never fewer. A company with no measured reading on this scope in the window is left out.
      */
     companies: Array<AiVisibilityTrendCompanyResponse>;
     /**
@@ -4195,7 +4195,7 @@ export type BriefingProgressResponse = {
      */
     startedAt: string;
     /**
-     * When this progress snapshot was last refreshed, ISO-8601 UTC. Updates roughly once a minute while a run is in flight, so a gap of more than ~10 minutes from the current time suggests a stalled run. A single missed update is not a signal.
+     * When this progress snapshot was last refreshed, ISO-8601 UTC. Updates roughly once a minute while a run is in flight. Short gaps are ordinary and a single missed update is not a signal; we do not treat a run as stalled until it has been quiet far longer than that, so use `status` rather than this timestamp to decide a run has stopped.
      */
     updatedAt: string;
 };
@@ -4227,7 +4227,7 @@ export type BriefingMetaResponse = {
      */
     briefingDate?: string | null;
     /**
-     * In-flight telemetry. Non-null only while `status` is `running` AND at least one progress update has landed (roughly a minute in). Always null on a `done` or `failed` run. Null is normal, not an error. A run typically finishes in about 90 minutes and a healthy one can take up to ~2 hours, so budget rather than polling tightly.
+     * In-flight telemetry. Non-null only while `status` is `running` AND at least one progress update has landed (roughly a minute in). Always null on a `done` or `failed` run. Null is normal, not an error. A run typically finishes in about two hours, so budget rather than polling tightly, and never infer failure from elapsed time.
      */
     progress?: BriefingProgressResponse | null;
 };
@@ -4235,7 +4235,20 @@ export type BriefingMetaResponse = {
 /**
  * Manifest of what this edition actually holds — every section it contains, whether or not you requested it. Values are exactly the tokens the `sections` parameter accepts, so you can pass one straight back. Use it to decide what to fetch next rather than requesting slots blind: a section absent from this list does not exist for this edition, and requesting it is not an error — the key is simply missing from `item`. Null whenever `meta.status` is not `done`. That means *this run* holds no content — **not** that the project has no editions; check `GET /strategic-briefing/history`.
  */
-export type BriefingSectionName = 'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-ai-sources' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status';
+export type BriefingSectionName = 'hub' | 'competitors' | 'deep-ai-visibility' | 'deep-ai-sources' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status';
+
+export type BriefingTicketsResponse = {
+    /**
+     * How many tickets this edition opened, counting every column — including the ones the team has since finished or dismissed.
+     */
+    total: number;
+    /**
+     * How those tickets stand right now, keyed by the column they sit in: triage, todo, in_progress, done, dismissed. Every column is present and an empty one is `0`.
+     */
+    byStatus: {
+        [key: string]: number;
+    };
+};
 
 export type BriefingEnvelopeResponse = {
     /**
@@ -4258,6 +4271,10 @@ export type BriefingEnvelopeResponse = {
      * Manifest of what this edition actually holds — every section it contains, whether or not you requested it. Values are exactly the tokens the `sections` parameter accepts, so you can pass one straight back. Use it to decide what to fetch next rather than requesting slots blind: a section absent from this list does not exist for this edition, and requesting it is not an error — the key is simply missing from `item`. Null whenever `meta.status` is not `done`. That means *this run* holds no content — **not** that the project has no editions; check `GET /strategic-briefing/history`.
      */
     contains?: Array<BriefingSectionName> | null;
+    /**
+     * How the tickets this edition opened stand on the project's board right now: how many there are, and how many sit in each column. Counted when the briefing is read, so it follows the board as the team works. The edition's recommended work IS those tickets and is returned in no section — read them with `GET /v1/projects/{projectId}/tickets?origin=briefing&briefingRunId={runId}`, taking `{runId}` from `meta.runId`. Null whenever `meta.status` is not `done`.
+     */
+    tickets?: BriefingTicketsResponse | null;
 };
 
 export type BriefingHistoryItemResponse = {
@@ -4285,6 +4302,366 @@ export type BriefingHistoryItemResponse = {
      * This edition's one-line headline verdict — the single sentence summarising what it concluded. Present so you can pick which edition to open without fetching each one. Null for a run that produced no edition, and for any edition that carries no headline.
      */
     headline?: string | null;
+};
+
+export type ApiPaymentRequiredErrorResponse = {
+    /**
+     * Machine-readable code for a key whose organization has no active subscription. The key itself is valid — the same organization cannot open this part of the product in the app either. Renew the subscription and the same request succeeds.
+     */
+    code: 'subscription_required';
+    /**
+     * Human-readable error message
+     */
+    message: string;
+    /**
+     * HTTP status code
+     */
+    status: number;
+};
+
+export type ApiPaymentRequiredErrorEnvelope = {
+    error: ApiPaymentRequiredErrorResponse;
+};
+
+export type ApiRateLimitErrorResponse = {
+    /**
+     * Machine-readable rate-limit error code.
+     */
+    code: 'rate_limit_exceeded';
+    /**
+     * Human-readable error message
+     */
+    message: string;
+    /**
+     * HTTP status code
+     */
+    status: number;
+};
+
+export type ApiRateLimitErrorEnvelope = {
+    error: ApiRateLimitErrorResponse;
+};
+
+export type TicketLabelResponse = {
+    /**
+     * The label's ID. This is what a ticket's `labelIds` names when you create or update one.
+     */
+    id: string;
+    /**
+     * The label's name. Unique within the project, compared without regard to case.
+     */
+    name: string;
+    /**
+     * The label's colour, as lower-case hex — `#rrggbb`. This is the form every tracker a ticket may be copied into speaks.
+     */
+    color: string;
+};
+
+export type CreateTicketLabelRequestDto = {
+    /**
+     * The label's name. Unique within the project, compared without regard to case, at most 40 characters. A project holds at most 50 labels.
+     */
+    name: string;
+    /**
+     * The label's colour, as hex — `#rrggbb`. It is stored lower-case, which is the form every tracker a ticket may be copied into speaks.
+     */
+    color: string;
+};
+
+export type ApiForbiddenErrorResponse = {
+    /**
+     * Machine-readable code for a key that is valid but may not do this. `insufficient_scope` — the endpoint writes and the key that called it may only read. Scope is fixed when a key is made: to write, create a `read_write` key. `forbidden` — the key may write, but not this particular row: rewriting a ticket comment that a person wrote in the app rather than one written through this API.
+     */
+    code: 'insufficient_scope' | 'forbidden';
+    /**
+     * Human-readable error message
+     */
+    message: string;
+    /**
+     * HTTP status code
+     */
+    status: number;
+};
+
+export type ApiForbiddenErrorEnvelope = {
+    error: ApiForbiddenErrorResponse;
+};
+
+export type UpdateTicketLabelRequestDto = {
+    /**
+     * The label's name. Unique within the project, compared without regard to case, at most 40 characters. A project holds at most 50 labels.
+     */
+    name?: string;
+    /**
+     * The label's colour, as hex — `#rrggbb`. It is stored lower-case, which is the form every tracker a ticket may be copied into speaks.
+     */
+    color?: string;
+};
+
+export type TicketPersonResponse = {
+    /**
+     * The person's user ID.
+     */
+    userId: string;
+    /**
+     * The person's name, as it stands on their CompetLab account.
+     */
+    fullName: string;
+};
+
+/**
+ * What wrote this: `user` — a person working in the app; `api` — an API key, which is what everything you write through this API carries; `briefing` or `ai_sources` — CompetLab itself. The server sets it; a request that sends it is refused.
+ */
+export type TicketOrigin = 'user' | 'api' | 'briefing' | 'ai_sources';
+
+/**
+ * The part of the analysis the recommendation came from. It is the edition's own reading and stays as the edition wrote it, whatever labels the team later puts on the ticket. `null` where the edition named none. `agent-readiness` is the key for Agent Adoption — how well a site is set up for AI agents to discover, access and read it. The key predates the name and does not change.
+ */
+export type BriefingDimension = 'ai-visibility' | 'ai-sources' | 'positioning' | 'pricing' | 'content' | 'tech-trust' | 'agent-readiness' | 'ai-ecosystem' | 'customer-voice' | 'funding-capital' | 'hiring-gtm' | 'landscape' | 'product-launches' | 'reliability-status';
+
+export type TicketBriefingRefResponse = {
+    /**
+     * The edition that opened this ticket. It is the same `runId` that `GET /v1/projects/{projectId}/strategic-briefing/history` lists, so `GET /v1/projects/{projectId}/strategic-briefing/history/{runId}` reads that edition in full.
+     */
+    runId: string;
+    /**
+     * The part of the analysis the recommendation came from. It is the edition's own reading and stays as the edition wrote it, whatever labels the team later puts on the ticket. `null` where the edition named none. `agent-readiness` is the key for Agent Adoption — how well a site is set up for AI agents to discover, access and read it. The key predates the name and does not change.
+     */
+    dimension: BriefingDimension | null;
+    /**
+     * How long the edition estimated the work would take, in minutes. `null` where it gave no estimate — read that as unsized, not as quick.
+     */
+    estimatedMinutes: number | null;
+};
+
+/**
+ * The column the ticket sits in. `triage` — nobody has decided yet. `todo` — decided, not started. `in_progress` — being worked on. `done` — finished. `dismissed` — we will not do this. The set is fixed and a project cannot add to it. Change it with the move endpoint, never with an update.
+ */
+export type TicketStatus = 'triage' | 'todo' | 'in_progress' | 'done' | 'dismissed';
+
+/**
+ * How much work the ticket is. `null` where nobody has said.
+ */
+export type TicketEffort = 'low' | 'medium' | 'high';
+
+export type TicketResponse = {
+    /**
+     * The ticket's ID.
+     */
+    id: string;
+    /**
+     * The ticket's number on its project's board — what a person says when they mean this ticket, shown in the app as `#14`. The first ticket a project opens is 1 and each one after it takes the next number, whatever opened it. A number never changes and is never given to a second ticket, so expect gaps: a number no ticket carries belonged to one that was deleted, or to a create that did not finish. `null` on a ticket opened before the board had numbers. Every endpoint takes the ticket's `id`; none looks a ticket up by its number.
+     */
+    number: number | null;
+    /**
+     * What wrote this: `user` — a person working in the app; `api` — an API key, which is what everything you write through this API carries; `briefing` or `ai_sources` — CompetLab itself. The server sets it; a request that sends it is refused.
+     */
+    origin: TicketOrigin;
+    /**
+     * The person who opened the ticket. `null` where no person did — `origin` says what did.
+     */
+    author: TicketPersonResponse | null;
+    /**
+     * The Strategic Briefing edition this ticket came from, and what that edition proposed. Present where `origin` is `briefing`, `null` on every other ticket. It records what the edition said and does not move when the ticket is edited — the title, the description and the planning fields are the team's to rewrite; this is not.
+     */
+    briefing: TicketBriefingRefResponse | null;
+    /**
+     * The ticket's title.
+     */
+    title: string;
+    /**
+     * The ticket's description, written in Markdown. An empty string where nothing was written.
+     */
+    description: string;
+    /**
+     * The ticket's labels, each resolved to its name and colour, in the project's own picker order. A ticket carries only labels the project's list holds.
+     */
+    labels: Array<TicketLabelResponse>;
+    /**
+     * The column the ticket sits in. `triage` — nobody has decided yet. `todo` — decided, not started. `in_progress` — being worked on. `done` — finished. `dismissed` — we will not do this. The set is fixed and a project cannot add to it. Change it with the move endpoint, never with an update.
+     */
+    status: TicketStatus;
+    /**
+     * When the ticket last changed column — its creation time until it first moves. Reordering a ticket inside its column does not touch it. ISO-8601.
+     */
+    statusChangedAt: string;
+    /**
+     * The person the ticket is assigned to, or `null` where nobody is. Somebody who has left the organization reads as unassigned here, and nothing is written back.
+     */
+    assignee: TicketPersonResponse | null;
+    /**
+     * The day the ticket is due, as `YYYY-MM-DD` — a calendar day, with no clock and no time zone, so it is the same day for every reader. `null` where none is set.
+     */
+    dueDate: string | null;
+    /**
+     * How much work the ticket is. `null` where nobody has said.
+     */
+    effort: TicketEffort | null;
+    /**
+     * How much the ticket matters, from 1 to 4: 1 Minor · 2 Moderate · 3 Significant · 4 Critical. `null` where nobody has said.
+     */
+    impact: number | null;
+    /**
+     * How many entries the ticket's thread holds. Counted when the ticket is read.
+     */
+    commentCount: number;
+    /**
+     * Whether this ticket can be deleted. A ticket a Strategic Briefing opened is moved to `dismissed` instead, so that what opened it does not open it again — deleting one is refused. Read this rather than working it out from `origin`.
+     */
+    deletable: boolean;
+    /**
+     * When the ticket was opened. ISO-8601.
+     */
+    createdAt: string;
+    /**
+     * When the ticket last changed in any way. ISO-8601.
+     */
+    updatedAt: string;
+    /**
+     * The last time anything happened to this ticket — an edit, a move, or an entry added to its thread. ISO-8601, and never earlier than `updatedAt`. Adding a comment does not change the ticket itself, so `updatedAt` can stand still while a thread fills up: read this field to ask whether a ticket has moved since you last looked, and `updatedAt` to ask whether the ticket itself was rewritten.
+     */
+    lastActivityAt: string;
+};
+
+export type CreateTicketRequestDto = {
+    /**
+     * The ticket's title.
+     */
+    title: string;
+    /**
+     * The ticket's description, in Markdown. At most 20000 characters.
+     */
+    description?: string;
+    /**
+     * The column the ticket opens in. Required and with no default: where a ticket belongs depends on who opened it, so a request that does not say is refused rather than landed somewhere plausible.
+     */
+    status: TicketStatus;
+    /**
+     * IDs from the project's own label list — read it with the labels endpoint, and create a label there before naming it. At most 10 per ticket, each named once.
+     */
+    labelIds?: Array<string>;
+    /**
+     * The user ID of a current member of your organization — list them with `GET /v1/projects/{projectId}/tickets/assignees`. A user ID from anywhere else is refused.
+     */
+    assigneeUserId?: string;
+    /**
+     * The day the ticket is due, as `YYYY-MM-DD` — a calendar day, with no clock and no time zone.
+     */
+    dueDate?: string;
+    /**
+     * How much work the ticket is.
+     */
+    effort?: TicketEffort;
+    /**
+     * How much the ticket matters, from 1 to 4: 1 Minor · 2 Moderate · 3 Significant · 4 Critical.
+     */
+    impact?: number;
+};
+
+export type UpdateTicketRequestDto = {
+    /**
+     * The ticket's title.
+     */
+    title?: string;
+    /**
+     * The ticket's description, in Markdown. At most 20000 characters. Send `""` to clear it.
+     */
+    description?: string;
+    /**
+     * IDs from the project's own label list — read it with the labels endpoint, and create a label there before naming it. At most 10 per ticket, each named once. The list replaces what the ticket holds; send `[]` to clear it.
+     */
+    labelIds?: Array<string>;
+    /**
+     * The user ID of a current member of your organization — list them with `GET /v1/projects/{projectId}/tickets/assignees`. A user ID from anywhere else is refused. Send `null` to leave the ticket unassigned.
+     */
+    assigneeUserId?: string | null;
+    /**
+     * The day the ticket is due, as `YYYY-MM-DD` — a calendar day, with no clock and no time zone. Send `null` to take the due date off.
+     */
+    dueDate?: string | null;
+    /**
+     * How much work the ticket is. Send `null` to take it off.
+     */
+    effort?: TicketEffort | null;
+    /**
+     * How much the ticket matters, from 1 to 4: 1 Minor · 2 Moderate · 3 Significant · 4 Critical. Send `null` to take it off.
+     */
+    impact?: number | null;
+};
+
+export type MoveTicketRequestDto = {
+    /**
+     * The column the ticket ends up in. Always the destination, never a change flag — reordering a ticket inside the column it already sits in names that column.
+     */
+    status: TicketStatus;
+    /**
+     * The ticket that will sit directly ABOVE this one. Name either neighbour or both. Omitting both puts the ticket at the BOTTOM of the destination column — which is its first card when that column is empty.
+     */
+    beforeId?: string;
+    /**
+     * The ticket that will sit directly BELOW this one. To put a ticket at the TOP of a column, send the ticket currently first there as `afterId`, and no `beforeId`.
+     */
+    afterId?: string;
+};
+
+export type TicketDeletedResponse = {
+    /**
+     * Always true. A delete that did not happen answers with an error instead.
+     */
+    success: boolean;
+    /**
+     * The ID of what was deleted.
+     */
+    id: string;
+};
+
+export type TicketCommentResponse = {
+    /**
+     * The entry's ID.
+     */
+    id: string;
+    /**
+     * The ticket this entry belongs to.
+     */
+    ticketId: string;
+    /**
+     * What wrote this: `user` — a person working in the app; `api` — an API key, which is what everything you write through this API carries; `briefing` or `ai_sources` — CompetLab itself. The server sets it; a request that sends it is refused.
+     */
+    origin: TicketOrigin;
+    /**
+     * The person who wrote the entry. `null` where no person did — `origin` says what did.
+     */
+    author: TicketPersonResponse | null;
+    /**
+     * The entry's text, written in Markdown.
+     */
+    body: string;
+    /**
+     * Whether the entry was rewritten after it was first written. The server answers it — do not work it out by comparing the two timestamps below, or two surfaces will say different things about the same entry.
+     */
+    edited: boolean;
+    /**
+     * When the entry was written. ISO-8601.
+     */
+    createdAt: string;
+    /**
+     * When the entry was last rewritten, or when it was written. ISO-8601.
+     */
+    updatedAt: string;
+};
+
+export type CreateTicketCommentRequestDto = {
+    /**
+     * The entry's text, in Markdown. At most 20000 characters. It is stored exactly as it is sent — leading whitespace is a code block in the dialect that draws it, so nothing is trimmed off the ends.
+     */
+    body: string;
+};
+
+export type UpdateTicketCommentRequestDto = {
+    /**
+     * The entry's text, in Markdown. At most 20000 characters. It is stored exactly as it is sent — leading whitespace is a code block in the dialect that draws it, so nothing is trimmed off the ends.
+     */
+    body: string;
 };
 
 export type TechStackEvidenceResponse = {
@@ -4414,25 +4791,6 @@ export type PtTechStackRequestDto = {
      * Target domain to fingerprint. Accepts a bare hostname or a full URL — normalized (lowercased, scheme and path stripped) before scanning.
      */
     domain: string;
-};
-
-export type ApiRateLimitErrorResponse = {
-    /**
-     * Machine-readable rate-limit error code.
-     */
-    code: 'rate_limit_exceeded';
-    /**
-     * Human-readable error message
-     */
-    message: string;
-    /**
-     * HTTP status code
-     */
-    status: number;
-};
-
-export type ApiRateLimitErrorEnvelope = {
-    error: ApiRateLimitErrorResponse;
 };
 
 export type ApiBadGatewayErrorResponse = {
@@ -6409,7 +6767,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data = {
     };
     query?: {
         /**
-         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large: roughly 25k tokens unfiltered on a three-engine check and 46k on a five-engine one, against roughly 2k with `brand=`, or 9k once Google AI Overviews is in the ask. Read `summary.totalEntries` to size it first (about 375 tokens per entry, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps and which `totalEntries` does not predict). The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
+         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large, and how large depends on the account. An entry is one brand a model named, at about 375 tokens each — so the block grows with three things at once: how many prompts the project asks (an account setting), how many models answered, and how many companies each answer named. No figure quoted here can stand in for `summary.totalEntries`; read it and size the fetch from it. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which `totalEntries` does not predict and which the `brand=` filter keeps by design. The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
          */
         includeAnswers?: boolean;
         /**
@@ -6417,7 +6775,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data = {
          */
         provider?: AiProvider;
         /**
-         * Return only the entries for this domain, across every answer. Requires `includeAnswers=true`. Matches `brands[].domain`, case-insensitively; brand NAMES are the model's own wording and vary between answers, so they are never matched. EVERY answer is still returned — the ones that did not name this domain come back with an empty `brands`, because 'this model answered and did not name them' is a finding, not an absence of data. A query that produced no answer at all is in `unansweredQueries` instead and asserts nothing about anyone. Ranks are unaffected: an entry keeps the position it held in the full answer. This is the cheapest way to ask where a competitor wins and where they are invisible — roughly 2k tokens, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps.
+         * Return only the entries for this domain, across every answer. Requires `includeAnswers=true`. Matches `brands[].domain`, case-insensitively; brand NAMES are the model's own wording and vary between answers, so they are never matched. EVERY answer is still returned — the ones that did not name this domain come back with an empty `brands`, because 'this model answered and did not name them' is a finding, not an absence of data. A query that produced no answer at all is in `unansweredQueries` instead and asserts nothing about anyone. Ranks are unaffected: an entry keeps the position it held in the full answer. This is the cheapest way to ask where a competitor wins and where they are invisible: it keeps at most one brand entry per answer instead of every brand the model named, and none at all on the answers that did not name it. Compare `summary.totalEntries` with the answer count to see the saving on this check. Google AI Overviews answers still carry their overview text and cited pages, which this filter keeps by design.
          */
         brand?: string;
         /**
@@ -6504,7 +6862,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data = {
     };
     query?: {
         /**
-         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large: roughly 25k tokens unfiltered on a three-engine check and 46k on a five-engine one, against roughly 2k with `brand=`, or 9k once Google AI Overviews is in the ask. Read `summary.totalEntries` to size it first (about 375 tokens per entry, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps and which `totalEntries` does not predict). The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
+         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large, and how large depends on the account. An entry is one brand a model named, at about 375 tokens each — so the block grows with three things at once: how many prompts the project asks (an account setting), how many models answered, and how many companies each answer named. No figure quoted here can stand in for `summary.totalEntries`; read it and size the fetch from it. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which `totalEntries` does not predict and which the `brand=` filter keeps by design. The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
          */
         includeAnswers?: boolean;
         /**
@@ -6512,7 +6870,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data = {
          */
         provider?: AiProvider;
         /**
-         * Return only the entries for this domain, across every answer. Requires `includeAnswers=true`. Matches `brands[].domain`, case-insensitively; brand NAMES are the model's own wording and vary between answers, so they are never matched. EVERY answer is still returned — the ones that did not name this domain come back with an empty `brands`, because 'this model answered and did not name them' is a finding, not an absence of data. A query that produced no answer at all is in `unansweredQueries` instead and asserts nothing about anyone. Ranks are unaffected: an entry keeps the position it held in the full answer. This is the cheapest way to ask where a competitor wins and where they are invisible — roughly 2k tokens, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps.
+         * Return only the entries for this domain, across every answer. Requires `includeAnswers=true`. Matches `brands[].domain`, case-insensitively; brand NAMES are the model's own wording and vary between answers, so they are never matched. EVERY answer is still returned — the ones that did not name this domain come back with an empty `brands`, because 'this model answered and did not name them' is a finding, not an absence of data. A query that produced no answer at all is in `unansweredQueries` instead and asserts nothing about anyone. Ranks are unaffected: an entry keeps the position it held in the full answer. This is the cheapest way to ask where a competitor wins and where they are invisible: it keeps at most one brand entry per answer instead of every brand the model named, and none at all on the answers that did not name it. Compare `summary.totalEntries` with the answer count to see the saving on this check. Google AI Overviews answers still carry their overview text and cited pages, which this filter keeps by design.
          */
         brand?: string;
         /**
@@ -6815,7 +7173,7 @@ export type PublicBriefingControllerGetStrategicBriefingV1Data = {
         /**
          * Which sections to return. Defaults to ["hub"] — the executive digest and navigation map. Pass specific sections to go deeper (e.g. a hub diagnosis pointer of `ai-visibility` maps to `deep-ai-visibility`), or `all` for the full document. Prefer deriving deep-<dimension> values from the hub diagnosis pointers rather than requesting slots blind — the response's `contains` array lists exactly which sections exist for this edition, in this same vocabulary.
          */
-        sections?: Array<'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-ai-sources' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status' | 'all'>;
+        sections?: Array<'hub' | 'competitors' | 'deep-ai-visibility' | 'deep-ai-sources' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status' | 'all'>;
         /**
          * Include full chart series data. Defaults to false — each chart returns its title and note only, with no underlying numbers. Pass true for the full series.
          */
@@ -6892,7 +7250,7 @@ export type PublicBriefingControllerGetStrategicBriefingEditionV1Data = {
         /**
          * Which sections to return. Defaults to ["hub"] — the executive digest and navigation map. Pass specific sections to go deeper (e.g. a hub diagnosis pointer of `ai-visibility` maps to `deep-ai-visibility`), or `all` for the full document. Prefer deriving deep-<dimension> values from the hub diagnosis pointers rather than requesting slots blind — the response's `contains` array lists exactly which sections exist for this edition, in this same vocabulary.
          */
-        sections?: Array<'hub' | 'actions' | 'competitors' | 'deep-ai-visibility' | 'deep-ai-sources' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status' | 'all'>;
+        sections?: Array<'hub' | 'competitors' | 'deep-ai-visibility' | 'deep-ai-sources' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status' | 'all'>;
         /**
          * Include full chart series data. Defaults to false — each chart returns its title and note only, with no underlying numbers. Pass true for the full series.
          */
@@ -6914,6 +7272,599 @@ export type PublicBriefingControllerGetStrategicBriefingEditionV1Responses = {
 };
 
 export type PublicBriefingControllerGetStrategicBriefingEditionV1Response = PublicBriefingControllerGetStrategicBriefingEditionV1Responses[keyof PublicBriefingControllerGetStrategicBriefingEditionV1Responses];
+
+export type PublicTicketsControllerListLabelsV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/labels';
+};
+
+export type PublicTicketsControllerListLabelsV1Errors = {
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerListLabelsV1Error = PublicTicketsControllerListLabelsV1Errors[keyof PublicTicketsControllerListLabelsV1Errors];
+
+export type PublicTicketsControllerListLabelsV1Responses = {
+    /**
+     * ListResponseOfTicketLabelResponse
+     */
+    200: {
+        items: Array<TicketLabelResponse>;
+    };
+};
+
+export type PublicTicketsControllerListLabelsV1Response = PublicTicketsControllerListLabelsV1Responses[keyof PublicTicketsControllerListLabelsV1Responses];
+
+export type PublicTicketsControllerCreateLabelV1Data = {
+    body: CreateTicketLabelRequestDto;
+    path: {
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/labels';
+};
+
+export type PublicTicketsControllerCreateLabelV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    403: ApiForbiddenErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerCreateLabelV1Error = PublicTicketsControllerCreateLabelV1Errors[keyof PublicTicketsControllerCreateLabelV1Errors];
+
+export type PublicTicketsControllerCreateLabelV1Responses = {
+    /**
+     * ListResponseOfTicketLabelResponse
+     */
+    200: {
+        items: Array<TicketLabelResponse>;
+    };
+};
+
+export type PublicTicketsControllerCreateLabelV1Response = PublicTicketsControllerCreateLabelV1Responses[keyof PublicTicketsControllerCreateLabelV1Responses];
+
+export type PublicTicketsControllerDeleteLabelV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Label ID, as the label list returns it
+         */
+        labelId: string;
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/labels/{labelId}';
+};
+
+export type PublicTicketsControllerDeleteLabelV1Errors = {
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    403: ApiForbiddenErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerDeleteLabelV1Error = PublicTicketsControllerDeleteLabelV1Errors[keyof PublicTicketsControllerDeleteLabelV1Errors];
+
+export type PublicTicketsControllerDeleteLabelV1Responses = {
+    /**
+     * ListResponseOfTicketLabelResponse
+     */
+    200: {
+        items: Array<TicketLabelResponse>;
+    };
+};
+
+export type PublicTicketsControllerDeleteLabelV1Response = PublicTicketsControllerDeleteLabelV1Responses[keyof PublicTicketsControllerDeleteLabelV1Responses];
+
+export type PublicTicketsControllerUpdateLabelV1Data = {
+    body: UpdateTicketLabelRequestDto;
+    path: {
+        /**
+         * Label ID, as the label list returns it
+         */
+        labelId: string;
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/labels/{labelId}';
+};
+
+export type PublicTicketsControllerUpdateLabelV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    403: ApiForbiddenErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerUpdateLabelV1Error = PublicTicketsControllerUpdateLabelV1Errors[keyof PublicTicketsControllerUpdateLabelV1Errors];
+
+export type PublicTicketsControllerUpdateLabelV1Responses = {
+    /**
+     * ListResponseOfTicketLabelResponse
+     */
+    200: {
+        items: Array<TicketLabelResponse>;
+    };
+};
+
+export type PublicTicketsControllerUpdateLabelV1Response = PublicTicketsControllerUpdateLabelV1Responses[keyof PublicTicketsControllerUpdateLabelV1Responses];
+
+export type PublicTicketsControllerListAssigneesV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/assignees';
+};
+
+export type PublicTicketsControllerListAssigneesV1Errors = {
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerListAssigneesV1Error = PublicTicketsControllerListAssigneesV1Errors[keyof PublicTicketsControllerListAssigneesV1Errors];
+
+export type PublicTicketsControllerListAssigneesV1Responses = {
+    /**
+     * ListResponseOfTicketPersonResponse
+     */
+    200: {
+        items: Array<TicketPersonResponse>;
+    };
+};
+
+export type PublicTicketsControllerListAssigneesV1Response = PublicTicketsControllerListAssigneesV1Responses[keyof PublicTicketsControllerListAssigneesV1Responses];
+
+export type PublicTicketsControllerListTicketsV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: {
+        /**
+         * Return only the tickets in these columns — one, or several separated by commas (`status=todo,in_progress`). Omit it for every column, in board order.
+         */
+        status?: Array<'triage' | 'todo' | 'in_progress' | 'done' | 'dismissed'>;
+        /**
+         * How much of `done` and `dismissed` to return. `recent` (the default) returns the tickets that reached those columns within the last 30 days; `all` returns them whole. The other columns are always whole, whichever you pass.
+         */
+        closed?: 'recent' | 'all';
+        /**
+         * Return only the tickets one source opened: `user` — a person working in the app; `api` — an API key, which is what everything you write through this API carries; `briefing` or `ai_sources` — CompetLab itself. No part of CompetLab opens `ai_sources` tickets today, so that value matches none.
+         */
+        origin?: 'user' | 'api' | 'briefing' | 'ai_sources';
+        /**
+         * Return only the tickets a Strategic Briefing opened for one part of its analysis. Nothing a person or an API key opens carries a dimension, so this narrows the list to briefing tickets whether or not you also pass `origin`. `agent-readiness` is the key for Agent Adoption — how well a site is set up for AI agents to discover, access and read it. The key predates the name and does not change.
+         */
+        dimension?: 'ai-visibility' | 'ai-sources' | 'positioning' | 'pricing' | 'content' | 'tech-trust' | 'agent-readiness' | 'ai-ecosystem' | 'customer-voice' | 'funding-capital' | 'hiring-gtm' | 'landscape' | 'product-launches' | 'reliability-status';
+        /**
+         * Return only the tickets one Strategic Briefing edition opened. Take the id from `GET /v1/projects/{projectId}/strategic-briefing/history`, or from `meta.runId` on a briefing read. Nothing a person or an API key opens carries an edition, so this narrows the list to that edition's tickets whether or not you also pass `origin`. An edition's tickets are returned whole, the finished and dismissed ones included however long ago they were closed — `closed` has no effect on this read — so the list matches the count the briefing states for that edition.
+         */
+        briefingRunId?: string;
+        /**
+         * Return only the tickets one person owns — their user ID, from `GET /v1/projects/{projectId}/tickets/assignees`. Pass `none` for the tickets nobody owns. A ticket whose owner has left the organization reads as unassigned everywhere, but is still found here by their ID.
+         */
+        assignee?: string;
+        /**
+         * Return only the tickets carrying one label — its ID, from `GET /v1/projects/{projectId}/tickets/labels`.
+         */
+        labelId?: string;
+        /**
+         * Return the one ticket carrying this number on the board — what a person means by `#14`. It is a name and not an address: this narrows the list, and every endpoint that acts on a ticket still takes its `id`.
+         */
+        number?: number;
+        /**
+         * Return only the tickets whose TITLE contains this text, compared without regard to case. It is matched literally — punctuation is text, not a pattern — and descriptions and comments are not searched.
+         */
+        q?: string;
+        /**
+         * What each ticket in the list carries. By default a list is an INDEX: every field except the ticket's own Markdown `description`, which is returned as an empty string. Pass `include=description` for the bodies — one ticket's description runs to thousands of characters, so a whole board fetched with them is large enough to be worth asking for on purpose. `GET …/tickets/{ticketId}` always returns the description whatever you pass here.
+         */
+        include?: Array<'description'>;
+    };
+    url: '/v1/projects/{projectId}/tickets';
+};
+
+export type PublicTicketsControllerListTicketsV1Errors = {
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerListTicketsV1Error = PublicTicketsControllerListTicketsV1Errors[keyof PublicTicketsControllerListTicketsV1Errors];
+
+export type PublicTicketsControllerListTicketsV1Responses = {
+    /**
+     * ListResponseOfTicketResponse
+     */
+    200: {
+        items: Array<TicketResponse>;
+        /**
+         * How many tickets the columns this call covers hold in all. It differs from the length of `items` only when a closed column was read through its recent window.
+         */
+        total: number;
+        /**
+         * Whether `total` names more tickets than `items` returned. Read again with `closed=all` for the rest.
+         */
+        hasMore: boolean;
+    };
+};
+
+export type PublicTicketsControllerListTicketsV1Response = PublicTicketsControllerListTicketsV1Responses[keyof PublicTicketsControllerListTicketsV1Responses];
+
+export type PublicTicketsControllerCreateTicketV1Data = {
+    body: CreateTicketRequestDto;
+    path: {
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets';
+};
+
+export type PublicTicketsControllerCreateTicketV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    403: ApiForbiddenErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerCreateTicketV1Error = PublicTicketsControllerCreateTicketV1Errors[keyof PublicTicketsControllerCreateTicketV1Errors];
+
+export type PublicTicketsControllerCreateTicketV1Responses = {
+    /**
+     * ItemResponseOfTicketResponse
+     */
+    200: {
+        item: TicketResponse;
+    };
+};
+
+export type PublicTicketsControllerCreateTicketV1Response = PublicTicketsControllerCreateTicketV1Responses[keyof PublicTicketsControllerCreateTicketV1Responses];
+
+export type PublicTicketsControllerDeleteTicketV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Ticket ID
+         */
+        ticketId: string;
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/{ticketId}';
+};
+
+export type PublicTicketsControllerDeleteTicketV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    403: ApiForbiddenErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerDeleteTicketV1Error = PublicTicketsControllerDeleteTicketV1Errors[keyof PublicTicketsControllerDeleteTicketV1Errors];
+
+export type PublicTicketsControllerDeleteTicketV1Responses = {
+    /**
+     * ItemResponseOfTicketDeletedResponse
+     */
+    200: {
+        item: TicketDeletedResponse;
+    };
+};
+
+export type PublicTicketsControllerDeleteTicketV1Response = PublicTicketsControllerDeleteTicketV1Responses[keyof PublicTicketsControllerDeleteTicketV1Responses];
+
+export type PublicTicketsControllerGetTicketV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Ticket ID
+         */
+        ticketId: string;
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/{ticketId}';
+};
+
+export type PublicTicketsControllerGetTicketV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerGetTicketV1Error = PublicTicketsControllerGetTicketV1Errors[keyof PublicTicketsControllerGetTicketV1Errors];
+
+export type PublicTicketsControllerGetTicketV1Responses = {
+    /**
+     * ItemResponseOfTicketResponse
+     */
+    200: {
+        item: TicketResponse;
+    };
+};
+
+export type PublicTicketsControllerGetTicketV1Response = PublicTicketsControllerGetTicketV1Responses[keyof PublicTicketsControllerGetTicketV1Responses];
+
+export type PublicTicketsControllerUpdateTicketV1Data = {
+    body: UpdateTicketRequestDto;
+    path: {
+        /**
+         * Ticket ID
+         */
+        ticketId: string;
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/{ticketId}';
+};
+
+export type PublicTicketsControllerUpdateTicketV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    403: ApiForbiddenErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerUpdateTicketV1Error = PublicTicketsControllerUpdateTicketV1Errors[keyof PublicTicketsControllerUpdateTicketV1Errors];
+
+export type PublicTicketsControllerUpdateTicketV1Responses = {
+    /**
+     * ItemResponseOfTicketResponse
+     */
+    200: {
+        item: TicketResponse;
+    };
+};
+
+export type PublicTicketsControllerUpdateTicketV1Response = PublicTicketsControllerUpdateTicketV1Responses[keyof PublicTicketsControllerUpdateTicketV1Responses];
+
+export type PublicTicketsControllerMoveTicketV1Data = {
+    body: MoveTicketRequestDto;
+    path: {
+        /**
+         * Ticket ID
+         */
+        ticketId: string;
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/{ticketId}/move';
+};
+
+export type PublicTicketsControllerMoveTicketV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    403: ApiForbiddenErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerMoveTicketV1Error = PublicTicketsControllerMoveTicketV1Errors[keyof PublicTicketsControllerMoveTicketV1Errors];
+
+export type PublicTicketsControllerMoveTicketV1Responses = {
+    /**
+     * ItemResponseOfTicketResponse
+     */
+    200: {
+        item: TicketResponse;
+    };
+};
+
+export type PublicTicketsControllerMoveTicketV1Response = PublicTicketsControllerMoveTicketV1Responses[keyof PublicTicketsControllerMoveTicketV1Responses];
+
+export type PublicTicketsControllerListCommentsV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Ticket ID
+         */
+        ticketId: string;
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/{ticketId}/comments';
+};
+
+export type PublicTicketsControllerListCommentsV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerListCommentsV1Error = PublicTicketsControllerListCommentsV1Errors[keyof PublicTicketsControllerListCommentsV1Errors];
+
+export type PublicTicketsControllerListCommentsV1Responses = {
+    /**
+     * ListResponseOfTicketCommentResponse
+     */
+    200: {
+        items: Array<TicketCommentResponse>;
+    };
+};
+
+export type PublicTicketsControllerListCommentsV1Response = PublicTicketsControllerListCommentsV1Responses[keyof PublicTicketsControllerListCommentsV1Responses];
+
+export type PublicTicketsControllerCreateCommentV1Data = {
+    body: CreateTicketCommentRequestDto;
+    path: {
+        /**
+         * Ticket ID
+         */
+        ticketId: string;
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/{ticketId}/comments';
+};
+
+export type PublicTicketsControllerCreateCommentV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    403: ApiForbiddenErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerCreateCommentV1Error = PublicTicketsControllerCreateCommentV1Errors[keyof PublicTicketsControllerCreateCommentV1Errors];
+
+export type PublicTicketsControllerCreateCommentV1Responses = {
+    /**
+     * ItemResponseOfTicketCommentResponse
+     */
+    200: {
+        item: TicketCommentResponse;
+    };
+};
+
+export type PublicTicketsControllerCreateCommentV1Response = PublicTicketsControllerCreateCommentV1Responses[keyof PublicTicketsControllerCreateCommentV1Responses];
+
+export type PublicTicketsControllerDeleteCommentV1Data = {
+    body?: never;
+    path: {
+        /**
+         * Ticket ID
+         */
+        ticketId: string;
+        /**
+         * Comment ID
+         */
+        commentId: string;
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/{ticketId}/comments/{commentId}';
+};
+
+export type PublicTicketsControllerDeleteCommentV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    403: ApiForbiddenErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerDeleteCommentV1Error = PublicTicketsControllerDeleteCommentV1Errors[keyof PublicTicketsControllerDeleteCommentV1Errors];
+
+export type PublicTicketsControllerDeleteCommentV1Responses = {
+    /**
+     * ItemResponseOfTicketDeletedResponse
+     */
+    200: {
+        item: TicketDeletedResponse;
+    };
+};
+
+export type PublicTicketsControllerDeleteCommentV1Response = PublicTicketsControllerDeleteCommentV1Responses[keyof PublicTicketsControllerDeleteCommentV1Responses];
+
+export type PublicTicketsControllerUpdateCommentV1Data = {
+    body: UpdateTicketCommentRequestDto;
+    path: {
+        /**
+         * Ticket ID
+         */
+        ticketId: string;
+        /**
+         * Comment ID
+         */
+        commentId: string;
+        /**
+         * Project ID
+         */
+        projectId: string;
+    };
+    query?: never;
+    url: '/v1/projects/{projectId}/tickets/{ticketId}/comments/{commentId}';
+};
+
+export type PublicTicketsControllerUpdateCommentV1Errors = {
+    400: ApiValidationErrorEnvelope;
+    401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
+    403: ApiForbiddenErrorEnvelope;
+    404: ApiNotFoundErrorEnvelope;
+    429: ApiRateLimitErrorEnvelope;
+};
+
+export type PublicTicketsControllerUpdateCommentV1Error = PublicTicketsControllerUpdateCommentV1Errors[keyof PublicTicketsControllerUpdateCommentV1Errors];
+
+export type PublicTicketsControllerUpdateCommentV1Responses = {
+    /**
+     * ItemResponseOfTicketCommentResponse
+     */
+    200: {
+        item: TicketCommentResponse;
+    };
+};
+
+export type PublicTicketsControllerUpdateCommentV1Response = PublicTicketsControllerUpdateCommentV1Responses[keyof PublicTicketsControllerUpdateCommentV1Responses];
 
 export type PublicTechStackToolControllerCreateScanV1Data = {
     body: PtTechStackRequestDto;

@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { PublicAgentAdoptionToolControllerCreateScanV1Data, PublicAgentAdoptionToolControllerCreateScanV1Errors, PublicAgentAdoptionToolControllerCreateScanV1Responses, PublicAgentAdoptionToolControllerGetScanV1Data, PublicAgentAdoptionToolControllerGetScanV1Errors, PublicAgentAdoptionToolControllerGetScanV1Responses, PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Data, PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Errors, PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Responses, PublicAiSourcesControllerGetAiSourcesCheckDetailV1Data, PublicAiSourcesControllerGetAiSourcesCheckDetailV1Errors, PublicAiSourcesControllerGetAiSourcesCheckDetailV1Responses, PublicAiSourcesControllerGetAiSourcesDashboardV1Data, PublicAiSourcesControllerGetAiSourcesDashboardV1Errors, PublicAiSourcesControllerGetAiSourcesDashboardV1Responses, PublicAiSourcesControllerGetAiSourcesHistoryV1Data, PublicAiSourcesControllerGetAiSourcesHistoryV1Errors, PublicAiSourcesControllerGetAiSourcesHistoryV1Responses, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Errors, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Responses, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Errors, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Responses, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Errors, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Responses, PublicAiVisibilityControllerGetAiVisibilityTrendV1Data, PublicAiVisibilityControllerGetAiVisibilityTrendV1Errors, PublicAiVisibilityControllerGetAiVisibilityTrendV1Responses, PublicAlertsControllerListAlertsV1Data, PublicAlertsControllerListAlertsV1Errors, PublicAlertsControllerListAlertsV1Responses, PublicBriefingControllerGetStrategicBriefingEditionV1Data, PublicBriefingControllerGetStrategicBriefingEditionV1Errors, PublicBriefingControllerGetStrategicBriefingEditionV1Responses, PublicBriefingControllerGetStrategicBriefingHistoryV1Data, PublicBriefingControllerGetStrategicBriefingHistoryV1Errors, PublicBriefingControllerGetStrategicBriefingHistoryV1Responses, PublicBriefingControllerGetStrategicBriefingV1Data, PublicBriefingControllerGetStrategicBriefingV1Errors, PublicBriefingControllerGetStrategicBriefingV1Responses, PublicCompetitorsControllerGetCompetitorV1Data, PublicCompetitorsControllerGetCompetitorV1Errors, PublicCompetitorsControllerGetCompetitorV1Responses, PublicCompetitorsControllerListCompetitorsV1Data, PublicCompetitorsControllerListCompetitorsV1Errors, PublicCompetitorsControllerListCompetitorsV1Responses, PublicContentControllerGetContentChangelogV1Data, PublicContentControllerGetContentChangelogV1Errors, PublicContentControllerGetContentChangelogV1Responses, PublicContentControllerGetContentDashboardV1Data, PublicContentControllerGetContentDashboardV1Errors, PublicContentControllerGetContentDashboardV1Responses, PublicContentControllerGetContentHistoryV1Data, PublicContentControllerGetContentHistoryV1Errors, PublicContentControllerGetContentHistoryV1Responses, PublicContentControllerGetContentRunDetailV1Data, PublicContentControllerGetContentRunDetailV1Errors, PublicContentControllerGetContentRunDetailV1Responses, PublicFetchUrlToolControllerFetchUrlV1Data, PublicFetchUrlToolControllerFetchUrlV1Errors, PublicFetchUrlToolControllerFetchUrlV1Responses, PublicHealthControllerGetHealthV1Data, PublicHealthControllerGetHealthV1Responses, PublicPositioningControllerGetPositioningDashboardV1Data, PublicPositioningControllerGetPositioningDashboardV1Errors, PublicPositioningControllerGetPositioningDashboardV1Responses, PublicPositioningControllerGetPositioningHistoryV1Data, PublicPositioningControllerGetPositioningHistoryV1Errors, PublicPositioningControllerGetPositioningHistoryV1Responses, PublicPositioningControllerGetPositioningRunDetailV1Data, PublicPositioningControllerGetPositioningRunDetailV1Errors, PublicPositioningControllerGetPositioningRunDetailV1Responses, PublicPricingControllerGetPricingDashboardV1Data, PublicPricingControllerGetPricingDashboardV1Errors, PublicPricingControllerGetPricingDashboardV1Responses, PublicPricingControllerGetPricingHistoryV1Data, PublicPricingControllerGetPricingHistoryV1Errors, PublicPricingControllerGetPricingHistoryV1Responses, PublicPricingControllerGetPricingRunDetailV1Data, PublicPricingControllerGetPricingRunDetailV1Errors, PublicPricingControllerGetPricingRunDetailV1Responses, PublicProjectsControllerGetProjectV1Data, PublicProjectsControllerGetProjectV1Errors, PublicProjectsControllerGetProjectV1Responses, PublicProjectsControllerListProjectsV1Data, PublicProjectsControllerListProjectsV1Errors, PublicProjectsControllerListProjectsV1Responses, PublicSchedulesControllerListSchedulesV1Data, PublicSchedulesControllerListSchedulesV1Errors, PublicSchedulesControllerListSchedulesV1Responses, PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Data, PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Errors, PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Responses, PublicTechStackToolControllerCreateScanV1Data, PublicTechStackToolControllerCreateScanV1Errors, PublicTechStackToolControllerCreateScanV1Responses, PublicTechStackToolControllerGetScanV1Data, PublicTechStackToolControllerGetScanV1Errors, PublicTechStackToolControllerGetScanV1Responses, PublicTechTrustControllerGetTechTrustDashboardV1Data, PublicTechTrustControllerGetTechTrustDashboardV1Errors, PublicTechTrustControllerGetTechTrustDashboardV1Responses, PublicTechTrustControllerGetTechTrustHistoryV1Data, PublicTechTrustControllerGetTechTrustHistoryV1Errors, PublicTechTrustControllerGetTechTrustHistoryV1Responses, PublicTechTrustControllerGetTechTrustRunDetailV1Data, PublicTechTrustControllerGetTechTrustRunDetailV1Errors, PublicTechTrustControllerGetTechTrustRunDetailV1Responses, PublicTrustSignalsToolControllerCreateScanV1Data, PublicTrustSignalsToolControllerCreateScanV1Errors, PublicTrustSignalsToolControllerCreateScanV1Responses, PublicTrustSignalsToolControllerGetScanV1Data, PublicTrustSignalsToolControllerGetScanV1Errors, PublicTrustSignalsToolControllerGetScanV1Responses } from './types.gen';
+import type { PublicAgentAdoptionToolControllerCreateScanV1Data, PublicAgentAdoptionToolControllerCreateScanV1Errors, PublicAgentAdoptionToolControllerCreateScanV1Responses, PublicAgentAdoptionToolControllerGetScanV1Data, PublicAgentAdoptionToolControllerGetScanV1Errors, PublicAgentAdoptionToolControllerGetScanV1Responses, PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Data, PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Errors, PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Responses, PublicAiSourcesControllerGetAiSourcesCheckDetailV1Data, PublicAiSourcesControllerGetAiSourcesCheckDetailV1Errors, PublicAiSourcesControllerGetAiSourcesCheckDetailV1Responses, PublicAiSourcesControllerGetAiSourcesDashboardV1Data, PublicAiSourcesControllerGetAiSourcesDashboardV1Errors, PublicAiSourcesControllerGetAiSourcesDashboardV1Responses, PublicAiSourcesControllerGetAiSourcesHistoryV1Data, PublicAiSourcesControllerGetAiSourcesHistoryV1Errors, PublicAiSourcesControllerGetAiSourcesHistoryV1Responses, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Errors, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Responses, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Errors, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Responses, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Errors, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Responses, PublicAiVisibilityControllerGetAiVisibilityTrendV1Data, PublicAiVisibilityControllerGetAiVisibilityTrendV1Errors, PublicAiVisibilityControllerGetAiVisibilityTrendV1Responses, PublicAlertsControllerListAlertsV1Data, PublicAlertsControllerListAlertsV1Errors, PublicAlertsControllerListAlertsV1Responses, PublicBriefingControllerGetStrategicBriefingEditionV1Data, PublicBriefingControllerGetStrategicBriefingEditionV1Errors, PublicBriefingControllerGetStrategicBriefingEditionV1Responses, PublicBriefingControllerGetStrategicBriefingHistoryV1Data, PublicBriefingControllerGetStrategicBriefingHistoryV1Errors, PublicBriefingControllerGetStrategicBriefingHistoryV1Responses, PublicBriefingControllerGetStrategicBriefingV1Data, PublicBriefingControllerGetStrategicBriefingV1Errors, PublicBriefingControllerGetStrategicBriefingV1Responses, PublicCompetitorsControllerGetCompetitorV1Data, PublicCompetitorsControllerGetCompetitorV1Errors, PublicCompetitorsControllerGetCompetitorV1Responses, PublicCompetitorsControllerListCompetitorsV1Data, PublicCompetitorsControllerListCompetitorsV1Errors, PublicCompetitorsControllerListCompetitorsV1Responses, PublicContentControllerGetContentChangelogV1Data, PublicContentControllerGetContentChangelogV1Errors, PublicContentControllerGetContentChangelogV1Responses, PublicContentControllerGetContentDashboardV1Data, PublicContentControllerGetContentDashboardV1Errors, PublicContentControllerGetContentDashboardV1Responses, PublicContentControllerGetContentHistoryV1Data, PublicContentControllerGetContentHistoryV1Errors, PublicContentControllerGetContentHistoryV1Responses, PublicContentControllerGetContentRunDetailV1Data, PublicContentControllerGetContentRunDetailV1Errors, PublicContentControllerGetContentRunDetailV1Responses, PublicFetchUrlToolControllerFetchUrlV1Data, PublicFetchUrlToolControllerFetchUrlV1Errors, PublicFetchUrlToolControllerFetchUrlV1Responses, PublicHealthControllerGetHealthV1Data, PublicHealthControllerGetHealthV1Responses, PublicPositioningControllerGetPositioningDashboardV1Data, PublicPositioningControllerGetPositioningDashboardV1Errors, PublicPositioningControllerGetPositioningDashboardV1Responses, PublicPositioningControllerGetPositioningHistoryV1Data, PublicPositioningControllerGetPositioningHistoryV1Errors, PublicPositioningControllerGetPositioningHistoryV1Responses, PublicPositioningControllerGetPositioningRunDetailV1Data, PublicPositioningControllerGetPositioningRunDetailV1Errors, PublicPositioningControllerGetPositioningRunDetailV1Responses, PublicPricingControllerGetPricingDashboardV1Data, PublicPricingControllerGetPricingDashboardV1Errors, PublicPricingControllerGetPricingDashboardV1Responses, PublicPricingControllerGetPricingHistoryV1Data, PublicPricingControllerGetPricingHistoryV1Errors, PublicPricingControllerGetPricingHistoryV1Responses, PublicPricingControllerGetPricingRunDetailV1Data, PublicPricingControllerGetPricingRunDetailV1Errors, PublicPricingControllerGetPricingRunDetailV1Responses, PublicProjectsControllerGetProjectV1Data, PublicProjectsControllerGetProjectV1Errors, PublicProjectsControllerGetProjectV1Responses, PublicProjectsControllerListProjectsV1Data, PublicProjectsControllerListProjectsV1Errors, PublicProjectsControllerListProjectsV1Responses, PublicSchedulesControllerListSchedulesV1Data, PublicSchedulesControllerListSchedulesV1Errors, PublicSchedulesControllerListSchedulesV1Responses, PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Data, PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Errors, PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Responses, PublicTechStackToolControllerCreateScanV1Data, PublicTechStackToolControllerCreateScanV1Errors, PublicTechStackToolControllerCreateScanV1Responses, PublicTechStackToolControllerGetScanV1Data, PublicTechStackToolControllerGetScanV1Errors, PublicTechStackToolControllerGetScanV1Responses, PublicTechTrustControllerGetTechTrustDashboardV1Data, PublicTechTrustControllerGetTechTrustDashboardV1Errors, PublicTechTrustControllerGetTechTrustDashboardV1Responses, PublicTechTrustControllerGetTechTrustHistoryV1Data, PublicTechTrustControllerGetTechTrustHistoryV1Errors, PublicTechTrustControllerGetTechTrustHistoryV1Responses, PublicTechTrustControllerGetTechTrustRunDetailV1Data, PublicTechTrustControllerGetTechTrustRunDetailV1Errors, PublicTechTrustControllerGetTechTrustRunDetailV1Responses, PublicTicketsControllerCreateCommentV1Data, PublicTicketsControllerCreateCommentV1Errors, PublicTicketsControllerCreateCommentV1Responses, PublicTicketsControllerCreateLabelV1Data, PublicTicketsControllerCreateLabelV1Errors, PublicTicketsControllerCreateLabelV1Responses, PublicTicketsControllerCreateTicketV1Data, PublicTicketsControllerCreateTicketV1Errors, PublicTicketsControllerCreateTicketV1Responses, PublicTicketsControllerDeleteCommentV1Data, PublicTicketsControllerDeleteCommentV1Errors, PublicTicketsControllerDeleteCommentV1Responses, PublicTicketsControllerDeleteLabelV1Data, PublicTicketsControllerDeleteLabelV1Errors, PublicTicketsControllerDeleteLabelV1Responses, PublicTicketsControllerDeleteTicketV1Data, PublicTicketsControllerDeleteTicketV1Errors, PublicTicketsControllerDeleteTicketV1Responses, PublicTicketsControllerGetTicketV1Data, PublicTicketsControllerGetTicketV1Errors, PublicTicketsControllerGetTicketV1Responses, PublicTicketsControllerListAssigneesV1Data, PublicTicketsControllerListAssigneesV1Errors, PublicTicketsControllerListAssigneesV1Responses, PublicTicketsControllerListCommentsV1Data, PublicTicketsControllerListCommentsV1Errors, PublicTicketsControllerListCommentsV1Responses, PublicTicketsControllerListLabelsV1Data, PublicTicketsControllerListLabelsV1Errors, PublicTicketsControllerListLabelsV1Responses, PublicTicketsControllerListTicketsV1Data, PublicTicketsControllerListTicketsV1Errors, PublicTicketsControllerListTicketsV1Responses, PublicTicketsControllerMoveTicketV1Data, PublicTicketsControllerMoveTicketV1Errors, PublicTicketsControllerMoveTicketV1Responses, PublicTicketsControllerUpdateCommentV1Data, PublicTicketsControllerUpdateCommentV1Errors, PublicTicketsControllerUpdateCommentV1Responses, PublicTicketsControllerUpdateLabelV1Data, PublicTicketsControllerUpdateLabelV1Errors, PublicTicketsControllerUpdateLabelV1Responses, PublicTicketsControllerUpdateTicketV1Data, PublicTicketsControllerUpdateTicketV1Errors, PublicTicketsControllerUpdateTicketV1Responses, PublicTrustSignalsToolControllerCreateScanV1Data, PublicTrustSignalsToolControllerCreateScanV1Errors, PublicTrustSignalsToolControllerCreateScanV1Responses, PublicTrustSignalsToolControllerGetScanV1Data, PublicTrustSignalsToolControllerGetScanV1Errors, PublicTrustSignalsToolControllerGetScanV1Responses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -266,7 +266,7 @@ export class AiVisibility {
     /**
      * Get latest AI visibility data
      *
-     * Get the latest AI visibility data for a project. Returns AI Visibility Scores, mention rates, and per-model breakdowns for all competitors found. Use this to understand how AI models perceive and recommend your brand vs competitors. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it sat only in the tail of AI recommendations — below the top 5, or too seldom inside it for the average to register. Read mentionRate beside a 0 score: a non-zero rate means the brand was named, and a 0 rate means no counted answer named it. Each check asks every prompt in the project against every AI model it was dispatched to — 5 today, but a check keeps the model set it ran with, so read answerCoverage.queriesSent and providerStatus for that check's own count rather than assuming today's. Rates divide by the answers that came back, not the queries sent, and the queries-sent figure is not returned. Checks published under the full-coverage gate were read for every query they asked — a usable answer came back, or the model was read and had none to show (`noAnswerShown`, the third query state beside `answers` and `unansweredQueries`: read, nothing shown, excluded from every count, not a failure); checks published before that gate stay published and can have been scored over fewer answers, and the response does not say which kind a check is — so describe a rate as a share of the answers counted, never as a share of every query asked. When the most recent check was abandoned as incomplete, `latestCheckDataAvailable` is present and everything else describes an earlier check. Set `includeAnswers=true` to also get what the models said on that check — every prompt sent and every brand each model named in rank order, with its stated reasoning — narrowed by `brand=<domain>`, `provider=` or `promptIndex=`. Roughly 25k tokens unfiltered on a three-engine check and 46k on a five-engine one, against 2k with `brand=` — or 9k once Google AI Overviews is in the ask, whose overview text and cited pages that filter keeps by design; use `summary.totalEntries` to size it first. `brand=` keeps every answer and empties the ones that did not name that domain, so you see where they win and where they are invisible. No filter changes a number under `summary`. The prose returned is the model's wording about the brands it named, not CompetLab's assessment of them. For 'which prompt am I losing on', read `summary.customer.perPrompt` first — it is on the plain response and costs nothing. A project with no scored check yet answers 404 `no_data_available` — not a missing project and not a failed measurement, just nothing measured here so far; the project itself is fine and `get_project` still describes it. Distinguish it from `project_not_found`, which means the id is wrong.
+     * Get the latest AI visibility data for a project. Returns AI Visibility Scores, mention rates, and per-model breakdowns for all competitors found. Use this to understand how AI models perceive and recommend your brand vs competitors. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it was named only below the top 5, or too seldom inside them for the average to register. Read mentionRate beside a 0 score: a non-zero rate means the brand was named, and a 0 rate means no counted answer named it. Each check asks every prompt in the project against every AI model it was dispatched to — 5 today, but a check keeps the model set it ran with, so read answerCoverage.queriesSent and providerStatus for that check's own count rather than assuming today's. Rates divide by the answers that came back, not the queries sent, and the queries-sent figure is not returned. Checks published under the full-coverage gate were read for every query they asked — a usable answer came back, or the model was read and had none to show (`noAnswerShown`, the third query state beside `answers` and `unansweredQueries`: read, nothing shown, excluded from every count, not a failure); checks published before that gate stay published and can have been scored over fewer answers, and the response does not say which kind a check is — so describe a rate as a share of the answers counted, never as a share of every query asked. When the most recent check was abandoned as incomplete, `latestCheckDataAvailable` is present and everything else describes an earlier check. Set `includeAnswers=true` to also get what the models said on that check — every prompt sent and every brand each model named in rank order, with its stated reasoning — narrowed by `brand=<domain>`, `provider=` or `promptIndex=`. It is large, and how large depends on the account. An entry is one brand a model named, at about 375 tokens each — so the block grows with three things at once: how many prompts the project asks (an account setting), how many models answered, and how many companies each answer named. No figure quoted here can stand in for `summary.totalEntries`; read it and size the fetch from it. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which `totalEntries` does not predict and which `brand=` keeps by design. `brand=` keeps every answer and empties the ones that did not name that domain, so you see where they win and where they are invisible. No filter changes a number under `summary`. The prose returned is the model's wording about the brands it named, not CompetLab's assessment of them. For 'which prompt am I losing on', read `summary.customer.perPrompt` first — it is on the plain response and costs nothing. A project with no scored check yet answers 404 `no_data_available` — not a missing project and not a failed measurement, just nothing measured here so far; the project itself is fine and `get_project` still describes it. Distinguish it from `project_not_found`, which means the id is wrong.
      */
     public static publicAiVisibilityControllerGetAiVisibilityDashboardV1<ThrowOnError extends boolean = false>(options: Options<PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicAiVisibilityControllerGetAiVisibilityDashboardV1Responses, PublicAiVisibilityControllerGetAiVisibilityDashboardV1Errors, ThrowOnError>({
@@ -279,7 +279,7 @@ export class AiVisibility {
     /**
      * Get AI visibility check history
      *
-     * Get paginated history of AI visibility checks for a project. Each entry includes check timing and summary statistics with customer metrics, top competitor, and competitor rankings. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it sat only in the tail of AI recommendations — below the top 5, or too seldom inside it for the average to register. Read mentionRate beside a 0 score: a non-zero rate means the brand was named, and a 0 rate means no counted answer named it. Only scored checks are listed — under the full-coverage gate a cycle with a query it could not read is never scored and does not appear here; a query the model was read for and had no answer to show (`noAnswerShown` on that check's answers) does not count against it. Checks published before that gate remain listed and can have been scored over fewer answers than they asked queries; the queries-sent figure is not returned, so a listed check cannot be shown to be fully covered. Each entry carries `summary.totalEntries`, which is the size preview for that check's raw answers via the check-detail route. This page is subject to a response size cap: when `truncated` is true, whole entries were dropped from the end of `items` and `pagination.hasMore` does NOT account for them — lower `limit` to see the rest rather than paging forward, which would skip them.
+     * Get paginated history of AI visibility checks for a project. Each entry includes check timing and summary statistics with customer metrics, top competitor, and competitor rankings. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it was named only below the top 5, or too seldom inside them for the average to register. Read mentionRate beside a 0 score: a non-zero rate means the brand was named, and a 0 rate means no counted answer named it. Only scored checks are listed — under the full-coverage gate a cycle with a query it could not read is never scored and does not appear here; a query the model was read for and had no answer to show (`noAnswerShown` on that check's answers) does not count against it. Checks published before that gate remain listed and can have been scored over fewer answers than they asked queries; the queries-sent figure is not returned, so a listed check cannot be shown to be fully covered. Each entry carries `summary.totalEntries`, which is the size preview for that check's raw answers via the check-detail route. This page is subject to a response size cap: when `truncated` is true, whole entries were dropped from the end of `items` and `pagination.hasMore` does NOT account for them — lower `limit` to see the rest rather than paging forward, which would skip them.
      */
     public static publicAiVisibilityControllerGetAiVisibilityHistoryV1<ThrowOnError extends boolean = false>(options: Options<PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicAiVisibilityControllerGetAiVisibilityHistoryV1Responses, PublicAiVisibilityControllerGetAiVisibilityHistoryV1Errors, ThrowOnError>({
@@ -292,7 +292,7 @@ export class AiVisibility {
     /**
      * Get AI visibility data for a specific check
      *
-     * Get full AI visibility data for a specific historical check: per-competitor rankings across every AI model we query, with mention rates and AI Visibility Scores, under `summary`. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it sat only in the tail of AI recommendations — below the top 5, or too seldom inside it for the average to register. These rows name other companies, so reporting a 0 as 'never named' is a false claim about a third party published under CompetLab's name. Read mentionRate beside a 0 score: a non-zero rate means the brand was named, and a 0 rate means no counted answer named it. Rates here divide by the answers that came back, not the queries sent, and the queries-sent figure is not on `summary` — describe a rate as a share of the answers counted, never as a share of every query asked. Set `includeAnswers=true` to also get what the models actually said: every prompt sent, and every brand each model named in rank order with its stated reasoning, plus `providerStatus` and (where the check recorded its ask) `answerCoverage`. That block is large — roughly 25k tokens unfiltered on a three-engine check and 46k on a five-engine one, against roughly 2k with `brand=`, or 9k once Google AI Overviews is in the ask. Check `summary.totalEntries` to size it first (about 375 tokens per entry, plus the overview text and cited pages on each Google AI Overviews answer, which the brand filter keeps and which `totalEntries` does not predict), and prefer `brand=<domain>` (one competitor across every answer) or `provider=` (one model) over fetching everything; `promptIndex=` narrows to a single prompt. `provider` and `promptIndex` narrow the answers array; `brand` does not — it reduces the `brands` list inside each answer, so every answer still comes back and the ones that did not name that domain arrive with an empty `brands`, which is a finding rather than an absence. No filter changes any number under `summary`: those are stored, computed over the whole check, and never recomputed for a filtered view. Ranks are stable under filtering. Queries that produced no usable answer are listed separately in `unansweredQueries` rather than appearing as answers naming nobody, and queries the model was read for and had no answer to show — today, prompts Google showed no AI Overview for — in `noAnswerShown`, excluded from every count and not a failure; those are three different facts, and an empty `brands` under a `brand` filter is none of them. `summary.customer.perPrompt` breaks the customer's result down per prompt at no extra cost — use it before reaching for `includeAnswers`.
+     * Get full AI visibility data for a specific historical check: the market map as it stood at this check under `summary.marketMap`, and each competitor's mention rate and AI Visibility Score across every AI model we query under `summary.competitorRankings` — in the order to render, nothing positional. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it was named only below the top 5, or too seldom inside them for the average to register. These rows name other companies, so reporting a 0 as 'never named' is a false claim about a third party published under CompetLab's name. Read mentionRate beside a 0 score: a non-zero rate means the brand was named, and a 0 rate means no counted answer named it. Rates here divide by the answers that came back, not the queries sent, and the queries-sent figure is not on `summary` — describe a rate as a share of the answers counted, never as a share of every query asked. Set `includeAnswers=true` to also get what the models actually said: every prompt sent, and every brand each model named in rank order with its stated reasoning, plus `providerStatus` and (where the check recorded its ask) `answerCoverage`. That block is large, and how large depends on the account. An entry is one brand a model named, at about 375 tokens each — so the block grows with three things at once: how many prompts the project asks (an account setting), how many models answered, and how many companies each answer named. No figure quoted here can stand in for `summary.totalEntries`; read it and size the fetch from it. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which `totalEntries` does not predict and which the brand filter keeps by design. Then prefer `brand=<domain>` (one competitor across every answer) or `provider=` (one model) over fetching everything; `promptIndex=` narrows to a single prompt. `provider` and `promptIndex` narrow the answers array; `brand` does not — it reduces the `brands` list inside each answer, so every answer still comes back and the ones that did not name that domain arrive with an empty `brands`, which is a finding rather than an absence. No filter changes any number under `summary`: those are stored, computed over the whole check, and never recomputed for a filtered view. Ranks are stable under filtering. Queries that produced no usable answer are listed separately in `unansweredQueries` rather than appearing as answers naming nobody, and queries the model was read for and had no answer to show — today, prompts Google showed no AI Overview for — in `noAnswerShown`, excluded from every count and not a failure; those are three different facts, and an empty `brands` under a `brand` filter is none of them. `summary.customer.perPrompt` breaks the customer's result down per prompt at no extra cost — use it before reaching for `includeAnswers`.
      */
     public static publicAiVisibilityControllerGetAiVisibilityCheckDetailV1<ThrowOnError extends boolean = false>(options: Options<PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Responses, PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Errors, ThrowOnError>({
@@ -305,7 +305,7 @@ export class AiVisibility {
     /**
      * Get how the market the AI models draw has moved
      *
-     * How the market the AI models draw has moved over a window: one row per company with how often it was recommended at the start of the window and now — a share of the answers pooled in each check's window, with a 95% range and a zone — plus its rank by that share and its AI Visibility Score at both ends, the difference between the ends in each unit, and the models backing it. The project's own company and its tracked competitors are always rows; the rest are the most recommended companies, up to ten rows in all, ordered by how often each is recommended on the latest map (ties are ties, so never break one). Two companies whose ranges overlap are not in a settled order whatever their shares say. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it sat only in the tail of AI recommendations — below the top 5, or too seldom inside it for the average to register. `events` carries what happened on the axis: the customer's own standing changing zone and holding (the alerts the customer received — a standing is announced only once it has held for two checks), the cycles that produced no reading, and when the prompts were last edited (readings before that date answer different questions). `provider` reads one model's own slice of every map; rank and score are then absent, since they exist only across every model. `detail=series` adds each company's share check by check, downsampled to at most twelve points; omit it unless the shape between the ends matters. The window reads at most the newest 200 published checks — use dateFrom/dateTo for longer histories. Every figure here is a stored map's own: a company a map does not carry is a measured zero of that map's answers, and a model with no usable answer in a window is null, never zero.
+     * How the market the AI models draw has moved over a window: one row per company with how often it was recommended at the start of the window and now — a share of the answers pooled in each check's window, with a 95% range and a zone — plus its rank by that share and its AI Visibility Score at both ends, the difference between the ends in each unit, and the models backing it. The project's own company and its tracked competitors are always rows, however many there are; the rest are the most recommended companies, filling up to 10 rows in all — a roster larger than that returns more rows, never fewer — ordered by how often each is recommended on the latest map (ties are ties, so never break one). Two companies whose ranges overlap are not in a settled order whatever their shares say. The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it was named only below the top 5, or too seldom inside them for the average to register. `events` carries what happened on the axis: the customer's own standing changing zone and holding (the alerts the customer received — a standing is announced only once it has held for two checks), the cycles that produced no reading, and when the prompts were last edited (readings before that date answer different questions). `provider` reads one model's own slice of every map; rank and score are then absent, since they exist only across every model. `detail=series` adds each company's share check by check, downsampled to at most twelve points; omit it unless the shape between the ends matters. The window reads at most the newest 200 published checks — use dateFrom/dateTo for longer histories. Every figure here is a stored map's own: a company a map does not carry is a measured zero of that map's answers, and a model with no usable answer in a window is null, never zero.
      */
     public static publicAiVisibilityControllerGetAiVisibilityTrendV1<ThrowOnError extends boolean = false>(options: Options<PublicAiVisibilityControllerGetAiVisibilityTrendV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicAiVisibilityControllerGetAiVisibilityTrendV1Responses, PublicAiVisibilityControllerGetAiVisibilityTrendV1Errors, ThrowOnError>({
@@ -391,12 +391,12 @@ export class StrategicBriefing {
     /**
      * Get the current state of this project's strategic briefing
      *
-     * Get the current state of this project's strategic briefing — the synthesized, as-of competitive read (what changed, what it means, what to do). This is the ANALYZED briefing; for the raw monitoring data use the per-dimension dashboards (e.g. `/pricing`), and for the monitored-competitor roster use `/competitors`.
+     * Get the current state of this project's strategic briefing — the synthesized, as-of competitive read (what changed and what it means). This is the ANALYZED briefing; for the raw monitoring data use the per-dimension dashboards (e.g. `/pricing`), and for the monitored-competitor roster use `/competitors`.
      *
      * **This returns the LATEST run, whatever state it is in.** `meta.status` is that run's raw lifecycle status and is the field to branch on:
      *
-     * - `done` — the run finished. `item`, `coverage` and `contains` are populated; this is the readable edition.
-     * - `running` — a briefing is being generated right now. `item` is null; `meta.progress` carries the step it is on and when it started. A typical run finishes in about 90 minutes and a healthy one can take up to ~2 hours — budget rather than busy-wait, and do not treat a run as late before then.
+     * - `done` — the run finished. `item`, `coverage`, `contains` and `tickets` are populated; this is the readable edition.
+     * - `running` — a briefing is being generated right now. `item` is null; `meta.progress` carries the step it is on and when it started. A typical run finishes in about two hours — budget rather than busy-wait. Treat it as running until this status changes, and never infer that a run is late or failed from how long it has taken.
      * - `failed` — the most recent attempt ended without producing an edition. `item` is null. A failed run does not resume the ~30-day cycle, so surface it rather than waiting it out.
      * - `null` — this project has never had a briefing run at all. **This is the only value that means the project genuinely has nothing.**
      *
@@ -404,11 +404,13 @@ export class StrategicBriefing {
      *
      * A missing or non-accessible project returns 404 `project_not_found`; the briefing lifecycle itself never 404s.
      *
-     * **Sections — lean by default.** `sections` selects what to return and defaults to `["hub"]` — the executive digest AND the navigation map. Each hub `diagnosis` row carries a `deepDive` pointer naming the dimension to read next; prefix it with `deep-` to form the section value (a pointer of `ai-visibility` → request `sections=deep-ai-visibility`). Valid sections: `hub`, `actions`, `competitors`, the fourteen `deep-<dimension>` deep-dives, or `all` for the full document. Charts are off by default (`includeCharts=false` returns each chart's title + note only); pass `includeCharts=true` for the full data series.
+     * **Sections — lean by default.** `sections` selects what to return and defaults to `["hub"]` — the executive digest AND the navigation map. A hub `diagnosis` row that earned a deep-dive carries a `deepDive` pointer naming the dimension to read next — prefix it with `deep-` to form the section value (a pointer of `ai-visibility` → request `sections=deep-ai-visibility`). A row without one has no deep-dive this edition and its `note` says why; request a section only for a pointer that is present. Valid sections: `hub`, `competitors`, the fourteen `deep-<dimension>` deep-dives, or `all` for the full document. Charts are off by default (`includeCharts=false` returns each chart's title + note only); pass `includeCharts=true` for the full data series.
      *
-     * **Returned with any finished edition, regardless of `sections`:** `coverage` (methodology and data-quality caveats — read these before quoting any figure) and `contains` (the list of sections this edition actually holds, so you can pick what to fetch next instead of requesting slots blind). Both are null whenever `meta.status` is not `done`, which says nothing about whether earlier editions exist — check `…/history`.
+     * **What the edition recommends doing is not a section.** Those recommendations are opened as tickets on the project's board. They land in the `triage` column and the team moves them from there, each carrying the dimension it came from and the edition's own estimate of the work. Read them with `GET /v1/projects/{projectId}/tickets?origin=briefing&briefingRunId={runId}`, taking `{runId}` from `meta.runId`. They are the team's from that moment: moving, editing or dismissing one changes the board, not the edition.
      *
-     * **Reading the numbers:** the AI Visibility Score is 0–100 (higher is better); AI-visibility `presence` is the share of answers analysed that named a brand (higher is named more often) and is always read with its range; action `impact` is 1–4 (higher is more critical); action effort is bucketed as `effortMinutes` (`<30` | `30-120` | `>120`, or `null` when the briefing gave that action no estimate — report it as unsized rather than as quick). A project's next briefing is scheduled approximately 30 days after its last **successful** one.
+     * **Returned with any finished edition, regardless of `sections`:** `coverage` (methodology and data-quality caveats — read these before quoting any figure), `contains` (the list of sections this edition actually holds, so you can pick what to fetch next instead of requesting slots blind), and `tickets` (how many tickets this edition opened on the board and how many of them sit in each column, counted as you read). All three are null whenever `meta.status` is not `done`, which says nothing about whether earlier editions exist — check `…/history`.
+     *
+     * **Reading the numbers:** the AI Visibility Score is 0–100 (higher is better); AI-visibility `presence` is the share of answers analysed that named a brand (higher is named more often) and is always read with its range; on a ticket this edition opened, `impact` is 1–4 (higher is more critical) and `briefing.estimatedMinutes` is the edition's own estimate of the work, `null` where it gave none — report that as unsized rather than as quick. A project's next briefing is scheduled approximately 30 days after its last **successful** one.
      */
     public static publicBriefingControllerGetStrategicBriefingV1<ThrowOnError extends boolean = false>(options: Options<PublicBriefingControllerGetStrategicBriefingV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicBriefingControllerGetStrategicBriefingV1Responses, PublicBriefingControllerGetStrategicBriefingV1Errors, ThrowOnError>({
@@ -455,6 +457,231 @@ export class StrategicBriefing {
             security: [{ name: 'CL-API-Key', type: 'apiKey' }],
             url: '/v1/projects/{projectId}/strategic-briefing/history/{runId}',
             ...options
+        });
+    }
+}
+
+export class StrategicTickets {
+    /**
+     * List the project's ticket labels
+     *
+     * List the project's label list — the only labels a ticket may carry, in the order the project picks them. A label is a name and a colour; a ticket names labels by ID.
+     */
+    public static publicTicketsControllerListLabelsV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerListLabelsV1Data, ThrowOnError>) {
+        return (options.client ?? client).get<PublicTicketsControllerListLabelsV1Responses, PublicTicketsControllerListLabelsV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/labels',
+            ...options
+        });
+    }
+    
+    /**
+     * Create a ticket label
+     *
+     * Add a label to the project's list. Names are unique within the project and compared without regard to case, so `Pricing` and `pricing` cannot both exist. Answers with the whole list. Requires a `read_write` key.
+     */
+    public static publicTicketsControllerCreateLabelV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerCreateLabelV1Data, ThrowOnError>) {
+        return (options.client ?? client).post<PublicTicketsControllerCreateLabelV1Responses, PublicTicketsControllerCreateLabelV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/labels',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Delete a ticket label
+     *
+     * Remove a label from the project's list and from every ticket carrying it. Answers with the whole list. Requires a `read_write` key.
+     */
+    public static publicTicketsControllerDeleteLabelV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerDeleteLabelV1Data, ThrowOnError>) {
+        return (options.client ?? client).delete<PublicTicketsControllerDeleteLabelV1Responses, PublicTicketsControllerDeleteLabelV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/labels/{labelId}',
+            ...options
+        });
+    }
+    
+    /**
+     * Rename or recolour a ticket label
+     *
+     * Rename a label, recolour it, or both. It is one write on the list and touches no ticket, because a ticket holds the label's ID. Answers with the whole list. Requires a `read_write` key.
+     */
+    public static publicTicketsControllerUpdateLabelV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerUpdateLabelV1Data, ThrowOnError>) {
+        return (options.client ?? client).patch<PublicTicketsControllerUpdateLabelV1Responses, PublicTicketsControllerUpdateLabelV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/labels/{labelId}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * List the people a ticket can be assigned to
+     *
+     * List the people a ticket in this project can be assigned to — everyone who is currently a member of the organization, each as the same `userId` and `fullName` a ticket already carries for its author and its assignee. This is where `assigneeUserId` comes from: a create or an update that names anyone else is refused. Somebody invited but not yet joined is not here, because a ticket cannot be assigned to them. Nothing about a person beyond their name and id is returned, on this endpoint or any other.
+     */
+    public static publicTicketsControllerListAssigneesV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerListAssigneesV1Data, ThrowOnError>) {
+        return (options.client ?? client).get<PublicTicketsControllerListAssigneesV1Responses, PublicTicketsControllerListAssigneesV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/assignees',
+            ...options
+        });
+    }
+    
+    /**
+     * List project tickets
+     *
+     * List the project's Strategic Tickets in one flat list — the work the team has taken on, whether a person opened it or your own automation did. Order is the board's: the columns in board order, and inside each column the order the team put them in. A ticket carries no position of its own on this API, so keep the order you receive. Pass `status` to read one column. `done` and `dismissed` grow without bound, so by default they return only the tickets that reached them in the last 30 days and `hasMore` is true when there are more; `closed=all` returns them whole. `origin` narrows the list to what one source opened, and `dimension` and `briefingRunId` to what a Strategic Briefing opened — `origin=briefing&briefingRunId={runId}` is one edition's tickets, with `{runId}` taken from `GET /v1/projects/{projectId}/strategic-briefing/history`. One edition's tickets are returned whole, whatever `closed` says, so the list matches the count the briefing states for it. `total` is the whole count of the columns this call covers, narrowed the same way — quote that, not the length of `items`.
+     */
+    public static publicTicketsControllerListTicketsV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerListTicketsV1Data, ThrowOnError>) {
+        return (options.client ?? client).get<PublicTicketsControllerListTicketsV1Responses, PublicTicketsControllerListTicketsV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets',
+            ...options
+        });
+    }
+    
+    /**
+     * Create a ticket
+     *
+     * Open a ticket on the project's board. `title` and `status` are required — `status` names the column it lands in and has no default, because where a ticket belongs depends on who opened it. A new ticket lands at the top of its column. Labels are named by ID from the project's label list, so create the label there first. A board holds at most 5,000 tickets; past that a create is refused with 400 until some are deleted. The ticket is recorded as opened by an API key — `origin` is `api` and `author` is null — which is how the board tells your automation's tickets from a person's. Requires a `read_write` key.
+     */
+    public static publicTicketsControllerCreateTicketV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerCreateTicketV1Data, ThrowOnError>) {
+        return (options.client ?? client).post<PublicTicketsControllerCreateTicketV1Responses, PublicTicketsControllerCreateTicketV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Delete a ticket
+     *
+     * Delete a ticket and its thread. A ticket a Strategic Briefing opened cannot be deleted — move it to `dismissed` instead, so that what opened it does not open it again. Read `deletable` on the ticket first; deleting one that is not is refused with 400. Requires a `read_write` key.
+     */
+    public static publicTicketsControllerDeleteTicketV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerDeleteTicketV1Data, ThrowOnError>) {
+        return (options.client ?? client).delete<PublicTicketsControllerDeleteTicketV1Responses, PublicTicketsControllerDeleteTicketV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/{ticketId}',
+            ...options
+        });
+    }
+    
+    /**
+     * Get a ticket
+     *
+     * Get one ticket: its description, its labels resolved to name and colour, its assignee, its dates, and how many entries its thread holds. On a ticket a Strategic Briefing opened, `briefing` names the edition it came from; it is `null` on every other ticket. An ID that belongs to another project answers 404 exactly as an ID that exists nowhere does.
+     */
+    public static publicTicketsControllerGetTicketV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerGetTicketV1Data, ThrowOnError>) {
+        return (options.client ?? client).get<PublicTicketsControllerGetTicketV1Responses, PublicTicketsControllerGetTicketV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/{ticketId}',
+            ...options
+        });
+    }
+    
+    /**
+     * Update a ticket
+     *
+     * Change a ticket's content and planning fields. Omit a field to leave it as it is, send a value to replace it, send `null` to clear it. The description and the labels are cleared by their own empty value instead — `""` and `[]` — because for those an empty value is a real one. A column, and a place inside one, are a move and are not accepted here, so a ticket can never change column as a side effect of an edit. Requires a `read_write` key.
+     */
+    public static publicTicketsControllerUpdateTicketV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerUpdateTicketV1Data, ThrowOnError>) {
+        return (options.client ?? client).patch<PublicTicketsControllerUpdateTicketV1Responses, PublicTicketsControllerUpdateTicketV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/{ticketId}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Move a ticket
+     *
+     * Move a ticket to another column, or reorder it inside the one it is in. Name the destination column and the two tickets it will sit between: `beforeId` is the one directly above it, `afterId` the one directly below. Name either or both. To put a ticket at the top of a column, send the ticket currently first there as `afterId` and no `beforeId`; omitting both puts it at the bottom — which is the column's first card when the column is empty. There is no position and no index to compute — you name neighbours you can see and the server works out the order, so two clients moving tickets at the same time converge on one order instead of overwriting each other. A neighbour that has since moved or been deleted is ignored and the ticket lands at the nearest place that is still true: a move never fails because your view of the board was a moment out of date. Reordering inside a column leaves `statusChangedAt` alone. Requires a `read_write` key.
+     */
+    public static publicTicketsControllerMoveTicketV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerMoveTicketV1Data, ThrowOnError>) {
+        return (options.client ?? client).patch<PublicTicketsControllerMoveTicketV1Responses, PublicTicketsControllerMoveTicketV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/{ticketId}/move',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * List a ticket's comments
+     *
+     * List a ticket's thread, oldest first and whole — nothing pages it, so nothing is counted twice. Each entry says what wrote it: a person working in the app, or an API key.
+     */
+    public static publicTicketsControllerListCommentsV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerListCommentsV1Data, ThrowOnError>) {
+        return (options.client ?? client).get<PublicTicketsControllerListCommentsV1Responses, PublicTicketsControllerListCommentsV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/{ticketId}/comments',
+            ...options
+        });
+    }
+    
+    /**
+     * Add a ticket comment
+     *
+     * Add an entry to a ticket's thread, written in Markdown. The entry is recorded as written by an API key. A thread holds at most 500 entries. Requires a `read_write` key.
+     */
+    public static publicTicketsControllerCreateCommentV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerCreateCommentV1Data, ThrowOnError>) {
+        return (options.client ?? client).post<PublicTicketsControllerCreateCommentV1Responses, PublicTicketsControllerCreateCommentV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/{ticketId}/comments',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
+        });
+    }
+    
+    /**
+     * Delete a ticket comment
+     *
+     * Delete an entry from a ticket's thread. A key reaches any entry on the ticket, whoever wrote it: a key is issued by an owner or an admin and acts with that authority. Requires a `read_write` key.
+     */
+    public static publicTicketsControllerDeleteCommentV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerDeleteCommentV1Data, ThrowOnError>) {
+        return (options.client ?? client).delete<PublicTicketsControllerDeleteCommentV1Responses, PublicTicketsControllerDeleteCommentV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/{ticketId}/comments/{commentId}',
+            ...options
+        });
+    }
+    
+    /**
+     * Edit a ticket comment
+     *
+     * Rewrite an entry this API wrote. An entry a person wrote in the app is theirs to edit there, and rewriting it here answers 403 `forbidden`. The text is the only part of an entry anyone may change. Requires a `read_write` key.
+     */
+    public static publicTicketsControllerUpdateCommentV1<ThrowOnError extends boolean = false>(options: Options<PublicTicketsControllerUpdateCommentV1Data, ThrowOnError>) {
+        return (options.client ?? client).patch<PublicTicketsControllerUpdateCommentV1Responses, PublicTicketsControllerUpdateCommentV1Errors, ThrowOnError>({
+            security: [{ name: 'CL-API-Key', type: 'apiKey' }],
+            url: '/v1/projects/{projectId}/tickets/{ticketId}/comments/{commentId}',
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            }
         });
     }
 }

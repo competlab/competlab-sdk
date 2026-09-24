@@ -3,6 +3,59 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 6.0.0
+
+A briefing's recommendations moved to the Strategic Tickets board, and the board is on the API —
+read AND write. Major for one reason: `'actions'` left `BriefingSectionName`, so code that asks
+for it stops compiling instead of getting a 400 at runtime.
+
+### Added — `cl.tickets`, the Strategic Tickets board
+
+Fifteen methods over the project's board: `list`, `get`, `create`, `update`, `move`, `delete`,
+`assignees`; `comments.list/create/update/delete`; `labels.list/create/update/delete`.
+
+- **The only part of the API that changes a project.** Every write needs a `read_write` key; a `read` key
+  gets `403 insufficient_scope`.
+- **Every ticket method needs an active subscription** — `402 subscription_required`, reads
+  included. It is the only part of `/v1` that checks.
+- **A move names neighbours, not a position** — `beforeId` / `afterId`. No ticket carries a
+  position field.
+- **On `update`, `null` clears a field and an omitted field is left alone**; the description
+  clears with `""`, labels with `[]`.
+- **A ticket a Strategic Briefing opened cannot be deleted.** Read `deletable`, and move it to
+  `dismissed` instead.
+- `number` is the ticket's number on the board (`#14` in the app). `list(projectId, { number: 14 })`
+  finds it; every method that acts on a ticket takes its `id`.
+- A comment a person wrote in the app cannot be edited through the API — `403 forbidden`, whatever
+  the key.
+- `CompetLabApiErrorCode` gains `subscription_required`, `forbidden`, `bad_request` and
+  `not_found`.
+
+### Removed — `'actions'` from `BriefingSectionName`
+
+A finished edition opens each recommendation as a ticket (`origin: 'briefing'`) and stores them
+nowhere else. The briefing envelope gains `tickets` — `{ total, byStatus }`, how they stand on the
+board right now, `null` unless the run is `done`.
+
+```typescript
+// Before (5.x):
+await cl.strategicBriefing.get('proj_abc', { sections: ['actions'] });
+
+// After (6.0.0): one edition's recommendations
+const { data } = await cl.strategicBriefing.get('proj_abc');
+await cl.tickets.list('proj_abc', { origin: 'briefing', briefingRunId: data.meta.runId! });
+```
+
+### Changed — doc comments
+
+- `prompts` on a project is no longer "always exactly 3": the count is set per account. Read the
+  array's length.
+- The fixed 25k / 46k `includeAnswers` token totals are gone; size the block from
+  `summary.totalEntries` (about 375 tokens per entry).
+- A briefing hub `diagnosis` row may carry no `deepDive`; request a `deep-<dimension>` section only
+  for a pointer that is present.
+- `agent-readiness` is the key for Agent Adoption; the key predates the name and does not change.
+
 ## 5.0.0
 
 AI Visibility stopped answering "where do you rank" and started answering "who do the models

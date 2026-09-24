@@ -11,6 +11,7 @@ import {
   AiVisibility as GenAiVisibility,
   AiSources as GenAiSources,
   StrategicBriefing as GenStrategicBriefing,
+  StrategicTickets as GenStrategicTickets,
   Alerts as GenAlerts,
   Schedules as GenSchedules,
   Tools as GenTools,
@@ -32,6 +33,14 @@ import type {
   PublicAiSourcesControllerGetAiSourcesHistoryV1Data,
   PublicAiSourcesControllerGetAiSourcesCheckDetailV1Data,
   PublicAlertsControllerListAlertsV1Data,
+  PublicTicketsControllerListTicketsV1Data,
+  CreateTicketRequestDto,
+  UpdateTicketRequestDto,
+  MoveTicketRequestDto,
+  CreateTicketCommentRequestDto,
+  UpdateTicketCommentRequestDto,
+  CreateTicketLabelRequestDto,
+  UpdateTicketLabelRequestDto,
   PtTechStackRequestDto,
   PtTrustSignalsRequestDto,
   PtAiCrawlerCheckerRequestDto,
@@ -40,6 +49,8 @@ import type {
   PtFetchUrlRequestDto,
   ApiUnauthorizedErrorResponse,
   ApiNotFoundErrorResponse,
+  ApiPaymentRequiredErrorResponse,
+  ApiForbiddenErrorResponse,
   ApiValidationErrorResponse,
   ApiRateLimitErrorResponse,
   ApiBadGatewayErrorResponse,
@@ -63,6 +74,8 @@ export type * from './generated/types.gen';
 export type CompetLabApiErrorCode =
   | ApiUnauthorizedErrorResponse['code']
   | ApiNotFoundErrorResponse['code']
+  | ApiPaymentRequiredErrorResponse['code']
+  | ApiForbiddenErrorResponse['code']
   | ApiValidationErrorResponse['code']
   | ApiRateLimitErrorResponse['code']
   | ApiBadGatewayErrorResponse['code']
@@ -152,6 +165,7 @@ class CompetLab {
   readonly aiVisibility: CompetLab.AiVisibility;
   readonly aiSources: CompetLab.AiSources;
   readonly strategicBriefing: CompetLab.StrategicBriefing;
+  readonly tickets: CompetLab.Tickets;
   readonly alerts: CompetLab.Alerts;
   readonly schedules: CompetLab.Schedules;
   readonly tools: CompetLab.Tools;
@@ -214,6 +228,7 @@ class CompetLab {
     this.aiVisibility = new CompetLab.AiVisibility(this.#client);
     this.aiSources = new CompetLab.AiSources(this.#client);
     this.strategicBriefing = new CompetLab.StrategicBriefing(this.#client);
+    this.tickets = new CompetLab.Tickets(this.#client);
     this.alerts = new CompetLab.Alerts(this.#client);
     this.schedules = new CompetLab.Schedules(this.#client);
     this.tools = new CompetLab.Tools(this.#client);
@@ -532,6 +547,171 @@ namespace CompetLab {
         throwOnError: true,
         path: { projectId, runId },
         query,
+      });
+    }
+  }
+
+  /**
+   * The project's Strategic Tickets board — the only part of the API that writes.
+   *
+   * Every method needs an active subscription (`402 subscription_required`); every
+   * method that writes needs a `read_write` key (`403 insufficient_scope`). A finished
+   * Strategic Briefing opens its recommendations here: `list(projectId, { origin:
+   * 'briefing', briefingRunId })` is what one edition opened.
+   */
+  export class Tickets {
+    readonly comments: TicketComments;
+    readonly labels: TicketLabels;
+
+    constructor(private readonly client: Client) {
+      this.comments = new TicketComments(client);
+      this.labels = new TicketLabels(client);
+    }
+
+    list(projectId: string, query?: PublicTicketsControllerListTicketsV1Data['query']) {
+      return GenStrategicTickets.publicTicketsControllerListTicketsV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId },
+        query,
+      });
+    }
+
+    get(projectId: string, ticketId: string) {
+      return GenStrategicTickets.publicTicketsControllerGetTicketV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId, ticketId },
+      });
+    }
+
+    create(projectId: string, body: CreateTicketRequestDto) {
+      return GenStrategicTickets.publicTicketsControllerCreateTicketV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId },
+        body,
+      });
+    }
+
+    /** `null` clears a field and an omitted one is left alone; the description clears with `""`, labels with `[]`. */
+    update(projectId: string, ticketId: string, body: UpdateTicketRequestDto) {
+      return GenStrategicTickets.publicTicketsControllerUpdateTicketV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId, ticketId },
+        body,
+      });
+    }
+
+    /** A move names neighbours, not a position: the ticket above (`beforeId`) and below (`afterId`). */
+    move(projectId: string, ticketId: string, body: MoveTicketRequestDto) {
+      return GenStrategicTickets.publicTicketsControllerMoveTicketV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId, ticketId },
+        body,
+      });
+    }
+
+    /** Read `deletable` first — a ticket a Strategic Briefing opened cannot be deleted; dismiss it instead. */
+    delete(projectId: string, ticketId: string) {
+      return GenStrategicTickets.publicTicketsControllerDeleteTicketV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId, ticketId },
+      });
+    }
+
+    /** The people a ticket can be assigned to. */
+    assignees(projectId: string) {
+      return GenStrategicTickets.publicTicketsControllerListAssigneesV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId },
+      });
+    }
+  }
+
+  export class TicketComments {
+    constructor(private readonly client: Client) {}
+
+    list(projectId: string, ticketId: string) {
+      return GenStrategicTickets.publicTicketsControllerListCommentsV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId, ticketId },
+      });
+    }
+
+    create(projectId: string, ticketId: string, body: CreateTicketCommentRequestDto) {
+      return GenStrategicTickets.publicTicketsControllerCreateCommentV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId, ticketId },
+        body,
+      });
+    }
+
+    /** Only a comment written through the API; one a person wrote in the app answers `403 forbidden`. */
+    update(
+      projectId: string,
+      ticketId: string,
+      commentId: string,
+      body: UpdateTicketCommentRequestDto,
+    ) {
+      return GenStrategicTickets.publicTicketsControllerUpdateCommentV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId, ticketId, commentId },
+        body,
+      });
+    }
+
+    delete(projectId: string, ticketId: string, commentId: string) {
+      return GenStrategicTickets.publicTicketsControllerDeleteCommentV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId, ticketId, commentId },
+      });
+    }
+  }
+
+  export class TicketLabels {
+    constructor(private readonly client: Client) {}
+
+    list(projectId: string) {
+      return GenStrategicTickets.publicTicketsControllerListLabelsV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId },
+      });
+    }
+
+    create(projectId: string, body: CreateTicketLabelRequestDto) {
+      return GenStrategicTickets.publicTicketsControllerCreateLabelV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId },
+        body,
+      });
+    }
+
+    /** Rename or recolour. */
+    update(projectId: string, labelId: string, body: UpdateTicketLabelRequestDto) {
+      return GenStrategicTickets.publicTicketsControllerUpdateLabelV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId, labelId },
+        body,
+      });
+    }
+
+    delete(projectId: string, labelId: string) {
+      return GenStrategicTickets.publicTicketsControllerDeleteLabelV1({
+        client: this.client,
+        throwOnError: true,
+        path: { projectId, labelId },
       });
     }
   }
