@@ -22,10 +22,11 @@ jobs:
       # it only learned how in 11.5.1. Node 20 ships npm 10.x, which would fall back to
       # looking for a token that no longer exists and fail as a 401 — the same 401 a
       # stale NPM_TOKEN gives, which makes the cause easy to misread. Pin the floor here
-      # rather than chasing the Node image's npm.
+      # rather than chasing the Node image's npm. Pinned to 11, not `latest`: npm 12 refuses to
+      # install on Node 20 (EBADENGINE), which failed the 6.0.0 publish before it started.
       - name: npm new enough for trusted publishing
         run: |
-          npm install -g npm@latest
+          npm install -g npm@11
           V="$(npm --version)"
           echo "npm $V"
           node -e "
