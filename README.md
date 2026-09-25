@@ -74,22 +74,26 @@ cl.tools             // Free tools — sitemap, AI crawlers, tech stack, trust s
 
 ## Examples
 
-### See what AI says about you
+### See who AI recommends in your category
 
 ```typescript
 const { data } = await cl.aiVisibility.dashboard('proj_abc');
+const map = data.item.summary.marketMap;
 
-// data.item.summary =>
-// {
-//   customer: { domain: "you.com", mentionRate: 100, aiScore: 82 },
-//   topCompetitor: { domain: "rival.com", mentionRate: 33 },
-//   mentionRateGap: 67,
-//   competitorRankings: [
-//     { name: "You",   domain: "you.com",   mentionRate: 100, aiScore: 82, isOwn: true },
-//     { name: "Rival", domain: "rival.com", mentionRate: 33,  aiScore: 31, isOwn: false }
-//   ]
-// }
+// The market map — who the AI models recommend, ordered by how often each is named:
+// map.coreSize   => 7    the companies that make up this market as the models draw it
+// map.brands     => one page: the top rows, plus your own and every tracked competitor's
+// map.brandsPage => { offset: 0, limit: 10, total: 96, hasMore: true }
+// map.brands[0]  => { name: "Rival", domain: "rival.com", answersNaming: 52, answersReceived: 80,
+//                     presence: 65, presenceLow: 54, presenceHigh: 75, rankByPresence: 1,
+//                     zone: "named_in_a_quarter_or_more_of_answers", ... }
+
+const you = map.brands.find((b) => b.isOwn);
+// you?.rankByPresence === null — named in no answer: "not named", never a place
 ```
+
+Presence is a share of the answers that came back, read with its 95% range: two brands whose
+ranges overlap are not in a settled order, whatever their shares say.
 
 A rate is a share of **the answers that came back**, not of the queries sent. A model that
 answered and named nobody is a measured absence, not a gap in the data — so never read a `0`
@@ -111,8 +115,23 @@ const { data } = await cl.aiVisibility.dashboard('proj_abc', {
 // `brands` list on answers that didn't name that domain, so you see the silences too.
 ```
 
-The block is large — roughly 12k tokens unfiltered against ~2k with `brand=`. Read
-`summary.totalEntries` first to size it (about 200 tokens per entry).
+The block is large: about 1,500 characters per brand entry. Read `summary.totalEntries` first to
+size it, and narrow with `brand`, `provider` or `promptIndex`.
+
+### Long lists come a page at a time
+
+The AI Visibility and AI Sources dashboards and check details, the AI Visibility history and the
+Tech & Trust dashboard answer in a compact view by default: each long list is one page, with a
+`*Page` object (`offset`, `limit`, `total`, `hasMore`) saying where it sits, and every response
+opens with `readingGuide`, the reading rules for its fields. Page on, or ask for every row:
+
+```typescript
+await cl.aiVisibility.dashboard('proj_abc', { mapOffset: 10, mapLimit: 50 });
+await cl.aiVisibility.dashboard('proj_abc', { view: 'full' });
+await cl.aiSources.dashboard('proj_abc', { pagesHost: 'g2.com' });
+```
+
+A check detail read for answers comes without its summary unless you pass `includeSummary: true`.
 
 > **Attribution:** every piece of prose in that block — descriptions, ranking rationales,
 > claims — is unverified model output about the brands that model named, including third
@@ -213,9 +232,10 @@ const deep = await cl.strategicBriefing.get('proj_abc', {
 });
 ```
 
-Every recommendation in a finished edition opens as a ticket on the project's Strategic Tickets
-board, most important first, and lives nowhere else; `data.tickets` (`{ total, byStatus }`) says
-how they stand right now. Read them from the board:
+Every move in a finished edition lands on the project's Strategic Tickets board — as a new ticket,
+most important first, or on the ticket already there for that work — and lives nowhere else.
+`data.tickets` says what the edition did to the board (`opened`, `commented`, `alreadyOnBoard`,
+`recheckedUnchanged`) and how its tickets stand right now (`byStatus`). Read them from the board:
 
 ```typescript
 const { data: board } = await cl.tickets.list('proj_abc', {
@@ -261,14 +281,21 @@ key gets `403 insufficient_scope`. A comment a person wrote in the app cannot be
 the API, whatever the key (`403 forbidden`).
 
 ```typescript
+// A page at a time: pagination.total counts every match, byStatus the matches per column.
+const { data: page } = await cl.tickets.list('proj_abc', { status: ['triage', 'todo'], sort: 'priority' });
+// page.pagination => { page: 1, limit: 50, total: 23, totalPages: 1, hasMore: false }
+// page.byStatus   => { triage: 9, todo: 14, in_progress: 3, done: 11, dismissed: 2 }
+
 const { data: created } = await cl.tickets.create('proj_abc', {
   title: 'Answer the pricing-page objection Acme now leads with',
   status: 'todo',
 });
 const ticketId = created.item.id;
 
-// A move names neighbours, not a position. Naming neither puts it at the bottom of the column.
-await cl.tickets.move('proj_abc', ticketId, { status: 'in_progress' });
+// Name the tickets it sits between (beforeId above, afterId below), or a position. Naming nothing
+// puts it at the bottom of the column; placement says where it landed.
+const { data: moved } = await cl.tickets.move('proj_abc', ticketId, { status: 'in_progress', position: 'top' });
+// moved.placement => { status: 'in_progress', above: null, below: { id, number: 12, title }, ignored: [] }
 
 // On an update, null clears a field and an omitted field is left alone.
 await cl.tickets.update('proj_abc', ticketId, { dueDate: null });

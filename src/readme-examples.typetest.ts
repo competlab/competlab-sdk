@@ -107,14 +107,20 @@ async function ticketExamples() {
   });
   report(String(board.items.length));
 
+  // A page at a time: pagination.total counts every match, byStatus the matches per column.
+  const { data: page } = await cl.tickets.list('proj_abc', { status: ['triage', 'todo'], sort: 'priority' });
+  report(`${page.pagination.total} ${page.byStatus.todo}`);
+
   const { data: created } = await cl.tickets.create('proj_abc', {
     title: 'Answer the pricing-page objection Acme now leads with',
     status: 'todo',
   });
   const ticketId = created.item.id;
 
-  // A move names neighbours, not a position. Naming neither puts it at the bottom of the column.
-  await cl.tickets.move('proj_abc', ticketId, { status: 'in_progress' });
+  // Name the tickets it sits between (beforeId above, afterId below), or a position. Naming nothing
+  // puts it at the bottom of the column; placement says where it landed.
+  const { data: moved } = await cl.tickets.move('proj_abc', ticketId, { status: 'in_progress', position: 'top' });
+  report(String(moved.placement.below?.number));
 
   // On an update, null clears a field and an omitted field is left alone.
   await cl.tickets.update('proj_abc', ticketId, { dueDate: null });
@@ -126,3 +132,31 @@ async function ticketExamples() {
   report(String(recs.data.items.length));
 }
 void ticketExamples;
+
+async function marketMapExamples() {
+  const { data } = await cl.aiVisibility.dashboard('proj_abc');
+  const map = data.item.summary.marketMap;
+
+  const you = map.brands.find((b) => b.isOwn);
+  report(String(you?.rankByPresence === null));
+  report(`${map.coreSize} ${map.brandsPage?.total}`);
+
+  await cl.aiVisibility.dashboard('proj_abc', { mapOffset: 10, mapLimit: 50 });
+  await cl.aiVisibility.dashboard('proj_abc', { view: 'full' });
+  await cl.aiSources.dashboard('proj_abc', { pagesHost: 'g2.com' });
+}
+
+// CHANGELOG 7.0.0, the "After" halves.
+async function sevenZeroExamples() {
+  const { data: page } = await cl.aiVisibility.dashboard('proj_abc');
+  const { total, hasMore } = page.item.summary.marketMap.brandsPage!;
+  const { data: whole } = await cl.aiVisibility.dashboard('proj_abc', { view: 'full' });
+  report(`${total} ${hasMore} ${whole.item.summary.marketMap.brands.length}`);
+
+  const { data: tickets } = await cl.tickets.list('proj_abc', { status: ['triage', 'todo'], sort: 'priority' });
+  const { total: ticketTotal, hasMore: moreTickets } = tickets.pagination;
+  const todo = tickets.byStatus.todo;
+  report(`${ticketTotal} ${moreTickets} ${todo}`);
+}
+
+export { marketMapExamples, sevenZeroExamples };

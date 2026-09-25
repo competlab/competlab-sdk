@@ -17,6 +17,7 @@ import {
   Tools as GenTools,
 } from './generated/sdk.gen';
 import type {
+  PublicTechTrustControllerGetTechTrustDashboardV1Data,
   PublicTechTrustControllerGetTechTrustHistoryV1Data,
   PublicContentControllerGetContentHistoryV1Data,
   PublicContentControllerGetContentChangelogV1Data,
@@ -289,11 +290,12 @@ namespace CompetLab {
   export class TechTrust {
     constructor(private readonly client: Client) {}
 
-    dashboard(projectId: string) {
+    dashboard(projectId: string, query?: PublicTechTrustControllerGetTechTrustDashboardV1Data['query']) {
       return GenTechTrust.publicTechTrustControllerGetTechTrustDashboardV1({
         client: this.client,
         throwOnError: true,
         path: { projectId },
+        query,
       });
     }
 
@@ -558,6 +560,9 @@ namespace CompetLab {
    * method that writes needs a `read_write` key (`403 insufficient_scope`). A finished
    * Strategic Briefing opens its recommendations here: `list(projectId, { origin:
    * 'briefing', briefingRunId })` is what one edition opened.
+   *
+   * `list` returns a page at a time: `pagination.total` counts every match and `byStatus` the
+   * matches per column; ask for `page + 1` while `pagination.hasMore`.
    */
   export class Tickets {
     readonly comments: TicketComments;
@@ -604,7 +609,10 @@ namespace CompetLab {
       });
     }
 
-    /** A move names neighbours, not a position: the ticket above (`beforeId`) and below (`afterId`). */
+    /**
+     * Name the tickets it will sit between — `beforeId` directly above, `afterId` directly below — or
+     * `position: 'top' | 'bottom'`, not both. The answer's `placement` says where it landed.
+     */
     move(projectId: string, ticketId: string, body: MoveTicketRequestDto) {
       return GenStrategicTickets.publicTicketsControllerMoveTicketV1({
         client: this.client,

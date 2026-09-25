@@ -230,6 +230,21 @@ export type CompetitorDetailResponse = {
     monitoredPages: MonitoredPagesResponse;
 };
 
+export type CrawlerCatalogEntryResponse = {
+    /**
+     * What blocking this crawler costs. `fetches_pages_to_cite_in_answers` costs visibility; `collects_training_data` costs none and is a content decision; `builds_search_index_that_grounds_assistants` costs visibility indirectly, through the assistant built on that index; `seo_or_backlink_analysis`, `renders_link_previews` and `checks_ad_landing_pages` have no AI consequence. `policy_token_does_not_crawl` names a token that issues no HTTP requests of its own — it is a CONTROL the operator applies to content fetched by a different crawler, and blocking it still changes what an assistant may do, which is why such a token can decide a `cannot_reach_site`. `Google-Extended` is the case to understand: Google documents it as governing both model training and grounding in Gemini Apps, so one directive carries a training consequence and a visibility consequence at once. Read this field before treating any block as costly or costless.
+     */
+    crawlerPurpose: string;
+    /**
+     * Whether a rule against this token actually binds. `yes` it binds; `no` it does not; `not_for_user_initiated_requests` and `not_for_security_or_integrity_checks` mean the operator publishes a carve-out for that case, so a rule is written but not guaranteed; `unknown` means nobody publishes either way. ⚠️ WHAT 'BINDS' MEANS DEPENDS ON THE NEIGHBOURING `crawlerPurpose`. For a crawler that fetches, it is whether the crawler obeys the directive. For `policy_token_does_not_crawl` it cannot be — such a token issues no requests — and there it means the OPERATOR honours the directive when deciding what to do with content another crawler already fetched. Both are 'the rule has effect'; only the mechanism differs. ⚠️ THIS FIELD IS NOT ON ITS OWN A STATEMENT OF OBSERVED BEHAVIOUR. It carries the operator's published position OR a measured result, and `honoursRobotsTxtEvidence` is what tells you which. Never quote this value without reading that one.
+     */
+    honoursRobotsTxt: string;
+    /**
+     * How well we know the value beside it, and it qualifies that value rather than merely annotating it. `operator_documented` is the operator's own words. `independently_measured` cites a study, so the value is an observation. `disputed` means a credible allegation the operator denies — a `yes` under `disputed` is the operator's CLAIM and contested, so word it as a claim and never as 'this crawler respects robots.txt'. `undocumented` means nobody publishes either way; never read it as 'ignores'.
+     */
+    honoursRobotsTxtEvidence: string;
+};
+
 /**
  * Your security grade, or null if check failed
  */
@@ -519,9 +534,9 @@ export type AiAccessExplanationResponse = {
      */
     code: string;
     /**
-     * The sentence. Render it verbatim; do not paraphrase or substitute your own.
+     * The sentence. Render it verbatim; do not paraphrase or substitute your own. Under the compact view it is left off when the sentence is the same wherever its `code` appears, and stated once in the top-level `explanationCatalog` under that `code`.
      */
-    text: string;
+    text?: string;
 };
 
 export type AiAccessMeasurementResponse = {
@@ -553,17 +568,17 @@ export type DecidingCrawlerResponse = {
      */
     userAgentToken: string;
     /**
-     * What blocking this crawler costs. `fetches_pages_to_cite_in_answers` costs visibility; `collects_training_data` costs none and is a content decision; `builds_search_index_that_grounds_assistants` costs visibility indirectly, through the assistant built on that index; `seo_or_backlink_analysis`, `renders_link_previews` and `checks_ad_landing_pages` have no AI consequence. `policy_token_does_not_crawl` names a token that issues no HTTP requests of its own — it is a CONTROL the operator applies to content fetched by a different crawler, and blocking it still changes what an assistant may do, which is why such a token can decide a `cannot_reach_site`. `Google-Extended` is the case to understand: Google documents it as governing both model training and grounding in Gemini Apps, so one directive carries a training consequence and a visibility consequence at once. Read this field before treating any block as costly or costless.
+     * What blocking this crawler costs. `fetches_pages_to_cite_in_answers` costs visibility; `collects_training_data` costs none and is a content decision; `builds_search_index_that_grounds_assistants` costs visibility indirectly, through the assistant built on that index; `seo_or_backlink_analysis`, `renders_link_previews` and `checks_ad_landing_pages` have no AI consequence. `policy_token_does_not_crawl` names a token that issues no HTTP requests of its own — it is a CONTROL the operator applies to content fetched by a different crawler, and blocking it still changes what an assistant may do, which is why such a token can decide a `cannot_reach_site`. `Google-Extended` is the case to understand: Google documents it as governing both model training and grounding in Gemini Apps, so one directive carries a training consequence and a visibility consequence at once. Read this field before treating any block as costly or costless. Under the compact view this field is left off the item and stated once in the top-level `crawlerCatalog`, under this crawler's `userAgentToken`.
      */
-    crawlerPurpose: string;
+    crawlerPurpose?: string;
     /**
-     * Whether a rule against this token actually binds. `yes` it binds; `no` it does not; `not_for_user_initiated_requests` and `not_for_security_or_integrity_checks` mean the operator publishes a carve-out for that case, so a rule is written but not guaranteed; `unknown` means nobody publishes either way. ⚠️ WHAT 'BINDS' MEANS DEPENDS ON THE NEIGHBOURING `crawlerPurpose`. For a crawler that fetches, it is whether the crawler obeys the directive. For `policy_token_does_not_crawl` it cannot be — such a token issues no requests — and there it means the OPERATOR honours the directive when deciding what to do with content another crawler already fetched. Both are 'the rule has effect'; only the mechanism differs. ⚠️ THIS FIELD IS NOT ON ITS OWN A STATEMENT OF OBSERVED BEHAVIOUR. It carries the operator's published position OR a measured result, and `honoursRobotsTxtEvidence` is what tells you which. Never quote this value without reading that one.
+     * Whether a rule against this token actually binds. `yes` it binds; `no` it does not; `not_for_user_initiated_requests` and `not_for_security_or_integrity_checks` mean the operator publishes a carve-out for that case, so a rule is written but not guaranteed; `unknown` means nobody publishes either way. ⚠️ WHAT 'BINDS' MEANS DEPENDS ON THE NEIGHBOURING `crawlerPurpose`. For a crawler that fetches, it is whether the crawler obeys the directive. For `policy_token_does_not_crawl` it cannot be — such a token issues no requests — and there it means the OPERATOR honours the directive when deciding what to do with content another crawler already fetched. Both are 'the rule has effect'; only the mechanism differs. ⚠️ THIS FIELD IS NOT ON ITS OWN A STATEMENT OF OBSERVED BEHAVIOUR. It carries the operator's published position OR a measured result, and `honoursRobotsTxtEvidence` is what tells you which. Never quote this value without reading that one. Under the compact view this field is left off the item and stated once in the top-level `crawlerCatalog`, under this crawler's `userAgentToken`.
      */
-    honoursRobotsTxt: string;
+    honoursRobotsTxt?: string;
     /**
-     * How well we know the value beside it, and it qualifies that value rather than merely annotating it. `operator_documented` is the operator's own words. `independently_measured` cites a study, so the value is an observation. `disputed` means a credible allegation the operator denies — a `yes` under `disputed` is the operator's CLAIM and contested, so word it as a claim and never as 'this crawler respects robots.txt'. `undocumented` means nobody publishes either way; never read it as 'ignores'.
+     * How well we know the value beside it, and it qualifies that value rather than merely annotating it. `operator_documented` is the operator's own words. `independently_measured` cites a study, so the value is an observation. `disputed` means a credible allegation the operator denies — a `yes` under `disputed` is the operator's CLAIM and contested, so word it as a claim and never as 'this crawler respects robots.txt'. `undocumented` means nobody publishes either way; never read it as 'ignores'. Under the compact view this field is left off the item and stated once in the top-level `crawlerCatalog`, under this crawler's `userAgentToken`.
      */
-    honoursRobotsTxtEvidence: string;
+    honoursRobotsTxtEvidence?: string;
     /**
      * WHICH KIND OF RULE decided this crawler, which is what says where to edit. `names_this_crawler`: a group naming it decided the outcome — somebody chose that. `wildcard_catch_all`: no group names it and the `User-agent: *` rule decided it, frequently a rule written before the crawler existed and applying to it by accident. A named group REPLACES the wildcard group rather than adding to it (RFC 9309 §2.2.1), so naming a crawler lifts it out of the catch-all entirely. ABSENT when nothing restricted this crawler — there is no audience for a rule that does not exist.
      */
@@ -756,6 +771,12 @@ export type TechTrustCompetitorResponse = {
 
 export type TechTrustDashboardResponse = {
     /**
+     * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
+     */
+    readingGuide?: {
+        [key: string]: string;
+    };
+    /**
      * When this data was last updated (ISO-8601)
      */
     lastUpdatedAt: string;
@@ -764,9 +785,40 @@ export type TechTrustDashboardResponse = {
      */
     summary: TechTrustDashboardSummaryResponse;
     /**
+     * Compact view only: the catalog facts of every crawler named by a verdict in this response, keyed by `userAgentToken` — what the crawler is for, and whether a robots.txt rule against it binds, with how well we know that. They are the same for a token on every site, so the compact view states them here once instead of on every `decidedByCrawlers` item. A token whose facts differ between two verdicts in this response keeps them inline on every item and is not listed here. Look a token up here before treating any block as costly or costless.
+     */
+    crawlerCatalog?: {
+        [key: string]: CrawlerCatalogEntryResponse;
+    };
+    /**
+     * Compact view only: the sentence for every explanation `code` under `aiAccess` whose wording is the same wherever it appears in this response, keyed by `code`. An explanation item carrying only its `code` is rendered from here, verbatim. A code whose sentence differs between items keeps its `text` inline on every item and is not listed here. Absent when no code qualifies.
+     */
+    explanationCatalog?: {
+        [key: string]: string;
+    };
+    /**
      * Per-competitor tech & trust data
      */
     competitors: Array<TechTrustCompetitorResponse>;
+};
+
+export type ApiValidationErrorResponse = {
+    /**
+     * Machine-readable error code for a rejected request payload or query. `invalid_parameters` — a query parameter or body field failed validation. `invalid_run_id` — a path parameter naming a run is not a well-formed identifier. `invalid_check_id` — a path parameter naming an AI Visibility or AI Sources check is not a well-formed identifier. `bad_request` — the request reached the endpoint and was refused for a reason the message states: a path parameter that is not a well-formed identifier, or a value the endpoint cannot act on (a due date that is not a real calendar day, a label the project's list does not hold, deleting a ticket a Strategic Briefing opened). `paging_requires_compact_view` — a param that pages a list was sent beside `view=full`, which returns every row; drop `view=full` or set `view=compact`. `paging_requires_summary` — a param that pages a list in a check detail's summary was sent beside `includeSummary=false`; drop `includeSummary=false`. `nothing_to_return` — a check detail was asked for with `includeSummary=false` and without `includeAnswers=true`, which leaves nothing to return.
+     */
+    code: 'invalid_parameters' | 'invalid_run_id' | 'invalid_check_id' | 'bad_request' | 'paging_requires_compact_view' | 'paging_requires_summary' | 'nothing_to_return';
+    /**
+     * Human-readable validation message (joined when multiple fields fail).
+     */
+    message: string;
+    /**
+     * HTTP status code
+     */
+    status: number;
+};
+
+export type ApiValidationErrorEnvelope = {
+    error: ApiValidationErrorResponse;
 };
 
 export type PaginationMeta = {
@@ -2168,9 +2220,9 @@ export type AiVisibilityMarketMapBrandResponse = {
      */
     isOwn: boolean;
     /**
-     * Rank by how often the brand is named: one plus the number of brands named more often. Ties SHARE a rank — several brands at the same share read as one rank, never as consecutive ones — so say '7th of 9 by how often it is named', and never break a tie.
+     * Rank by how often the brand is named: one plus the number of brands named more often. Ties SHARE a rank — several brands at the same share read as one rank, never as consecutive ones — so say '7th of 9 by how often it is named', and never break a tie. Null at zero presence: a brand no answer in the window named has no place in this order, so say 'not named in any answer', never a rank. Only the customer's own row can sit there, because every other row is on the map because an answer named it — and that row stays on the map, since its zero is measured.
      */
-    rankByPresence: number;
+    rankByPresence: number | null;
     /**
      * This brand on each AI model that answered in the window. The pooled figures above are a vote across models — which AI models back a row — and a brand core to one model and a brand core to all of them look identical on the pooled figure, so read this before saying a brand is 'core to the market'. A model absent here returned no usable answer in the window; a slice at zero is a model that answered and never named the brand.
      */
@@ -2183,6 +2235,25 @@ export type AiVisibilityMarketMapBrandResponse = {
      * Where the models that describe brands place this one's price (shown in the app as 'Price read') — the tier they stated most often, with the mean's position on a line from free (0) through budget, mid-range and premium to enterprise (100), pooled the same way as `presence`. What the models THINK it costs, never its price list: the scale has one thin independent witness and is not validated beyond the cheap end. `null` means no answer in the window stated a tier for it, never 'free'. Report the tier word with its share of the answers, and say the models disagree when `tierAnswers` is under half of `answersRead`.
      */
     pricePerception: AiVisibilityBrandPriceReadingResponse | null;
+};
+
+export type ListPageResponse = {
+    /**
+     * Rows skipped before this page, in stored order.
+     */
+    offset: number;
+    /**
+     * Rows asked for. The page can hold more: rows its list always keeps — the customer's own, where the list has one, and on the AI Visibility market map and history every tracked competitor's — when they fall outside the page.
+     */
+    limit: number;
+    /**
+     * Rows in the whole list (after any filter), not on this page.
+     */
+    total: number;
+    /**
+     * Whether rows exist after this page. Ask for them with a higher offset.
+     */
+    hasMore: boolean;
 };
 
 export type AiVisibilityMarketMapResponse = {
@@ -2211,9 +2282,13 @@ export type AiVisibilityMarketMapResponse = {
      */
     profileEngines: Array<'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews'>;
     /**
-     * Every brand any answer in the window named, plus the customer's own row, in the ORDER TO RENDER: `presence` desc, then domain. Never re-sort it by anything positional — there is nothing positional to sort by, by design. Read `isOwn` to find the customer; `rankByPresence` says where they sit and shares its value across ties.
+     * Every brand any answer in the window named, plus the customer's own row, in the ORDER TO RENDER: `presence` desc, then domain. Never re-sort it by anything positional — there is nothing positional to sort by, by design. Read `isOwn` to find the customer; `rankByPresence` says where they sit and shares its value across ties, and is null on a row named in no answer.
      */
     brands: Array<AiVisibilityMarketMapBrandResponse>;
+    /**
+     * Compact view only: which rows of the map `brands` carries — the stored order, from `offset`, `limit` rows, plus the customer's own row and every tracked competitor's whenever they fall outside them. `total` is every row on the map. Page on with `mapOffset` and `mapLimit`; `coreSize`, `untrackedCoreBrands` and `customerStanding` always describe the whole map, whatever page this is.
+     */
+    brandsPage?: ListPageResponse;
 };
 
 export type AiVisibilityDashboardSummaryResponse = {
@@ -2238,7 +2313,7 @@ export type AiVisibilityDashboardSummaryResponse = {
      */
     totalQueries: number;
     /**
-     * Total brand entries across this check's counted answers — one per brand a model named, summed over every answer. This is the size preview for `includeAnswers=true`: an entry serializes to roughly 375 tokens. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which this count does not predict and which the `brand=` filter keeps by design.
+     * Total brand entries across this check's counted answers — one per brand a model named, summed over every answer. This is the size preview for `includeAnswers=true`: an entry serializes to about 1,500 characters. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which this count does not predict and which the `brand=` filter keeps by design.
      */
     totalEntries: number;
     /**
@@ -2622,6 +2697,12 @@ export type AiVisibilityAnswerCoverageResponse = {
 
 export type AiVisibilityDashboardResponse = {
     /**
+     * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
+     */
+    readingGuide?: {
+        [key: string]: string;
+    };
+    /**
      * When the data below was measured (ISO-8601). This is the completion time of the check the summary comes from, which is NOT necessarily the most recent cycle — see `latestCheckDataAvailable`.
      */
     lastUpdatedAt: string;
@@ -2638,7 +2719,7 @@ export type AiVisibilityDashboardResponse = {
      */
     customerStanding?: AiVisibilityCustomerStandingResponse;
     /**
-     * Present ONLY when the project's most recent check was abandoned as incomplete: at least one query it asked could not be read — no usable answer came back from it — so it was never scored. A query the model was read for and had no answer to show does not count against coverage. When present, every other field in this response comes from an EARLIER check, and `lastUpdatedAt` is older than the most recent check attempted. Absent when the most recent check published normally — and absent, too, when an older check fell short but a later one has since published, because that failure has been superseded. An abandoned check is never retried into a score: a new check runs automatically, and the caller may also trigger one immediately. When describing this state, NEVER phrase it as a fraction — this dimension's own metric is already an n-of-N over the same denominator, so any shortfall written as a fraction gets read as a visibility rate. State the two numbers as separate facts that cannot be divided by each other: "We sent every query we planned, but one answer didn't come back."
+     * Present ONLY when the project's most recent check was not scored: at least one query it asked came back without a usable answer. A query the model was read for and had no answer to show does not count against coverage. When present, every other field in this response comes from an EARLIER check, and `lastUpdatedAt` is older than the most recent check attempted: report those fields as of that date. Absent when the most recent check published normally, and absent when a later check has since published. Never phrase the shortfall as a fraction — this dimension's own metric is an n-of-N over the same denominator, so a fraction reads as a visibility rate.
      */
     latestCheckDataAvailable?: AiVisibilityLatestCheckUnavailableResponse;
     /**
@@ -2669,25 +2750,6 @@ export type AiVisibilityDashboardResponse = {
 
 export type AiProvider = 'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews';
 
-export type ApiValidationErrorResponse = {
-    /**
-     * Machine-readable error code for a rejected request payload or query. `invalid_parameters` — a query parameter or body field failed validation. `invalid_run_id` — a path parameter naming a run is not a well-formed identifier. `invalid_check_id` — a path parameter naming an AI Visibility or AI Sources check is not a well-formed identifier. `bad_request` — the request reached the endpoint and was refused for a reason the message states: a path parameter that is not a well-formed identifier, or a value the endpoint cannot act on (a due date that is not a real calendar day, a label the project's list does not hold, deleting a ticket a Strategic Briefing opened).
-     */
-    code: 'invalid_parameters' | 'invalid_run_id' | 'invalid_check_id' | 'bad_request';
-    /**
-     * Human-readable validation message (joined when multiple fields fail).
-     */
-    message: string;
-    /**
-     * HTTP status code
-     */
-    status: number;
-};
-
-export type ApiValidationErrorEnvelope = {
-    error: ApiValidationErrorResponse;
-};
-
 export type AiVisibilityHistorySummaryResponse = {
     /**
      * Customer metrics
@@ -2710,7 +2772,7 @@ export type AiVisibilityHistorySummaryResponse = {
      */
     totalQueries: number;
     /**
-     * Total brand entries across this check's counted answers — one per brand a model named, summed over every answer. This is the size preview for `includeAnswers=true`: an entry serializes to roughly 375 tokens. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which this count does not predict and which the `brand=` filter keeps by design.
+     * Total brand entries across this check's counted answers — one per brand a model named, summed over every answer. This is the size preview for `includeAnswers=true`: an entry serializes to about 1,500 characters. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which this count does not predict and which the `brand=` filter keeps by design.
      */
     totalEntries: number;
     /**
@@ -2721,6 +2783,10 @@ export type AiVisibilityHistorySummaryResponse = {
      * Whether this project's prompts are reaching the market its tracked competitor list describes — a reading about the QUESTIONS we ask, not about the brand's visibility. Every other number in this summary is arithmetic over those prompts, so this is the field that says whether they are measuring the right market at all. ABSENT means no reading could be produced: the account tracks no competitors to test the prompts against, or no answer came back to test them with. There is deliberately no token for that case, so absence is the only way it is expressed — and absence NEVER means the prompts are fine. Do not report a missing `promptMarket` as a pass, and do not infer one from the numbers beside it. This reading suppresses nothing: everything else in this summary is complete and published whatever it says, because a customer may have chosen unusual prompts deliberately and their data is the only evidence they can judge that on.
      */
     promptMarket?: AiVisibilityPromptMarketResponse;
+    /**
+     * Compact view only: which of the check's ranked companies `competitorRankings` carries — the first 10 in stored order, then every tracked company and the customer's own row that fall outside them, still in stored order. `total` counts every row of the stored list — every company the check named; `hasMore` is true only when rows were left out. There is no offset: the whole list is `view=full`, or the check's detail. The compact row also leaves out `promptMarket.perPrompt`, which the dashboard and the check's detail carry.
+     */
+    competitorRankingsPage?: ListPageResponse;
 };
 
 export type AiVisibilityHistoryItemResponse = {
@@ -2740,6 +2806,12 @@ export type AiVisibilityHistoryItemResponse = {
 
 export type AiVisibilityCheckDetailResponse = {
     /**
+     * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
+     */
+    readingGuide?: {
+        [key: string]: string;
+    };
+    /**
      * Check ID
      */
     checkId: string;
@@ -2748,9 +2820,9 @@ export type AiVisibilityCheckDetailResponse = {
      */
     completedAt: string;
     /**
-     * Check summary statistics, including the market map as it stood at this check under `summary.marketMap`, and each competitor's mention rate and AI Visibility Score under `summary.competitorRankings` — in the order to render, nothing positional.
+     * Check summary statistics, including the market map as it stood at this check under `summary.marketMap`, and each competitor's mention rate and AI Visibility Score under `summary.competitorRankings` — in the order to render, nothing positional. ABSENT when `includeSummary` is false — by default whenever `includeAnswers=true`.
      */
-    summary: AiVisibilityDashboardSummaryResponse;
+    summary?: AiVisibilityDashboardSummaryResponse;
     /**
      * The models' answers for this check — one entry per query that came back with an answer we could use. Present ONLY when the request set `includeAnswers=true`; absent otherwise, never an empty array standing in for 'not requested'. Narrowed by `provider` and `promptIndex` when those are set — those also narrow the matching entries of `unansweredQueries` and `noAnswerShown`. `brand` narrows DIFFERENTLY: it reduces the `brands` list inside each answer and never this array, so every answer the check counted is still here and the ones that did not name that domain arrive with an empty `brands`. `brand` narrows `unansweredQueries` and `noAnswerShown` not at all, because a query that produced no answer could have named anyone. No filter changes anything else: every number under `summary` is stored, computed over the whole check, and is never recomputed for a filtered view. Per-brand prose — description, ranking rationale, audience, pricing tier, messaging, differentiation — is present only for models that describe brands; a brand row carrying only `rank`, `name` and `domain` means Google AI Overviews named it in prose, and the prose is on that answer's `answerText`. ATTRIBUTION: every piece of prose in this block — descriptions, ranking rationales, audiences, claims, and the overview text itself — is unverified model output about the brands that model named, including third parties CompetLab does not monitor. It is a record of what the model said, not CompetLab's assessment of those brands. Attribute it to the named `provider`; do not republish it as fact.
      */
@@ -2841,15 +2913,19 @@ export type AiVisibilityTrendReadingResponse = {
      */
     checkId: string;
     /**
+     * How many published checks that check's map pools — the window this reading's answers come from. Checks, never days. `now` is never the latest check alone.
+     */
+    checksAnalysed: number;
+    /**
      * How often the company was recommended in that check's window, with its range and zone.
      */
     presence: AiVisibilityTrendPresenceResponse;
     /**
-     * The company's rank by how often it was recommended on that check's map: one plus the companies recommended more often, ties sharing a rank. Null where the company was not on that map (no answer in the window named it), and null under a `provider` filter — a rank exists only across every model.
+     * The company's rank by how often it was recommended on that check's map: one plus the companies recommended more often, ties sharing a rank. Null where no answer in that check's window named the company — off the map, or on it at a measured zero — and null under a `provider` filter, since a rank exists only across every model. Without a `provider` filter the null is a measured absence — say 'not named', never 'not measured'.
      */
     rank: number | null;
     /**
-     * The company's AI Visibility Score on that check (0-100). The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it was named only below the top 5, or too seldom inside them for the average to register. Null where the check's rows carry none — no counted answer on that check named the company; the customer's own is present on every check — and null under a `provider` filter, since the score is one figure across every model.
+     * The company's AI Visibility Score on that check (0-100). The score counts only the top 5 positions in an answer, evenly spaced — first place the most, the last scoring position the least — and nothing below them. It is a reading of WHERE a brand lands when it is named, never of who is ahead: a standing claim — "you lead", "you trail", "the leader is X" — rests on how often each brand is named (presence on the market map, or mentionRate within one check) and never on this score, which can favour a brand named half as often. A score of 0 for a brand the answers did name means it was named only below the top 5, or too seldom inside them for the average to register. 0 where no counted answer named the company in its top 5, whether never named or named only below the scoring positions: a measured 0, for the customer and every other company alike. Read presence beside it to tell the two apart. null where that check's map carries the company but its rows hold no score for it, and under a `provider` filter, since the score is one figure across every model.
      */
     score: number | null;
 };
@@ -2859,6 +2935,10 @@ export type AiVisibilityTrendSeriesPointResponse = {
      * When the published check completed (ISO-8601).
      */
     date: string;
+    /**
+     * How many published checks that check's map pools — the window the point's answers come from. Checks, never days.
+     */
+    checksAnalysed: number;
     /**
      * The share of answers recommending the company in that check's window, in whole percent — or null where this scope was not measured on that check (the model returned no usable answer in the window). Null is a break in the line, never a zero; a measured zero ships as 0.
      */
@@ -2887,7 +2967,7 @@ export type AiVisibilityTrendCompanyResponse = {
      */
     isOwn: boolean;
     /**
-     * True when the project tracks this domain as a competitor today. False means the AI models raised it unprompted.
+     * True when the project tracks this domain as a competitor today. False means it is not on today's tracked list — on an earlier reading that can be a competitor tracked then and dropped since. The customer's own row is false.
      */
     isTracked: boolean;
     /**
@@ -2911,7 +2991,7 @@ export type AiVisibilityTrendCompanyResponse = {
      */
     presenceChangeSeparable: boolean | null;
     /**
-     * `start.rank` minus `now.rank` — places moved, positive means the company climbed. Null without a rank on both ends, and always null under a `provider` filter.
+     * `start.rank` minus `now.rank` — places moved, positive means the company climbed. Null without a rank on both ends — a company named in no answer at either end has no rank there, so it has no places to have moved — and always null under a `provider` filter.
      */
     rankChange: number | null;
     /**
@@ -2987,7 +3067,7 @@ export type AiVisibilityTrendResponse = {
      */
     scope: 'all' | 'openai' | 'claude' | 'gemini' | 'perplexity' | 'google_ai_overviews';
     /**
-     * One row per company, in the order of how often each is recommended on the latest map — ties are ties. The project's own company and its tracked competitors are always here, however many there are; the rest are the most recommended companies in the window, filling up to 10 rows in all — a roster larger than that returns more rows, never fewer. A company with no measured reading on this scope in the window is left out.
+     * One row per company, in the order of how often each is recommended on the latest map — ties are ties. The project's own company and every tracked competitor are always here, however many there are, plus up to 3 companies the project does not track — the most recommended of the rest. A company with no measured reading on this scope in the window is left out, and never takes one of those 3 places.
      */
     companies: Array<AiVisibilityTrendCompanyResponse>;
     /**
@@ -3040,7 +3120,7 @@ export type AiSourcesEngineUnavailableResponse = {
      */
     available: boolean;
     /**
-     * `no_usable_answer` — every question this engine was asked came back unmeasured, so there is no reading of it this check. Our problem, not the engine's verdict on anyone: report it as 'we could not read this engine this check', never as 'the engine named nobody'. An engine read for every question that showed no answer on any of them is NOT this — that publishes as measured absences.
+     * `no_usable_answer` — every question this engine was asked came back unmeasured, so there is no reading of it this check: not measured, never 'the engine named nobody'. An engine read for every question that showed no answer on any of them is NOT this — that publishes as measured absences.
      */
     reason: 'no_usable_answer';
 };
@@ -3098,7 +3178,7 @@ export type AiSourcesEngineSummaryResponse = {
      */
     answersAbsent?: number;
     /**
-     * Questions we could not read this engine's answer to. In no denominator. Our problem, never a fact about the question or the engine's view of anyone.
+     * Questions we could not read this engine's answer to. Not measured and in no denominator — never a fact about the question or the engine's view of anyone.
      */
     answersUnmeasured?: number;
     /**
@@ -3353,9 +3433,9 @@ export type AiSourcesBrandRowResponse = {
      */
     ambiguous: boolean;
     /**
-     * Rank by how often the brand is named in answers: one plus the number of brands named more often. Ties SHARE a rank — never break one. Presence, never position: nothing on this surface records how high a brand sat.
+     * Rank by how often the brand is named in answers: one plus the number of brands named more often. Ties SHARE a rank — never break one. Null at zero presence: a brand no answer in the window named has no place in this order, so say 'not named in any answer', never a rank; the customer's own row and a tracked competitor's are the rows that can sit there, because every other row is on the list because an engine named it. Presence, never position: nothing on this surface records how high a brand sat.
      */
-    rankByPresence: number;
+    rankByPresence: number | null;
     /**
      * Answers in the window that named the brand, pooled across engines as a vote, with the interval. Pooling ANSWERS is legitimate; `perEngine` beside it says which engines back the row, because a brand named by one engine and a brand named by both look identical on the pooled figure.
      */
@@ -3429,7 +3509,7 @@ export type AiSourcesFunnelResponse = {
      */
     missingPublishers: number;
     /**
-     * Of `missing`: a competitor's own site. Not won by outreach; listed so the narrowing is complete.
+     * Of `missing`: a tracked competitor's own site. Not won by outreach; listed so the narrowing is complete.
      */
     missingCompetitorOwned: number;
 };
@@ -3440,7 +3520,7 @@ export type AiSourcesFunnelResponse = {
 export type AiSourcesCoreHostStatus = 'already_named' | 'missing' | 'unreadable';
 
 /**
- * `third_party` — nobody on the leaderboard owns it: a publisher, a community, a review site; addressable. `competitor_owned` — a competitor's own site; not won by outreach. The customer's own hosts are never on this list.
+ * `third_party` — neither the customer nor a tracked competitor owns it: a publisher, a community, a review site, or a vendor the engines named that the project does not track; addressable. `competitor_owned` — a tracked competitor's own site; not won by outreach. The customer's own hosts are never on this list.
  */
 export type AiSourcesHostOwnership = 'third_party' | 'competitor_owned';
 
@@ -3506,7 +3586,7 @@ export type AiSourcesCheckPageResponse = {
      */
     promptIds: Array<string>;
     /**
-     * The domain of the brand whose own site this page is on, when it is on one — the customer's or a competitor's. Absent for a third-party page. A page on a brand's own site is never an independent source naming that brand.
+     * The domain of the brand whose own site this page is on, when it is on one — the customer's, a competitor's, or a company the engines named. Absent for a third-party page. It labels the page and decides no targeting: only a tracked competitor's host is `competitor_owned`. A page on a brand's own site is never an independent source naming that brand.
      */
     ownedBy?: string;
     /**
@@ -3549,11 +3629,11 @@ export type AiSourcesCoreHostResponse = {
      */
     status: AiSourcesCoreHostStatus;
     /**
-     * `third_party` — nobody on the leaderboard owns it: a publisher, a community, a review site; addressable. `competitor_owned` — a competitor's own site; not won by outreach. The customer's own hosts are never on this list.
+     * `third_party` — neither the customer nor a tracked competitor owns it: a publisher, a community, a review site, or a vendor the engines named that the project does not track; addressable. `competitor_owned` — a tracked competitor's own site; not won by outreach. The customer's own hosts are never on this list.
      */
     ownership: AiSourcesHostOwnership;
     /**
-     * The competitor's domain, present iff `ownership` is `competitor_owned`.
+     * The tracked competitor's domain, present iff `ownership` is `competitor_owned`.
      */
     ownedBy?: string;
     /**
@@ -3565,7 +3645,7 @@ export type AiSourcesCoreHostResponse = {
      */
     kindCheckedAt?: string;
     /**
-     * What the customer can do about this host, as a stable code with its sentence beside it. Render `text` verbatim; it is identical for every host in the same state and names no host's numbers. `pitch_publisher` — a third-party page we read that does not name the customer. `claim_review_profile` — a review site, whether or not we could read it. `join_community` — a community. `not_addressable_by_text` — a video. `check_manually` — we could not read the page: open it and check. `competitor_owned` — not a target. `already_named` — nothing to do.
+     * What the customer can do about this host, as a stable code with its sentence beside it. Render `text` verbatim; it is identical for every host in the same state and names no host's numbers. `pitch_publisher` — a third-party page we read that does not name the customer. `claim_review_profile` — a review site, whether or not we could read it. `join_community` — a community. `not_addressable_by_text` — a video. `check_manually` — we could not read the page: open it and check. `competitor_owned` — a tracked competitor's own site, not a target. `already_named` — nothing to do.
      */
     actionHint: AiSourcesExplanationResponse;
     /**
@@ -3585,9 +3665,13 @@ export type AiSourcesCoreHostResponse = {
      */
     brandsNamed: Array<string>;
     /**
-     * This host's pages this check, each with its own read state and naming. A host is `missing` when at least one of these was read and none is `named`.
+     * This host's pages this check, each with its own read state and naming. A host is `missing` when at least one of these was read and none is `named`. Under the compact view the pages are listed in `pageUrls` instead, and this carries only a page `summary.pages` does not (normally absent).
      */
-    pages: Array<AiSourcesCheckPageResponse>;
+    pages?: Array<AiSourcesCheckPageResponse>;
+    /**
+     * Compact view only: the URLs of this host's pages this check, in the order `pages` holds them. Each is a row of `summary.pages`; read those rows with `pagesHost` set to this host.
+     */
+    pageUrls?: Array<string>;
 };
 
 export type AiSourcesOwnPageRefResponse = {
@@ -3626,6 +3710,29 @@ export type AiSourcesOwnPageRetrievalResponse = {
      * Whether the customer was among them.
      */
     namedCustomer: boolean;
+};
+
+export type HostListPageResponse = {
+    /**
+     * Rows skipped before this page, in stored order.
+     */
+    offset: number;
+    /**
+     * Rows asked for. The page can hold more: rows its list always keeps — the customer's own, where the list has one, and on the AI Visibility market map and history every tracked competitor's — when they fall outside the page.
+     */
+    limit: number;
+    /**
+     * Rows in the whole list (after any filter), not on this page.
+     */
+    total: number;
+    /**
+     * Whether rows exist after this page. Ask for them with a higher offset.
+     */
+    hasMore: boolean;
+    /**
+     * The host the rows were filtered to, as matched: lower-case, without `www.`. Absent when no host filter was given.
+     */
+    host?: string;
 };
 
 export type AiSourcesUnreadableByReasonResponse = {
@@ -3739,9 +3846,13 @@ export type AiSourcesSummaryResponse = {
      */
     matrix: Array<AiSourcesMatrixRowResponse>;
     /**
-     * Who else this market names: the customer, the tracked competitors, and every company an engine named in the window. In the ORDER TO RENDER — answers naming desc, then domain — and never re-sorted by anything positional. The customer's row is always present; read `isOwn` to find it. Ties share a `rankByPresence`.
+     * Who else this market names: the customer, the tracked competitors, and every company an engine named in the window. In the ORDER TO RENDER — answers naming desc, then domain — and never re-sorted by anything positional. The customer's row is always present; read `isOwn` to find it. Ties share a `rankByPresence`, and it is null on a row no answer named.
      */
     brands: Array<AiSourcesBrandRowResponse>;
+    /**
+     * Compact view only: which rows `brands` carries — the stored order, from `offset`, `limit` rows, plus the customer's own row whenever it falls outside them. Page on with `brandsOffset` and `brandsLimit`.
+     */
+    brandsPage?: ListPageResponse;
     /**
      * How the engines' host sets overlap this check — the one cross-engine object.
      */
@@ -3763,6 +3874,10 @@ export type AiSourcesSummaryResponse = {
      */
     pages: Array<AiSourcesCheckPageResponse>;
     /**
+     * Compact view only: which rows `pages` carries — the stored order, after the `pagesHost` filter when one was given, from `offset`, `limit` rows. `total` counts the rows after that filter. Page on with `pagesOffset` and `pagesLimit`.
+     */
+    pagesPage?: HostListPageResponse;
+    /**
      * What the numbers rest on, and the sentences to render beside them.
      */
     limits: AiSourcesLimitsResponse;
@@ -3774,7 +3889,7 @@ export type AiSourcesLatestCheckUnavailableResponse = {
      */
     available: boolean;
     /**
-     * `no_usable_answer_from_any_engine` — every engine the check asked came back with no usable answer, so nothing was measured and the check was abandoned. Our problem: it never locks the customer out, a new check runs automatically, and the caller may trigger one. A check where ONE engine came back empty is not this — it publishes with that engine marked unmeasured. `page_stage_failed` — the engines answered, but the stage that reads the retrieved pages could not be closed, so no summary was built and the check was abandoned. Ours, never the engines' or the customer's; a new check runs automatically. A page stage that merely ran out of time is not this: it closes with the pages it has, the rest recorded as not fetched, and the check publishes.
+     * `no_usable_answer_from_any_engine` — every engine the check asked came back with no usable answer, so nothing was measured and the check was not published. A check where ONE engine came back empty is not this — it publishes with that engine marked unmeasured. `page_stage_failed` — the engines answered, but the retrieved pages could not be read into a summary, so the check was not published. A page stage that ran out of time is not this: it closes with the pages it has, the rest recorded as not fetched, and the check publishes.
      */
     reason: 'no_usable_answer_from_any_engine' | 'page_stage_failed';
     /**
@@ -3951,7 +4066,7 @@ export type AiSourcesEngineStatusResponse = {
      */
     answersAbsent: number;
     /**
-     * Of `questionsAsked`: questions we could not read the answer to — the entries for this engine in `unansweredQueries`. Our problem, and in no count.
+     * Of `questionsAsked`: questions we could not read the answer to — the entries for this engine in `unansweredQueries`. Not measured, and in no count.
      */
     answersUnmeasured: number;
 };
@@ -3968,6 +4083,12 @@ export type AiSourcesEngineStatusMapResponse = {
 };
 
 export type AiSourcesDashboardResponse = {
+    /**
+     * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
+     */
+    readingGuide?: {
+        [key: string]: string;
+    };
     /**
      * When the data below was measured (ISO-8601): the completion time of the check the summary comes from, which is NOT necessarily the most recent cycle — see `latestCheckDataAvailable`.
      */
@@ -4057,6 +4178,12 @@ export type AiSourcesHistoryItemResponse = {
 
 export type AiSourcesCheckDetailResponse = {
     /**
+     * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
+     */
+    readingGuide?: {
+        [key: string]: string;
+    };
+    /**
      * Check ID
      */
     checkId: string;
@@ -4065,9 +4192,9 @@ export type AiSourcesCheckDetailResponse = {
      */
     completedAt: string;
     /**
-     * The summary stored on this check, exactly as the app shows it — the same shape as the dashboard's `summary`, as of this check.
+     * The summary stored on this check, exactly as the app shows it — the same shape as the dashboard's `summary`, as of this check. ABSENT when `includeSummary` is false — by default whenever `includeAnswers=true`.
      */
-    summary: AiSourcesSummaryResponse;
+    summary?: AiSourcesSummaryResponse;
     /**
      * The engines' answers for this check — one entry per question that came back with an answer, with the pages the engine RETRIEVED to write it. Present ONLY when the request set `includeAnswers=true`; absent otherwise, never an empty array standing in for 'not requested'. Narrowed by `engine` and `promptIndex` when those are set — they narrow `unansweredQueries` and `noAnswerShown` the same way. No filter changes anything under `summary`: every number there is stored, computed over the whole check, and never recomputed for a filtered view. The pages on an answer are the pages the engine retrieved while answering, never a list of citations — the engines do not disclose which pages they leaned on. Never count pages across engines. ATTRIBUTION: the answer text and the companies read out of it are what that engine said, including about third parties CompetLab does not monitor. Attribute it to the named `engine`; do not republish it as fact.
      */
@@ -4175,7 +4302,7 @@ export type ScheduleItemResponse = {
  *
  * - `running` — being generated now; see `progress`. `item` is null, but an earlier edition is usually still readable via `GET /strategic-briefing/history`. Never report that no briefing exists without checking there first.
  * - `done` — finished; `item`, `coverage` and `contains` are populated.
- * - `failed` — this attempt ended without producing an edition. `item` is null; earlier editions remain readable via `GET /strategic-briefing/history`. **A failed run does not resume the ~30-day cycle** — surface it rather than waiting it out.
+ * - `failed` — this attempt ended without producing an edition. `item` is null; earlier editions remain readable via `GET /strategic-briefing/history`.
  * - `null` — this project has never had a briefing run at all. This is the only value that means the project genuinely has nothing.
  */
 export type BriefingRunStatus = 'running' | 'done' | 'failed';
@@ -4210,7 +4337,7 @@ export type BriefingMetaResponse = {
      *
      * - `running` — being generated now; see `progress`. `item` is null, but an earlier edition is usually still readable via `GET /strategic-briefing/history`. Never report that no briefing exists without checking there first.
      * - `done` — finished; `item`, `coverage` and `contains` are populated.
-     * - `failed` — this attempt ended without producing an edition. `item` is null; earlier editions remain readable via `GET /strategic-briefing/history`. **A failed run does not resume the ~30-day cycle** — surface it rather than waiting it out.
+     * - `failed` — this attempt ended without producing an edition. `item` is null; earlier editions remain readable via `GET /strategic-briefing/history`.
      * - `null` — this project has never had a briefing run at all. This is the only value that means the project genuinely has nothing.
      */
     status?: BriefingRunStatus | null;
@@ -4223,11 +4350,11 @@ export type BriefingMetaResponse = {
      */
     startedAt?: string | null;
     /**
-     * When this run reached a terminal state, ISO-8601 UTC — for a `done` run, the edition's publication date. Null while `running`. A project's next briefing is scheduled roughly 30 days after its last **successful** one.
+     * When this run reached a terminal state, ISO-8601 UTC — for a `done` run, the edition's publication date. Null while `running`. A project's next briefing is scheduled roughly 30 days after its last run.
      */
     briefingDate?: string | null;
     /**
-     * In-flight telemetry. Non-null only while `status` is `running` AND at least one progress update has landed (roughly a minute in). Always null on a `done` or `failed` run. Null is normal, not an error. A run typically finishes in about two hours, so budget rather than polling tightly, and never infer failure from elapsed time.
+     * In-flight telemetry. Non-null only while `status` is `running` AND at least one progress update has landed (roughly a minute in). Always null on a `done` or `failed` run. Null is normal, not an error. A run finishes within two hours, so budget rather than polling tightly, and never infer failure from elapsed time.
      */
     progress?: BriefingProgressResponse | null;
 };
@@ -4236,6 +4363,45 @@ export type BriefingMetaResponse = {
  * Manifest of what this edition actually holds — every section it contains, whether or not you requested it. Values are exactly the tokens the `sections` parameter accepts, so you can pass one straight back. Use it to decide what to fetch next rather than requesting slots blind: a section absent from this list does not exist for this edition, and requesting it is not an error — the key is simply missing from `item`. Null whenever `meta.status` is not `done`. That means *this run* holds no content — **not** that the project has no editions; check `GET /strategic-briefing/history`.
  */
 export type BriefingSectionName = 'hub' | 'competitors' | 'deep-ai-visibility' | 'deep-ai-sources' | 'deep-positioning' | 'deep-pricing' | 'deep-content' | 'deep-tech-trust' | 'deep-agent-readiness' | 'deep-ai-ecosystem' | 'deep-customer-voice' | 'deep-funding-capital' | 'deep-hiring-gtm' | 'deep-landscape' | 'deep-product-launches' | 'deep-reliability-status';
+
+/**
+ * Why the comment exists: `result` — Measured after close: the check before the ticket opened beside the first check after it closed; `basis_weaker` — Reason weaker: what the ticket rests on moved, and its reason is weaker for it; `basis_stronger` — Reason stronger: the same, stronger; `basis_changed` — Reason changed: it moved, and the edition cannot say whether that makes the reason weaker or stronger; `basis_gone` — Reason gone: measured again, and what the ticket rests on is no longer there (for example the page no longer names any competitor). Never a check that failed — a page we could not read is not a page that names nobody. `null` on a kind this API does not know yet — the comment is still there.
+ */
+export type TicketCommentKind = 'result' | 'basis_changed' | 'basis_weaker' | 'basis_stronger' | 'basis_gone';
+
+export type BriefingTicketCommentResponse = {
+    /**
+     * The ticket the edition commented on.
+     */
+    ticketId: string;
+    /**
+     * The comment's ID — the entry `GET /v1/projects/{projectId}/tickets/{ticketId}/comments` lists.
+     */
+    commentId: string;
+    /**
+     * Why the comment exists: `result` — Measured after close: the check before the ticket opened beside the first check after it closed; `basis_weaker` — Reason weaker: what the ticket rests on moved, and its reason is weaker for it; `basis_stronger` — Reason stronger: the same, stronger; `basis_changed` — Reason changed: it moved, and the edition cannot say whether that makes the reason weaker or stronger; `basis_gone` — Reason gone: measured again, and what the ticket rests on is no longer there (for example the page no longer names any competitor). Never a check that failed — a page we could not read is not a page that names nobody. `null` on a kind this API does not know yet — the comment is still there.
+     */
+    kind: TicketCommentKind | null;
+    /**
+     * The comment's text, in Markdown: one paragraph of dated facts, never a cause. Report it as the comment states it, never as the fix having worked.
+     */
+    body: string;
+};
+
+export type BriefingMatchedTicketResponse = {
+    /**
+     * The ticket already on the board that the recommendation matched — in any column, `dismissed` included.
+     */
+    ticketId: string;
+    /**
+     * The recommendation, as the edition printed it.
+     */
+    move: string;
+    /**
+     * The column the matched ticket stands in now. A match in `dismissed` is a recommendation the team refused: the edition dropped it rather than recommending it again.
+     */
+    status: 'triage' | 'todo' | 'in_progress' | 'done' | 'dismissed';
+};
 
 export type BriefingTicketsResponse = {
     /**
@@ -4248,6 +4414,22 @@ export type BriefingTicketsResponse = {
     byStatus: {
         [key: string]: number;
     };
+    /**
+     * The IDs of the tickets this edition opened that are still on the board, in any column, dismissed included. A ticket no longer on the board is not listed.
+     */
+    opened: Array<string>;
+    /**
+     * The comments this edition wrote on tickets that were already on the board, and that are still in their threads — at most one per ticket. Empty where it wrote none.
+     */
+    commented: Array<BriefingTicketCommentResponse>;
+    /**
+     * The tickets this edition's recommendations matched instead of opening a second ticket for the same work — each with the recommendation it matched, in any column, dismissed included. Only tickets still on the board are listed. Empty where none matched.
+     */
+    alreadyOnBoard: Array<BriefingMatchedTicketResponse>;
+    /**
+     * The IDs of open tickets this edition measured again on the same denominator and found standing where the last check left them; it wrote no comment on them. A ticket in neither this list nor `commented` was not measured by this edition: read that as not checked, never as unchanged. Only tickets still on the board are listed.
+     */
+    recheckedUnchanged: Array<string>;
 };
 
 export type BriefingEnvelopeResponse = {
@@ -4272,7 +4454,7 @@ export type BriefingEnvelopeResponse = {
      */
     contains?: Array<BriefingSectionName> | null;
     /**
-     * How the tickets this edition opened stand on the project's board right now: how many there are, and how many sit in each column. Counted when the briefing is read, so it follows the board as the team works. The edition's recommended work IS those tickets and is returned in no section — read them with `GET /v1/projects/{projectId}/tickets?origin=briefing&briefingRunId={runId}`, taking `{runId}` from `meta.runId`. Null whenever `meta.status` is not `done`.
+     * What this edition did to the project's board, as the board stands right now: the tickets it opened (how many, how many sit in each column, and their IDs), the comments it wrote on tickets already there, the tickets it found already on the board instead of opening a second one, and the open tickets it measured again and found unchanged. Counted when the briefing is read, so it follows the board as the team works. The edition's recommended work IS those tickets and is returned in no section — read them with `GET /v1/projects/{projectId}/tickets?origin=briefing&briefingRunId={runId}`, taking `{runId}` from `meta.runId`. Null whenever `meta.status` is not `done`.
      */
     tickets?: BriefingTicketsResponse | null;
 };
@@ -4432,10 +4614,14 @@ export type TicketBriefingRefResponse = {
      * How long the edition estimated the work would take, in minutes. `null` where it gave no estimate — read that as unsized, not as quick.
      */
     estimatedMinutes: number | null;
+    /**
+     * The id of the ticket already on the board that this one builds on with a different piece of work; `GET /v1/projects/{projectId}/tickets/{ticketId}` reads it. Set once by the edition that opened this ticket, and said in words in the description. `null` where it builds on none.
+     */
+    extendsTicketId: string | null;
 };
 
 /**
- * The column the ticket sits in. `triage` — nobody has decided yet. `todo` — decided, not started. `in_progress` — being worked on. `done` — finished. `dismissed` — we will not do this. The set is fixed and a project cannot add to it. Change it with the move endpoint, never with an update.
+ * The column the ticket sits in. `triage` — nobody has decided yet. `todo` — decided, not started. `in_progress` — being worked on. `done` — finished. `dismissed` — the team decided not to do it. The set is fixed and a project cannot add to it. Change it with the move endpoint, never with an update.
  */
 export type TicketStatus = 'triage' | 'todo' | 'in_progress' | 'done' | 'dismissed';
 
@@ -4443,6 +4629,85 @@ export type TicketStatus = 'triage' | 'todo' | 'in_progress' | 'done' | 'dismiss
  * How much work the ticket is. `null` where nobody has said.
  */
 export type TicketEffort = 'low' | 'medium' | 'high';
+
+export type TicketListItemResponse = {
+    /**
+     * The ticket's ID.
+     */
+    id: string;
+    /**
+     * The ticket's number on its project's board — what a person says when they mean this ticket, shown in the app as `#14`. The first ticket a project opens is 1 and each one after it takes the next number, whatever opened it. A number never changes and is never given to a second ticket, so expect gaps: a number no ticket carries belonged to one that was deleted, or to a create that did not finish. `null` on a ticket opened before the board had numbers. Every endpoint takes the ticket's `id`; none looks a ticket up by its number.
+     */
+    number: number | null;
+    /**
+     * What wrote this: `user` — a person working in the app; `api` — an API key, which is what everything you write through this API carries; `briefing` or `ai_sources` — CompetLab itself. The server sets it; a request that sends it is refused.
+     */
+    origin: TicketOrigin;
+    /**
+     * The person who opened the ticket. `null` where no person did — `origin` says what did.
+     */
+    author: TicketPersonResponse | null;
+    /**
+     * The Strategic Briefing edition this ticket came from, and what that edition proposed. Present where `origin` is `briefing`, `null` on every other ticket. It records what the edition said and does not move when the ticket is edited — the title, the description and the planning fields are the team's to rewrite; this is not.
+     */
+    briefing: TicketBriefingRefResponse | null;
+    /**
+     * The ticket's title.
+     */
+    title: string;
+    /**
+     * The ticket's labels, each resolved to its name and colour, in the project's own picker order. A ticket carries only labels the project's list holds.
+     */
+    labels: Array<TicketLabelResponse>;
+    /**
+     * The column the ticket sits in. `triage` — nobody has decided yet. `todo` — decided, not started. `in_progress` — being worked on. `done` — finished. `dismissed` — the team decided not to do it. The set is fixed and a project cannot add to it. Change it with the move endpoint, never with an update.
+     */
+    status: TicketStatus;
+    /**
+     * When the ticket last changed column — its creation time until it first moves. Reordering a ticket inside its column does not touch it. ISO-8601.
+     */
+    statusChangedAt: string;
+    /**
+     * The person the ticket is assigned to, or `null` where nobody is. Somebody who has left the organization reads as unassigned here, and nothing is written back.
+     */
+    assignee: TicketPersonResponse | null;
+    /**
+     * The day the ticket is due, as `YYYY-MM-DD` — a calendar day, with no clock and no time zone, so it is the same day for every reader. `null` where none is set.
+     */
+    dueDate: string | null;
+    /**
+     * How much work the ticket is. `null` where nobody has said.
+     */
+    effort: TicketEffort | null;
+    /**
+     * How much the ticket matters, from 1 to 4 (1 Minor · 2 Moderate · 3 Significant · 4 Critical; 4 matters most). `null` where nobody has said.
+     */
+    impact: number | null;
+    /**
+     * How many entries the ticket's thread holds. Counted when the ticket is read.
+     */
+    commentCount: number;
+    /**
+     * Whether this ticket can be deleted. A ticket a Strategic Briefing opened is moved to `dismissed` instead, so that what opened it does not open it again — deleting one is refused. Read this rather than working it out from `origin`.
+     */
+    deletable: boolean;
+    /**
+     * When the ticket was opened. ISO-8601.
+     */
+    createdAt: string;
+    /**
+     * When the ticket last changed in any way. ISO-8601.
+     */
+    updatedAt: string;
+    /**
+     * The last time anything happened to this ticket — an edit, a move, or an entry added to its thread. ISO-8601, and never earlier than `updatedAt`. Adding a comment does not change the ticket itself, so `updatedAt` can stand still while a thread fills up: read this field to ask whether a ticket has moved since you last looked, and `updatedAt` to ask whether the ticket itself was rewritten.
+     */
+    lastActivityAt: string;
+    /**
+     * The ticket's description, written in Markdown — present only when the list was asked for bodies with `include=description`, and then an empty string where nothing was written. Absent otherwise: a row without it says nothing about whether one exists. `GET …/tickets/{ticketId}` always carries it.
+     */
+    description?: string;
+};
 
 export type TicketResponse = {
     /**
@@ -4470,7 +4735,7 @@ export type TicketResponse = {
      */
     title: string;
     /**
-     * The ticket's description, written in Markdown. An empty string where nothing was written.
+     * The ticket's description, written in Markdown. An empty string where nothing was written. A row of the ticket LIST does not carry it unless the list was asked for bodies (`include=description`) — the key is then absent, never an empty string. Every other answer that returns a ticket — a single read, a create, an update, a move — and every webhook delivery carries it.
      */
     description: string;
     /**
@@ -4478,7 +4743,7 @@ export type TicketResponse = {
      */
     labels: Array<TicketLabelResponse>;
     /**
-     * The column the ticket sits in. `triage` — nobody has decided yet. `todo` — decided, not started. `in_progress` — being worked on. `done` — finished. `dismissed` — we will not do this. The set is fixed and a project cannot add to it. Change it with the move endpoint, never with an update.
+     * The column the ticket sits in. `triage` — nobody has decided yet. `todo` — decided, not started. `in_progress` — being worked on. `done` — finished. `dismissed` — the team decided not to do it. The set is fixed and a project cannot add to it. Change it with the move endpoint, never with an update.
      */
     status: TicketStatus;
     /**
@@ -4498,7 +4763,7 @@ export type TicketResponse = {
      */
     effort: TicketEffort | null;
     /**
-     * How much the ticket matters, from 1 to 4: 1 Minor · 2 Moderate · 3 Significant · 4 Critical. `null` where nobody has said.
+     * How much the ticket matters, from 1 to 4 (1 Minor · 2 Moderate · 3 Significant · 4 Critical; 4 matters most). `null` where nobody has said.
      */
     impact: number | null;
     /**
@@ -4553,7 +4818,7 @@ export type CreateTicketRequestDto = {
      */
     effort?: TicketEffort;
     /**
-     * How much the ticket matters, from 1 to 4: 1 Minor · 2 Moderate · 3 Significant · 4 Critical.
+     * How much the ticket matters, from 1 to 4 (1 Minor · 2 Moderate · 3 Significant · 4 Critical; 4 matters most).
      */
     impact?: number;
 };
@@ -4584,7 +4849,7 @@ export type UpdateTicketRequestDto = {
      */
     effort?: TicketEffort | null;
     /**
-     * How much the ticket matters, from 1 to 4: 1 Minor · 2 Moderate · 3 Significant · 4 Critical. Send `null` to take it off.
+     * How much the ticket matters, from 1 to 4 (1 Minor · 2 Moderate · 3 Significant · 4 Critical; 4 matters most). Send `null` to take it off.
      */
     impact?: number | null;
 };
@@ -4602,6 +4867,74 @@ export type MoveTicketRequestDto = {
      * The ticket that will sit directly BELOW this one. To put a ticket at the TOP of a column, send the ticket currently first there as `afterId`, and no `beforeId`.
      */
     afterId?: string;
+    /**
+     * The top or the bottom of the destination column, without reading the column first. Name a position OR neighbours: a request carrying both is refused. Omitting everything puts the ticket at the bottom.
+     */
+    position?: 'top' | 'bottom';
+};
+
+export type TicketNeighbourResponse = {
+    /**
+     * The neighbour's ID.
+     */
+    id: string;
+    /**
+     * Its number on the board, as a person says it. `null` on a ticket that has none.
+     */
+    number: number | null;
+    /**
+     * Its title.
+     */
+    title: string;
+};
+
+export type TicketPlacementIgnoredResponse = {
+    /**
+     * The neighbour ID the request named.
+     */
+    id: string;
+    /**
+     * Which neighbour it was named as.
+     */
+    as: 'beforeId' | 'afterId';
+    /**
+     * Why it was not used: `not_found` — deleted, or never on this project; `other_column` — on this project but in another column, most often read off the wrong column's list; `out_of_order` — both are in the column, but the one named as `afterId` now sits above `beforeId`, and `beforeId` was kept; `self` — the moved ticket named as its own neighbour.
+     */
+    reason: 'not_found' | 'other_column' | 'out_of_order' | 'self';
+    /**
+     * The column that ticket sits in now — for `self`, the column the moved ticket is now in. `null` only where it was not found.
+     */
+    status: TicketStatus | null;
+};
+
+export type TicketPlacementResponse = {
+    /**
+     * The column the ticket is in now.
+     */
+    status: TicketStatus;
+    /**
+     * The ticket directly above it now. `null` when it is first in the column.
+     */
+    above: TicketNeighbourResponse | null;
+    /**
+     * The ticket directly below it now. `null` when it is last in the column.
+     */
+    below: TicketNeighbourResponse | null;
+    /**
+     * Every neighbour the request named that was not used, and why. Empty when every neighbour you named was used — which alone does not mean the ticket sits right next to them: compare `above` and `below` with what you named, and if they differ and the exact place matters, re-read that column in board order and move again.
+     */
+    ignored: Array<TicketPlacementIgnoredResponse>;
+};
+
+export type TicketMovedResponse = {
+    /**
+     * The ticket after the move.
+     */
+    item: TicketResponse;
+    /**
+     * Where it landed.
+     */
+    placement: TicketPlacementResponse;
 };
 
 export type TicketDeletedResponse = {
@@ -4613,6 +4946,25 @@ export type TicketDeletedResponse = {
      * The ID of what was deleted.
      */
     id: string;
+};
+
+export type TicketCommentBriefingRefResponse = {
+    /**
+     * The edition that wrote this comment. It is the same `runId` that `GET /v1/projects/{projectId}/strategic-briefing/history` lists, so `GET /v1/projects/{projectId}/strategic-briefing/history/{runId}` reads that edition in full.
+     */
+    runId: string;
+    /**
+     * Why the comment exists — see `briefing` above for what each value means. `null` on a kind this API does not know yet; the comment is still there.
+     */
+    kind: TicketCommentKind | null;
+    /**
+     * The edition's number in the project's series of Strategic Briefings — what a person means by "edition 5". `null` where that edition has since been replaced.
+     */
+    editionNumber: number | null;
+    /**
+     * When the edition finished, ISO-8601 — the same moment its own envelope calls `completedAt`. `null` where that edition has since been replaced.
+     */
+    completedAt: string | null;
 };
 
 export type TicketCommentResponse = {
@@ -4648,6 +5000,10 @@ export type TicketCommentResponse = {
      * When the entry was last rewritten, or when it was written. ISO-8601.
      */
     updatedAt: string;
+    /**
+     * Set only on a comment a Strategic Briefing wrote; null on every comment a person or an API key wrote. runId names the edition; kind says why it exists: result — Measured after close: the check before the ticket opened beside the first check after it closed; basis_weaker — Reason weaker: what the ticket rests on moved, and its reason is weaker for it; basis_stronger — Reason stronger: the same, stronger; basis_changed — Reason changed: it moved, and the edition cannot say whether that makes the reason weaker or stronger; basis_gone — Reason gone: measured again, and what the ticket rests on is no longer there (for example the page no longer names any competitor). Never a check that failed — a page we could not read is not a page that names nobody. The body is dated facts and never a cause: report it as the comment states it, never as the fix having worked.
+     */
+    briefing: TicketCommentBriefingRefResponse | null;
 };
 
 export type CreateTicketCommentRequestDto = {
@@ -6298,11 +6654,17 @@ export type PublicTechTrustControllerGetTechTrustDashboardV1Data = {
          */
         projectId: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * How much of the response to return. `compact`: each crawler's catalog facts (its purpose and whether a robots.txt rule against it binds) are stated once in `crawlerCatalog` instead of on every verdict that names it. `full`: every row of every list, as stored — large, and meant for export rather than for reading. Omitted, the API's default view applies: `compact` on `/v1`.
+         */
+        view?: 'compact' | 'full';
+    };
     url: '/v1/projects/{projectId}/tech-trust';
 };
 
 export type PublicTechTrustControllerGetTechTrustDashboardV1Errors = {
+    400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
 };
@@ -6767,7 +7129,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data = {
     };
     query?: {
         /**
-         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large, and how large depends on the account. An entry is one brand a model named, at about 375 tokens each — so the block grows with three things at once: how many prompts the project asks (an account setting), how many models answered, and how many companies each answer named. No figure quoted here can stand in for `summary.totalEntries`; read it and size the fetch from it. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which `totalEntries` does not predict and which the `brand=` filter keeps by design. The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
+         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large, and how large depends on the account. An entry is one brand a model named, at about 1,500 characters each — so the block grows with three things at once: how many prompts the project asks (an account setting), how many models answered, and how many companies each answer named. No figure quoted here can stand in for `summary.totalEntries`; read it and size the fetch from it. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which `totalEntries` does not predict and which the `brand=` filter keeps by design. The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
          */
         includeAnswers?: boolean;
         /**
@@ -6782,6 +7144,18 @@ export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data = {
          * Return only the answers for this prompt, across every model. Requires `includeAnswers=true`. Zero-based, matching the per-prompt index used elsewhere in this dimension.
          */
         promptIndex?: number;
+        /**
+         * How much of the response to return. `compact`: `summary.marketMap.brands` is one page of rows — the core by default — with `summary.marketMap.brandsPage` saying where it sits; the customer's own row and every tracked competitor's are always included. Every other field is unchanged, and `untrackedCoreBrands` and `customerStanding` are still read from the whole map. `full`: every row of every list, as stored — large, and meant for export rather than for reading. Omitted, the API's default view applies: `compact` on `/v1`.
+         */
+        view?: 'compact' | 'full';
+        /**
+         * Rows of `summary.marketMap.brands` to skip, in the order the list is stored. Default 0. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        mapOffset?: number;
+        /**
+         * Rows of `summary.marketMap.brands` to return, 1 to 200. Default the core size (`summary.marketMap.coreSize`), and never fewer than 10. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        mapLimit?: number;
     };
     url: '/v1/projects/{projectId}/ai-visibility';
 };
@@ -6822,6 +7196,10 @@ export type PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data = {
          * Number of items per page
          */
         limit?: number;
+        /**
+         * How much of the response to return. `compact`: each row's `summary.competitorRankings` carries its first 10 companies in stored order, then every tracked company and the customer's own row that fall outside them, with `summary.competitorRankingsPage` counting the whole list; `summary.promptMarket.perPrompt` is left out — the dashboard and a check's detail carry it. Every other field is unchanged. There is no offset: the whole list is `view=full`, or the check's detail. `full`: every row of every list, as stored — large, and meant for export rather than for reading. Omitted, the API's default view applies: `compact` on `/v1`.
+         */
+        view?: 'compact' | 'full';
     };
     url: '/v1/projects/{projectId}/ai-visibility/history';
 };
@@ -6837,6 +7215,12 @@ export type PublicAiVisibilityControllerGetAiVisibilityHistoryV1Responses = {
      * PaginatedResponseOfAiVisibilityHistoryItemResponse
      */
     200: {
+        /**
+         * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
+         */
+        readingGuide?: {
+            [key: string]: string;
+        };
         items: Array<AiVisibilityHistoryItemResponse>;
         pagination: PaginationMeta;
         /**
@@ -6862,7 +7246,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data = {
     };
     query?: {
         /**
-         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large, and how large depends on the account. An entry is one brand a model named, at about 375 tokens each — so the block grows with three things at once: how many prompts the project asks (an account setting), how many models answered, and how many companies each answer named. No figure quoted here can stand in for `summary.totalEntries`; read it and size the fetch from it. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which `totalEntries` does not predict and which the `brand=` filter keeps by design. The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
+         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large, and how large depends on the account. An entry is one brand a model named, at about 1,500 characters each — so the block grows with three things at once: how many prompts the project asks (an account setting), how many models answered, and how many companies each answer named. No figure quoted here can stand in for `summary.totalEntries`; read it and size the fetch from it. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which `totalEntries` does not predict and which the `brand=` filter keeps by design. The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
          */
         includeAnswers?: boolean;
         /**
@@ -6877,6 +7261,22 @@ export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data = {
          * Return only the answers for this prompt, across every model. Requires `includeAnswers=true`. Zero-based, matching the per-prompt index used elsewhere in this dimension.
          */
         promptIndex?: number;
+        /**
+         * How much of the response to return. `compact`: `summary.marketMap.brands` is one page of rows — the core by default — with `summary.marketMap.brandsPage` saying where it sits; the customer's own row and every tracked competitor's are always included. Every other field is unchanged, and `untrackedCoreBrands` and `customerStanding` are still read from the whole map. `full`: every row of every list, as stored — large, and meant for export rather than for reading. Omitted, the API's default view applies: `compact` on `/v1`.
+         */
+        view?: 'compact' | 'full';
+        /**
+         * Rows of `summary.marketMap.brands` to skip, in the order the list is stored. Default 0. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        mapOffset?: number;
+        /**
+         * Rows of `summary.marketMap.brands` to return, 1 to 200. Default the core size (`summary.marketMap.coreSize`), and never fewer than 10. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        mapLimit?: number;
+        /**
+         * Whether to return `summary`. Omitted, `/v1` returns it unless `includeAnswers=true` — a read for the answers rarely needs the summary again, and the summary is most of the response — and a param that pages a summary list returns it too. Set it explicitly to override; `false` beside a paging param is refused with `paging_requires_summary`.
+         */
+        includeSummary?: boolean;
     };
     url: '/v1/projects/{projectId}/ai-visibility/history/{checkId}';
 };
@@ -6967,6 +7367,30 @@ export type PublicAiSourcesControllerGetAiSourcesDashboardV1Data = {
          * Return only the answers for this question, across every engine. Requires `includeAnswers=true`. Zero-based: the question's position in the check's question list, matching `promptIndex` on each answer.
          */
         promptIndex?: number;
+        /**
+         * How much of the response to return. `compact`: `summary.pages` and `summary.brands` are one page of rows each, with `summary.pagesPage` and `summary.brandsPage` saying where it sits (the customer's own brand row is always included); each `summary.coreHosts[]` lists its pages as `pageUrls`, every one a row of `summary.pages` reachable with `pagesHost`. Every other field is unchanged. `full`: every row of every list, as stored — large, and meant for export rather than for reading. Omitted, the API's default view applies: `compact` on `/v1`.
+         */
+        view?: 'compact' | 'full';
+        /**
+         * Return only the rows of `summary.pages` on this host, matched exactly and case-insensitively; a leading `www.` is ignored on both sides, so `www.g2.com` and `g2.com` are the same host. Use a `summary.coreHosts[].host` to read that host's pages. `summary.pagesPage.total` counts the rows after this filter. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        pagesHost?: string;
+        /**
+         * Rows of `summary.pages` to skip, in the order the list is stored. Default 0. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        pagesOffset?: number;
+        /**
+         * Rows of `summary.pages` to return, 1 to 100. Default 10. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        pagesLimit?: number;
+        /**
+         * Rows of `summary.brands` to skip, in the order the list is stored. Default 0. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        brandsOffset?: number;
+        /**
+         * Rows of `summary.brands` to return, 1 to 200. Default 10. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        brandsLimit?: number;
     };
     url: '/v1/projects/{projectId}/ai-sources';
 };
@@ -7058,6 +7482,34 @@ export type PublicAiSourcesControllerGetAiSourcesCheckDetailV1Data = {
          * Return only the answers for this question, across every engine. Requires `includeAnswers=true`. Zero-based: the question's position in the check's question list, matching `promptIndex` on each answer.
          */
         promptIndex?: number;
+        /**
+         * How much of the response to return. `compact`: `summary.pages` and `summary.brands` are one page of rows each, with `summary.pagesPage` and `summary.brandsPage` saying where it sits (the customer's own brand row is always included); each `summary.coreHosts[]` lists its pages as `pageUrls`, every one a row of `summary.pages` reachable with `pagesHost`. Every other field is unchanged. `full`: every row of every list, as stored — large, and meant for export rather than for reading. Omitted, the API's default view applies: `compact` on `/v1`.
+         */
+        view?: 'compact' | 'full';
+        /**
+         * Return only the rows of `summary.pages` on this host, matched exactly and case-insensitively; a leading `www.` is ignored on both sides, so `www.g2.com` and `g2.com` are the same host. Use a `summary.coreHosts[].host` to read that host's pages. `summary.pagesPage.total` counts the rows after this filter. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        pagesHost?: string;
+        /**
+         * Rows of `summary.pages` to skip, in the order the list is stored. Default 0. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        pagesOffset?: number;
+        /**
+         * Rows of `summary.pages` to return, 1 to 100. Default 10. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        pagesLimit?: number;
+        /**
+         * Rows of `summary.brands` to skip, in the order the list is stored. Default 0. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        brandsOffset?: number;
+        /**
+         * Rows of `summary.brands` to return, 1 to 200. Default 10. Pages the compact view: sent without `view` it selects the compact view, and beside `view=full` it is refused with `paging_requires_compact_view`.
+         */
+        brandsLimit?: number;
+        /**
+         * Whether to return `summary`. Omitted, `/v1` returns it unless `includeAnswers=true` — a read for the answers rarely needs the summary again, and the summary is most of the response — and a param that pages a summary list returns it too. Set it explicitly to override; `false` beside a paging param is refused with `paging_requires_summary`.
+         */
+        includeSummary?: boolean;
     };
     url: '/v1/projects/{projectId}/ai-sources/history/{checkId}';
 };
@@ -7453,21 +7905,33 @@ export type PublicTicketsControllerListTicketsV1Data = {
     };
     query?: {
         /**
-         * Return only the tickets in these columns — one, or several separated by commas (`status=todo,in_progress`). Omit it for every column, in board order.
+         * Page number (1-indexed)
+         */
+        page?: number;
+        /**
+         * How many tickets per page, 1 to 100; 50 when omitted. Pass `limit=1` when you only need `pagination.total` and `byStatus`.
+         */
+        limit?: number;
+        /**
+         * Return only the tickets in these columns — one, or several separated by commas (`status=todo,in_progress`). Omit it for every column. `byStatus` ignores this filter, so its counts still cover every column, narrowed by every other filter you passed.
          */
         status?: Array<'triage' | 'todo' | 'in_progress' | 'done' | 'dismissed'>;
         /**
-         * How much of `done` and `dismissed` to return. `recent` (the default) returns the tickets that reached those columns within the last 30 days; `all` returns them whole. The other columns are always whole, whichever you pass.
+         * The order of the list. `board` (the default) is the board flattened: the columns in board order, each in the order the team keeps — and the only order to read neighbours for a move from. `priority` puts the highest impact first; among the same impact, the least effort first, and among the same effort the fewest minutes of the edition's estimate; then the earliest due date, then board order. A missing value sorts last at each step. `due` puts the earliest due date first, undated last. `activity` puts the most recently touched first (`lastActivityAt`). Any order but `board` mixes the columns; each ticket carries its `status`.
+         */
+        sort?: 'board' | 'priority' | 'due' | 'activity';
+        /**
+         * How much of `done` and `dismissed` to return. `all` (the default) returns them whole; `recent` returns only the tickets that reached those columns within the last 30 days. The other columns are always whole, whichever you pass, and a read narrowed to one edition is whole whatever you pass.
          */
         closed?: 'recent' | 'all';
         /**
-         * Return only the tickets one source opened: `user` — a person working in the app; `api` — an API key, which is what everything you write through this API carries; `briefing` or `ai_sources` — CompetLab itself. No part of CompetLab opens `ai_sources` tickets today, so that value matches none.
+         * Who opened the ticket, never which dimension it is about (that is `dimension`): `user` — a person in the app; `api` — an API key, which is what everything you write here carries; `briefing` — a Strategic Briefing; `ai_sources` — reserved for a future AI Sources writer, which opens none today, so that value matches none.
          */
         origin?: 'user' | 'api' | 'briefing' | 'ai_sources';
         /**
-         * Return only the tickets a Strategic Briefing opened for one part of its analysis. Nothing a person or an API key opens carries a dimension, so this narrows the list to briefing tickets whether or not you also pass `origin`. `agent-readiness` is the key for Agent Adoption — how well a site is set up for AI agents to discover, access and read it. The key predates the name and does not change.
+         * Return only the tickets a Strategic Briefing opened for one part of its analysis, or `none` for the tickets no part claims — everything a person or an API key opened, and a briefing's ticket whose edition named none. `agent-readiness` is the key for Agent Adoption — how well a site is set up for AI agents to discover, access and read it. The key predates the name and does not change.
          */
-        dimension?: 'ai-visibility' | 'ai-sources' | 'positioning' | 'pricing' | 'content' | 'tech-trust' | 'agent-readiness' | 'ai-ecosystem' | 'customer-voice' | 'funding-capital' | 'hiring-gtm' | 'landscape' | 'product-launches' | 'reliability-status';
+        dimension?: 'ai-visibility' | 'ai-sources' | 'positioning' | 'pricing' | 'content' | 'tech-trust' | 'agent-readiness' | 'ai-ecosystem' | 'customer-voice' | 'funding-capital' | 'hiring-gtm' | 'landscape' | 'product-launches' | 'reliability-status' | 'none';
         /**
          * Return only the tickets one Strategic Briefing edition opened. Take the id from `GET /v1/projects/{projectId}/strategic-briefing/history`, or from `meta.runId` on a briefing read. Nothing a person or an API key opens carries an edition, so this narrows the list to that edition's tickets whether or not you also pass `origin`. An edition's tickets are returned whole, the finished and dismissed ones included however long ago they were closed — `closed` has no effect on this read — so the list matches the count the briefing states for that edition.
          */
@@ -7477,7 +7941,7 @@ export type PublicTicketsControllerListTicketsV1Data = {
          */
         assignee?: string;
         /**
-         * Return only the tickets carrying one label — its ID, from `GET /v1/projects/{projectId}/tickets/labels`.
+         * Return only the tickets carrying one label — its ID, from `GET /v1/projects/{projectId}/tickets/labels`. A project's list is empty until the project defines a label, in the app or through `POST /v1/projects/{projectId}/tickets/labels`.
          */
         labelId?: string;
         /**
@@ -7485,11 +7949,35 @@ export type PublicTicketsControllerListTicketsV1Data = {
          */
         number?: number;
         /**
-         * Return only the tickets whose TITLE contains this text, compared without regard to case. It is matched literally — punctuation is text, not a pattern — and descriptions and comments are not searched.
+         * Return only the tickets whose title or description contains this text, compared without regard to case. It is matched literally — punctuation is text, not a pattern — and threads are not searched. A match in a description is weaker evidence than one in the title: a briefing's description quotes its grounding, so read the ticket before calling two tickets the same work.
          */
         q?: string;
         /**
-         * What each ticket in the list carries. By default a list is an INDEX: every field except the ticket's own Markdown `description`, which is returned as an empty string. Pass `include=description` for the bodies — one ticket's description runs to thousands of characters, so a whole board fetched with them is large enough to be worth asking for on purpose. `GET …/tickets/{ticketId}` always returns the description whatever you pass here.
+         * Return only the tickets whose impact is at least this, 1 to 4 (1 Minor · 2 Moderate · 3 Significant · 4 Critical; 4 matters most). Tickets nobody sized are left out. A Strategic Briefing sets impact and effort on the tickets it opens, so a value there is the edition's estimate until a person changes it.
+         */
+        impactMin?: number;
+        /**
+         * Return only the tickets sized as one of these — one, or several separated by commas (`effort=low,medium`). Tickets nobody sized are left out. This is the ticket's size word, not its minutes: a briefing's `briefing.estimatedMinutes` is the edition's own time estimate, neither is derived from the other, and a `low` ticket can be an afternoon — when a person asks for something quick, use `maxMinutes`.
+         */
+        effort?: Array<'low' | 'medium' | 'high'>;
+        /**
+         * Return only the tickets a Strategic Briefing opened whose edition estimated at most this many minutes of work. A ticket without an edition's estimate — everything a person or an API key opened, and a briefing's ticket the edition did not size — is left out; use `effort` for those.
+         */
+        maxMinutes?: number;
+        /**
+         * Return only the tickets due on or after this calendar day, `YYYY-MM-DD`. Tickets with no due date are left out. A due date has no time zone, so pass the customer's own day.
+         */
+        dueFrom?: string;
+        /**
+         * Return only the tickets due strictly before this calendar day, `YYYY-MM-DD`. `dueBefore=<today>` with the open columns (`status=triage,todo,in_progress`) is everything overdue; with `dueFrom` it is a range. Tickets with no due date are left out. A due date has no time zone, so pass the customer's own day.
+         */
+        dueBefore?: string;
+        /**
+         * Return only the tickets something happened to at or after this moment — an edit, a move, or a new thread entry (`lastActivityAt`). ISO 8601 with its offset; a time without one is read as UTC, and `YYYY-MM-DD` is the start of that day in UTC. A deleted ticket is gone and does not appear.
+         */
+        activeSince?: string;
+        /**
+         * What each ticket in the list carries. By default a list is an INDEX: every field except the ticket's own Markdown `description`, which is then not on the row at all. Pass `include=description` for the bodies — one ticket's description runs to thousands of characters, so a page fetched with them is large enough to be worth asking for on purpose. `GET …/tickets/{ticketId}` always returns the description whatever you pass here.
          */
         include?: Array<'description'>;
     };
@@ -7497,6 +7985,7 @@ export type PublicTicketsControllerListTicketsV1Data = {
 };
 
 export type PublicTicketsControllerListTicketsV1Errors = {
+    400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
     402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
@@ -7506,18 +7995,21 @@ export type PublicTicketsControllerListTicketsV1Error = PublicTicketsControllerL
 
 export type PublicTicketsControllerListTicketsV1Responses = {
     /**
-     * ListResponseOfTicketResponse
+     * PaginatedResponseOfTicketListItemResponse
      */
     200: {
-        items: Array<TicketResponse>;
+        items: Array<TicketListItemResponse>;
+        pagination: PaginationMeta;
         /**
-         * How many tickets the columns this call covers hold in all. It differs from the length of `items` only when a closed column was read through its recent window.
+         * How many tickets match every filter of this call EXCEPT `status`, per column — every column present, the empty ones as 0. One call with `limit=1` and no other filter says how a whole board is spread; with filters, how the matches are.
          */
-        total: number;
-        /**
-         * Whether `total` names more tickets than `items` returned. Read again with `closed=all` for the rest.
-         */
-        hasMore: boolean;
+        byStatus: {
+            triage: number;
+            todo: number;
+            in_progress: number;
+            done: number;
+            dismissed: number;
+        };
     };
 };
 
@@ -7697,12 +8189,7 @@ export type PublicTicketsControllerMoveTicketV1Errors = {
 export type PublicTicketsControllerMoveTicketV1Error = PublicTicketsControllerMoveTicketV1Errors[keyof PublicTicketsControllerMoveTicketV1Errors];
 
 export type PublicTicketsControllerMoveTicketV1Responses = {
-    /**
-     * ItemResponseOfTicketResponse
-     */
-    200: {
-        item: TicketResponse;
-    };
+    200: TicketMovedResponse;
 };
 
 export type PublicTicketsControllerMoveTicketV1Response = PublicTicketsControllerMoveTicketV1Responses[keyof PublicTicketsControllerMoveTicketV1Responses];

@@ -3,6 +3,103 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 7.0.0
+
+The API answers a page at a time. Six dimension reads return their long lists one page at a time by
+default, the ticket list is paged with a count per column, and a brand no answer named has no rank.
+Major for four reasons, each of which breaks a build rather than a runtime: the ticket list's
+response type is replaced, `summary` is optional on both check details, `rankByPresence` can be
+`null`, and a ticket list row carries no `description` unless you ask for it.
+
+### Changed — the dimension reads answer in a compact view by default
+
+`aiVisibility.dashboard`, `aiVisibility.checkDetail`, `aiVisibility.history`, `aiSources.dashboard`,
+`aiSources.checkDetail` and `techTrust.dashboard` take `view: 'compact' | 'full'`, and the API
+defaults to `compact`:
+
+- AI Visibility: `summary.marketMap.brands` is one page — `mapOffset` / `mapLimit` — with
+  `summary.marketMap.brandsPage` (`{ offset, limit, total, hasMore }`). Your own row and every
+  tracked competitor's are on every page, so a tracked competitor missing from it was named in no
+  answer.
+- AI Sources: `summary.pages` (`pagesOffset` / `pagesLimit`, narrowed by `pagesHost`) and
+  `summary.brands` (`brandsOffset` / `brandsLimit`) are paged, with `pagesPage` and `brandsPage`;
+  each `summary.coreHosts[]` lists `pageUrls` in place of `pages`.
+- AI Visibility history: a compact row keeps the first 10 `competitorRankings` plus every tracked
+  competitor's and your own, with `competitorRankingsPage`.
+- Tech & Trust: `crawlerCatalog` and `explanationCatalog` state once what repeats, and the items
+  carry the key.
+- Every response of these reads opens with `readingGuide`, the reading rules for its fields.
+
+`view: 'full'` returns every row, as 6.x did. A paging parameter beside `view: 'full'` is a
+`400 paging_requires_compact_view`.
+
+```typescript
+// Before (6.x): every row of the map
+const { data } = await cl.aiVisibility.dashboard('proj_abc');
+
+// After (7.0.0): one page, or every row when you ask for it
+const { data: page } = await cl.aiVisibility.dashboard('proj_abc');
+const { total, hasMore } = page.item.summary.marketMap.brandsPage!;
+const { data: whole } = await cl.aiVisibility.dashboard('proj_abc', { view: 'full' });
+```
+
+### Changed — a check detail read for answers comes without its summary
+
+`summary` is optional on `aiVisibility.checkDetail` and `aiSources.checkDetail`. `includeSummary`
+defaults to the opposite of `includeAnswers`, so an answers read stays small; pass
+`includeSummary: true` for both. `includeSummary: false` without `includeAnswers: true` is a
+`400 nothing_to_return`, and a paging parameter beside `includeSummary: false` a
+`400 paging_requires_summary`.
+
+### Changed — `rankByPresence` is `number | null`
+
+On `summary.marketMap.brands[]` (AI Visibility) and `summary.brands[]` (AI Sources), a brand named
+in no answer has no rank. A `null` beside `answersNaming: 0` reads "not named in any answer" —
+never "not measured", never a place. On the trend, a company's `score` is a measured `0` on a check
+that named it nowhere, and its `rank` and `rankChange` are `null` there.
+
+### Changed — the ticket list is paged, sortable and filterable
+
+`tickets.list` returns `{ items, pagination, byStatus }` in place of `{ items, total, hasMore }`.
+It takes `page` and `limit` (default 50, max 100), `sort` (`board` · `priority` · `due` ·
+`activity`) and the filters `impactMin`, `effort`, `maxMinutes`, `dueFrom`, `dueBefore`,
+`activeSince` and `dimension: 'none'`; `q` matches the description too, and `closed` defaults to
+`all`. A row is a `TicketListItemResponse`: every field but `description`, which
+`include: ['description']` adds. `byStatus` counts the matches per column whatever `status` you
+passed.
+
+```typescript
+// Before (6.x)
+const { data } = await cl.tickets.list('proj_abc');
+const { total, hasMore } = data;
+
+// After (7.0.0)
+const { data: page } = await cl.tickets.list('proj_abc', { status: ['triage', 'todo'], sort: 'priority' });
+const { total, hasMore } = page.pagination;
+const todo = page.byStatus.todo;
+```
+
+### Added
+
+- `tickets.move` takes `position: 'top' | 'bottom'` as well as neighbours, and answers with
+  `placement` — `above`, `below`, and `ignored[]`: each neighbour you named that was not used, and why.
+- A comment carries `briefing` — `{ runId, kind, editionNumber, completedAt }` on one a Strategic
+  Briefing wrote, `null` on every other. `kind` is the new `TicketCommentKind`.
+- The briefing envelope's `tickets` gains `opened`, `commented`, `alreadyOnBoard` and
+  `recheckedUnchanged`: what the edition did to the board, in one call.
+- A briefing's ticket carries `briefing.extendsTicketId`, the ticket already on the board it builds on.
+- The trend lists your company, every tracked competitor and up to 3 untracked companies, and every
+  reading carries `checksAnalysed`.
+- `techTrust.dashboard(projectId, { view })`.
+- `CompetLabApiErrorCode` gains `paging_requires_compact_view`, `paging_requires_summary` and
+  `nothing_to_return`.
+
+### Changed — doc comments
+
+- The impact scale reads "(1 Minor · 2 Moderate · 3 Significant · 4 Critical; 4 matters most)".
+- A project's next briefing is scheduled roughly 30 days after its last run.
+- An answers entry is about 1,500 characters; read `summary.totalEntries` to size the block.
+
 ## 6.0.0
 
 A briefing's recommendations moved to the Strategic Tickets board, and the board is on the API —
