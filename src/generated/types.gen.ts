@@ -4094,7 +4094,7 @@ export type AiSourcesDashboardResponse = {
      */
     lastUpdatedAt: string;
     /**
-     * The stored summary of the latest published check, exactly as the app shows it: per engine, who was named, what was read, and which of the pages more than one engine read name the customer's competitors and not them.
+     * The stored summary of the latest published check, exactly as the app shows it: per engine, who was named, what was read, and which of the pages more than one engine read name other companies and not them.
      */
     summary: AiSourcesSummaryResponse;
     /**

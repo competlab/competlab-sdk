@@ -3,6 +3,12 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 7.0.1
+
+The AI Sources dashboard's descriptions say which pages name other companies and not the customer,
+where they said "the customer's competitors": the list holds every company the engines name for the
+market, tracked or not, and a competitor is one the customer tracks. No type changes.
+
 ## 7.0.0
 
 The API answers a page at a time. Six dimension reads return their long lists one page at a time by
