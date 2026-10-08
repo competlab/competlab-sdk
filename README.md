@@ -275,9 +275,10 @@ A `runId` for a failed or still-running edition resolves successfully with `meta
 
 ### Work the Strategic Tickets board
 
-The board is the only part of the API that changes a project. Every ticket route needs an active
-subscription (`402 subscription_required`), and every write needs a `read_write` key — a `read`
-key gets `403 insufficient_scope`. A comment a person wrote in the app cannot be edited through
+The board is the only part of the API that changes a project. A key reads everything its
+organization has and works its Strategic Tickets board on any plan and after one ends; the calls
+that fetch or scan a site on CompetLab's side need a plan (`402 subscription_required`). Every
+write needs a `read_write` key — a `read` key gets `403 insufficient_scope`. A comment a person wrote in the app cannot be edited through
 the API, whatever the key (`403 forbidden`).
 
 ```typescript
