@@ -3,6 +3,22 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 7.0.2
+
+A key reads everything its organization has and works its Strategic Tickets board on any plan and
+after one ends; the calls that fetch or scan a site on CompetLab's side need a plan
+(`402 subscription_required`). The types follow the API:
+
+- The fifteen Strategic Tickets operations no longer list `402`: the board answers on any plan and
+  after one ends.
+- The six site tools list `402`: fetch a URL, the sitemap visualizer, the AI crawler checker, and
+  the tech stack, trust signals and agent adoption scans.
+- The `402` body's `message` is one sentence an agent can repeat to a person whole: why, since
+  when (the ISO date monitoring stopped, or that the organization never had a plan), and what still
+  works.
+
+Nothing renamed and no field removed.
+
 ## 7.0.1
 
 The AI Sources dashboard's descriptions say which pages name other companies and not the customer,

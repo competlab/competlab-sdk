@@ -4486,25 +4486,6 @@ export type BriefingHistoryItemResponse = {
     headline?: string | null;
 };
 
-export type ApiPaymentRequiredErrorResponse = {
-    /**
-     * Machine-readable code for a key whose organization has no active subscription. The key itself is valid — the same organization cannot open this part of the product in the app either. Renew the subscription and the same request succeeds.
-     */
-    code: 'subscription_required';
-    /**
-     * Human-readable error message
-     */
-    message: string;
-    /**
-     * HTTP status code
-     */
-    status: number;
-};
-
-export type ApiPaymentRequiredErrorEnvelope = {
-    error: ApiPaymentRequiredErrorResponse;
-};
-
 export type ApiRateLimitErrorResponse = {
     /**
      * Machine-readable rate-limit error code.
@@ -5147,6 +5128,25 @@ export type PtTechStackRequestDto = {
      * Target domain to fingerprint. Accepts a bare hostname or a full URL — normalized (lowercased, scheme and path stripped) before scanning.
      */
     domain: string;
+};
+
+export type ApiPaymentRequiredErrorResponse = {
+    /**
+     * Machine-readable code for a key whose organization has no plan. Reads of what the organization already has, and every call on its Strategic Tickets board, succeed on the same key; a call that fetches or scans a site on CompetLab's side waits for a plan.
+     */
+    code: 'subscription_required';
+    /**
+     * Human-readable error message. One sentence an agent can repeat to a person whole: why, since when (the ISO date monitoring stopped, or that the organization never had a plan), and what still works on this key.
+     */
+    message: string;
+    /**
+     * HTTP status code
+     */
+    status: number;
+};
+
+export type ApiPaymentRequiredErrorEnvelope = {
+    error: ApiPaymentRequiredErrorResponse;
 };
 
 export type ApiBadGatewayErrorResponse = {
@@ -7739,7 +7739,6 @@ export type PublicTicketsControllerListLabelsV1Data = {
 
 export type PublicTicketsControllerListLabelsV1Errors = {
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
 };
 
@@ -7771,7 +7770,6 @@ export type PublicTicketsControllerCreateLabelV1Data = {
 export type PublicTicketsControllerCreateLabelV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     403: ApiForbiddenErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
 };
@@ -7807,7 +7805,6 @@ export type PublicTicketsControllerDeleteLabelV1Data = {
 
 export type PublicTicketsControllerDeleteLabelV1Errors = {
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     403: ApiForbiddenErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
@@ -7845,7 +7842,6 @@ export type PublicTicketsControllerUpdateLabelV1Data = {
 export type PublicTicketsControllerUpdateLabelV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     403: ApiForbiddenErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
@@ -7878,7 +7874,6 @@ export type PublicTicketsControllerListAssigneesV1Data = {
 
 export type PublicTicketsControllerListAssigneesV1Errors = {
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
 };
 
@@ -7987,7 +7982,6 @@ export type PublicTicketsControllerListTicketsV1Data = {
 export type PublicTicketsControllerListTicketsV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
 };
 
@@ -8030,7 +8024,6 @@ export type PublicTicketsControllerCreateTicketV1Data = {
 export type PublicTicketsControllerCreateTicketV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     403: ApiForbiddenErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
 };
@@ -8067,7 +8060,6 @@ export type PublicTicketsControllerDeleteTicketV1Data = {
 export type PublicTicketsControllerDeleteTicketV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     403: ApiForbiddenErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
@@ -8105,7 +8097,6 @@ export type PublicTicketsControllerGetTicketV1Data = {
 export type PublicTicketsControllerGetTicketV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
 };
@@ -8142,7 +8133,6 @@ export type PublicTicketsControllerUpdateTicketV1Data = {
 export type PublicTicketsControllerUpdateTicketV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     403: ApiForbiddenErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
@@ -8180,7 +8170,6 @@ export type PublicTicketsControllerMoveTicketV1Data = {
 export type PublicTicketsControllerMoveTicketV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     403: ApiForbiddenErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
@@ -8213,7 +8202,6 @@ export type PublicTicketsControllerListCommentsV1Data = {
 export type PublicTicketsControllerListCommentsV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
 };
@@ -8250,7 +8238,6 @@ export type PublicTicketsControllerCreateCommentV1Data = {
 export type PublicTicketsControllerCreateCommentV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     403: ApiForbiddenErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
@@ -8292,7 +8279,6 @@ export type PublicTicketsControllerDeleteCommentV1Data = {
 export type PublicTicketsControllerDeleteCommentV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     403: ApiForbiddenErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
@@ -8334,7 +8320,6 @@ export type PublicTicketsControllerUpdateCommentV1Data = {
 export type PublicTicketsControllerUpdateCommentV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
-    402: ApiPaymentRequiredErrorEnvelope;
     403: ApiForbiddenErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
@@ -8363,6 +8348,7 @@ export type PublicTechStackToolControllerCreateScanV1Data = {
 export type PublicTechStackToolControllerCreateScanV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
     502: ApiBadGatewayErrorEnvelope;
 };
@@ -8418,6 +8404,7 @@ export type PublicTrustSignalsToolControllerCreateScanV1Data = {
 export type PublicTrustSignalsToolControllerCreateScanV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
     502: ApiBadGatewayErrorEnvelope;
 };
@@ -8473,6 +8460,7 @@ export type PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Data = {
 export type PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
     502: ApiBadGatewayErrorEnvelope;
 };
@@ -8500,6 +8488,7 @@ export type PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Data = {
 export type PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
     502: ApiBadGatewayErrorEnvelope;
 };
@@ -8527,6 +8516,7 @@ export type PublicAgentAdoptionToolControllerCreateScanV1Data = {
 export type PublicAgentAdoptionToolControllerCreateScanV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
     502: ApiBadGatewayErrorEnvelope;
 };
@@ -8582,6 +8572,7 @@ export type PublicFetchUrlToolControllerFetchUrlV1Data = {
 export type PublicFetchUrlToolControllerFetchUrlV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
+    402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
     502: ApiBadGatewayErrorEnvelope;
     503: ApiServiceUnavailableErrorEnvelope;
