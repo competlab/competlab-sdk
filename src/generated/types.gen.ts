@@ -56,6 +56,10 @@ export type ProjectListItemResponse = {
      */
     status: 'market_discovering' | 'active';
     /**
+     * The project's plan: `trial`; `monitor`; `process`; `kept` — monitoring stopped, everything measured stays readable; `client` — a project on an Agency's monitored slot, run as Monitor; `pitch` — ran everything once and is not monitored.
+     */
+    plan: 'trial' | 'monitor' | 'process' | 'client' | 'pitch' | 'kept';
+    /**
      * Number of monitored competitors
      */
     competitorCount: number;
@@ -124,6 +128,10 @@ export type ProjectDetailResponse = {
      * Project status
      */
     status: 'market_discovering' | 'active';
+    /**
+     * The project's plan: `trial`; `monitor`; `process`; `kept` — monitoring stopped, everything measured stays readable; `client` — a project on an Agency's monitored slot, run as Monitor; `pitch` — ran everything once and is not monitored.
+     */
+    plan: 'trial' | 'monitor' | 'process' | 'client' | 'pitch' | 'kept';
     /**
      * Number of monitored competitors
      */

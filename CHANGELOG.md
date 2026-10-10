@@ -3,6 +3,19 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 7.2.0
+
+Pricing phase 5 (Agency) is on production, and every project on `/v1` now says its plan. Types
+regenerated from the served spec of 2026-10-10 17:52Z (master 41631577); the only change is one new
+field on two types, no operation or status code moved.
+
+- `GET /v1/projects` list items and `GET /v1/projects/{id}` gain `plan`: `'trial' | 'monitor' |
+  'process' | 'client' | 'pitch' | 'kept'` — "The project's plan: `trial`; `monitor`; `process`;
+  `kept` — monitoring stopped, everything measured stays readable; `client` — a project on an
+  Agency's monitored slot, run as Monitor; `pitch` — ran everything once and is not monitored."
+  A `kept` or `pitch` project reads in full (every dashboard, every edition, the board) and refuses
+  spend on our side; a `client` project is a Monitor project under an agency.
+
 ## 7.1.1
 
 The button — *Run an edition now*, $249 for one edition on request — is on production, and the API's
