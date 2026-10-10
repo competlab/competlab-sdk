@@ -3,6 +3,24 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 7.1.0
+
+The plans are in the app: Monitor and Process sell per project, and the API's words follow.
+
+- The `402 subscription_required` message on the six site tools now ends with where a plan is
+  chosen: `A plan is chosen in Billing: https://app.competlab.com/{org}/billing.` The `message`
+  description says so; the six tool operations describe their 402.
+- AI Visibility: a project asks 8 prompts on every plan and in the trial (the `includeAnswers`
+  descriptions say so; the project's `prompts` example holds eight).
+- Schedules: `intervalDays` is the plan's for the dimension, or slower if the owner set it
+  (example 7).
+- Strategic Briefing: the next edition follows 30 days after the last run on Monitor and two weeks
+  on Process, where the API said "roughly 30 days" / "roughly monthly".
+- `Tickets`' doc comment said every method needs an active subscription; the board works on any
+  plan and after one ends.
+
+Minor: descriptions and examples only; no type renamed, no field removed.
+
 ## 7.0.2
 
 A key reads everything its organization has and works its Strategic Tickets board on any plan and

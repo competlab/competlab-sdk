@@ -556,8 +556,9 @@ namespace CompetLab {
   /**
    * The project's Strategic Tickets board — the only part of the API that writes.
    *
-   * Every method needs an active subscription (`402 subscription_required`); every
-   * method that writes needs a `read_write` key (`403 insufficient_scope`). A finished
+   * A key works its board on any plan and after one ends (the calls that fetch or scan a
+   * site on CompetLab's side are the ones that need a plan, `402 subscription_required`);
+   * every method that writes needs a `read_write` key (`403 insufficient_scope`). A finished
    * Strategic Briefing opens its recommendations here: `list(projectId, { origin:
    * 'briefing', briefingRunId })` is what one edition opened.
    *

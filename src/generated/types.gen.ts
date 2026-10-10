@@ -141,7 +141,7 @@ export type ProjectDetailResponse = {
      */
     dimensions: DimensionFreshnessResponse;
     /**
-     * The project's AI monitoring prompt texts — the questions put to each model. How many a project carries is set per account, so the length varies between accounts and changes when someone edits the prompts: size on the array, never on a constant. These are the CURRENT wordings — a published check keeps the prompts it ran with, so its `perPrompt` rows and its `promptIndex` filter follow that check's own count, not this array. Nothing on this list carries an id: to line a check up with it, match `summary.promptMarket.perPrompt[].promptTextInProject`, or fetch `includeAnswers=true` and match `answers[].promptText`. Do not join on `summary.customer.perPrompt[].promptLabel` — it is truncated to 80 characters.
+     * The project's AI monitoring prompt texts — the questions put to each model. Up to 8 on every plan and in the trial; the array's length is what this project asks today. These are the CURRENT wordings — a published check keeps the prompts it ran with, so its `perPrompt` rows and its `promptIndex` filter follow that check's own count, not this array. Nothing on this list carries an id: to line a check up with it, match `summary.promptMarket.perPrompt[].promptTextInProject`, or fetch `includeAnswers=true` and match `answers[].promptText`. Do not join on `summary.customer.perPrompt[].promptLabel` — it is truncated to 80 characters.
      */
     prompts: Array<string>;
     /**
@@ -4284,7 +4284,7 @@ export type ScheduleItemResponse = {
      */
     enabled: boolean;
     /**
-     * Monitoring interval in days
+     * Monitoring interval in days — the plan's for this dimension, or slower if the owner set it.
      */
     intervalDays: number;
     /**
@@ -4350,7 +4350,7 @@ export type BriefingMetaResponse = {
      */
     startedAt?: string | null;
     /**
-     * When this run reached a terminal state, ISO-8601 UTC — for a `done` run, the edition's publication date. Null while `running`. A project's next briefing is scheduled roughly 30 days after its last run.
+     * When this run reached a terminal state, ISO-8601 UTC — for a `done` run, the edition's publication date. Null while `running`. A project's next briefing is scheduled 30 days after its last run on Monitor, two weeks on Process.
      */
     briefingDate?: string | null;
     /**
@@ -5136,7 +5136,7 @@ export type ApiPaymentRequiredErrorResponse = {
      */
     code: 'subscription_required';
     /**
-     * Human-readable error message. One sentence an agent can repeat to a person whole: why, since when (the ISO date monitoring stopped, or that the organization never had a plan), and what still works on this key.
+     * Human-readable error message. One sentence an agent can repeat to a person whole: why, since when (the ISO date monitoring stopped, or that the organization never had a plan), what still works on this key, and where a plan is chosen (the organization's Billing page).
      */
     message: string;
     /**
@@ -7129,7 +7129,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityDashboardV1Data = {
     };
     query?: {
         /**
-         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large, and how large depends on the account. An entry is one brand a model named, at about 1,500 characters each — so the block grows with three things at once: how many prompts the project asks (an account setting), how many models answered, and how many companies each answer named. No figure quoted here can stand in for `summary.totalEntries`; read it and size the fetch from it. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which `totalEntries` does not predict and which the `brand=` filter keeps by design. The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
+         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large, and how large depends on the project. An entry is one brand a model named, at about 1,500 characters each — so the block grows with three things at once: how many prompts the project asks — 8 on every plan and in the trial — times five models, how many models answered, and how many companies each answer named. No figure quoted here can stand in for `summary.totalEntries`; read it and size the fetch from it. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which `totalEntries` does not predict and which the `brand=` filter keeps by design. The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
          */
         includeAnswers?: boolean;
         /**
@@ -7246,7 +7246,7 @@ export type PublicAiVisibilityControllerGetAiVisibilityCheckDetailV1Data = {
     };
     query?: {
         /**
-         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large, and how large depends on the account. An entry is one brand a model named, at about 1,500 characters each — so the block grows with three things at once: how many prompts the project asks (an account setting), how many models answered, and how many companies each answer named. No figure quoted here can stand in for `summary.totalEntries`; read it and size the fetch from it. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which `totalEntries` does not predict and which the `brand=` filter keeps by design. The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
+         * Set true to include the models' raw answers — every prompt sent and every brand each model named, with its stated reasoning. Off by default because the block is large, and how large depends on the project. An entry is one brand a model named, at about 1,500 characters each — so the block grows with three things at once: how many prompts the project asks — 8 on every plan and in the trial — times five models, how many models answered, and how many companies each answer named. No figure quoted here can stand in for `summary.totalEntries`; read it and size the fetch from it. Google AI Overviews answers additionally carry the overview text and the pages Google cited, which `totalEntries` does not predict and which the `brand=` filter keeps by design. The prose it returns is the model's wording about the brands it named, not CompetLab's assessment.
          */
         includeAnswers?: boolean;
         /**
@@ -8348,6 +8348,9 @@ export type PublicTechStackToolControllerCreateScanV1Data = {
 export type PublicTechStackToolControllerCreateScanV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
+    /**
+     * The organization has no plan, and this call fetches or scans a site on CompetLab's side.
+     */
     402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
     502: ApiBadGatewayErrorEnvelope;
@@ -8404,6 +8407,9 @@ export type PublicTrustSignalsToolControllerCreateScanV1Data = {
 export type PublicTrustSignalsToolControllerCreateScanV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
+    /**
+     * The organization has no plan, and this call fetches or scans a site on CompetLab's side.
+     */
     402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
     502: ApiBadGatewayErrorEnvelope;
@@ -8460,6 +8466,9 @@ export type PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Data = {
 export type PublicAiCrawlerCheckerToolControllerDetectAiCrawlersV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
+    /**
+     * The organization has no plan, and this call fetches or scans a site on CompetLab's side.
+     */
     402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
     502: ApiBadGatewayErrorEnvelope;
@@ -8488,6 +8497,9 @@ export type PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Data = {
 export type PublicSitemapVisualizerToolControllerAnalyzeSitemapV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
+    /**
+     * The organization has no plan, and this call fetches or scans a site on CompetLab's side.
+     */
     402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
     502: ApiBadGatewayErrorEnvelope;
@@ -8516,6 +8528,9 @@ export type PublicAgentAdoptionToolControllerCreateScanV1Data = {
 export type PublicAgentAdoptionToolControllerCreateScanV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
+    /**
+     * The organization has no plan, and this call fetches or scans a site on CompetLab's side.
+     */
     402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
     502: ApiBadGatewayErrorEnvelope;
@@ -8572,6 +8587,9 @@ export type PublicFetchUrlToolControllerFetchUrlV1Data = {
 export type PublicFetchUrlToolControllerFetchUrlV1Errors = {
     400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
+    /**
+     * The organization has no plan, and this call fetches or scans a site on CompetLab's side.
+     */
     402: ApiPaymentRequiredErrorEnvelope;
     429: ApiRateLimitErrorEnvelope;
     502: ApiBadGatewayErrorEnvelope;
