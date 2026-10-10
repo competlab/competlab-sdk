@@ -3,6 +3,19 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 7.1.1
+
+The button — *Run an edition now*, $249 for one edition on request — is on production, and the API's
+two cadence sentences follow it. Types regenerated from the served spec of 2026-10-10 12:28Z (master
+2e5afc59); the only changes are three description strings, no type or operation moved.
+
+- `GET /v1/projects/{id}/strategic-briefing` and the briefing response's `completedAt`: "A project's
+  next scheduled briefing follows its plan's cadence: 30 days on Monitor, two weeks on Process. An
+  edition run on request (Run an edition now) does not move it." (was: "scheduled 30 days after its
+  last run").
+- `GET /v1/projects/{id}/strategic-briefing/history`: "Scheduled briefings come every 30 days on
+  Monitor and every two weeks on Process, plus any run on request, so this list is typically short."
+
 ## 7.1.0
 
 The plans are in the app: Monitor and Process sell per project, and the API's words follow.

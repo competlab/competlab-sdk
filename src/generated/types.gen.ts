@@ -4350,7 +4350,7 @@ export type BriefingMetaResponse = {
      */
     startedAt?: string | null;
     /**
-     * When this run reached a terminal state, ISO-8601 UTC — for a `done` run, the edition's publication date. Null while `running`. A project's next briefing is scheduled 30 days after its last run on Monitor, two weeks on Process.
+     * When this run reached a terminal state, ISO-8601 UTC — for a `done` run, the edition's publication date. Null while `running`. A project's next scheduled briefing follows its plan's cadence: 30 days on Monitor, two weeks on Process. An edition run on request (Run an edition now) does not move it.
      */
     briefingDate?: string | null;
     /**

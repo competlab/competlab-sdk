@@ -410,7 +410,7 @@ export class StrategicBriefing {
      *
      * **Returned with any finished edition, regardless of `sections`:** `coverage` (methodology and data-quality caveats — read these before quoting any figure), `contains` (the list of sections this edition actually holds, so you can pick what to fetch next instead of requesting slots blind), and `tickets` (how many tickets this edition opened on the board and how many of them sit in each column, counted as you read). All three are null whenever `meta.status` is not `done`, which says nothing about whether earlier editions exist — check `…/history`.
      *
-     * **Reading the numbers:** the AI Visibility Score is 0–100 (higher is better); AI-visibility `presence` is the share of answers analysed that named a brand (higher is named more often) and is always read with its range; on a ticket this edition opened, `impact` is 1–4 (higher is more critical) and `briefing.estimatedMinutes` is the edition's own estimate of the work, `null` where it gave none — report that as unsized rather than as quick. A project's next briefing is scheduled 30 days after its last run on Monitor, two weeks on Process.
+     * **Reading the numbers:** the AI Visibility Score is 0–100 (higher is better); AI-visibility `presence` is the share of answers analysed that named a brand (higher is named more often) and is always read with its range; on a ticket this edition opened, `impact` is 1–4 (higher is more critical) and `briefing.estimatedMinutes` is the edition's own estimate of the work, `null` where it gave none — report that as unsized rather than as quick. A project's next scheduled briefing follows its plan's cadence: 30 days on Monitor, two weeks on Process. An edition run on request (Run an edition now) does not move it.
      */
     public static publicBriefingControllerGetStrategicBriefingV1<ThrowOnError extends boolean = false>(options: Options<PublicBriefingControllerGetStrategicBriefingV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicBriefingControllerGetStrategicBriefingV1Responses, PublicBriefingControllerGetStrategicBriefingV1Errors, ThrowOnError>({
@@ -431,7 +431,7 @@ export class StrategicBriefing {
      *
      * Use this to answer "what did we say in April", to trace how a read has changed over time, or — when `GET /strategic-briefing` reports a `running` or `failed` status — to find the last edition that is actually readable. For the current state use `GET /strategic-briefing`, not this.
      *
-     * Paginated with `page` and `limit`; check `pagination.hasMore` to fetch further pages. Briefings are produced every 30 days on Monitor and every two weeks on Process, so this list is typically short.
+     * Paginated with `page` and `limit`; check `pagination.hasMore` to fetch further pages. Scheduled briefings come every 30 days on Monitor and every two weeks on Process, plus any run on request, so this list is typically short.
      */
     public static publicBriefingControllerGetStrategicBriefingHistoryV1<ThrowOnError extends boolean = false>(options: Options<PublicBriefingControllerGetStrategicBriefingHistoryV1Data, ThrowOnError>) {
         return (options.client ?? client).get<PublicBriefingControllerGetStrategicBriefingHistoryV1Responses, PublicBriefingControllerGetStrategicBriefingHistoryV1Errors, ThrowOnError>({
