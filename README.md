@@ -43,7 +43,7 @@ Competitive intelligence for the AI era. One platform, 6 dimensions, monitored a
 | **Tech & Trust** | Tech stacks, security headers, trust signals |
 | **Content** | Sitemaps, content categories, publishing cadence |
 | **Positioning** | Homepage messaging, value props, CTAs |
-| **Pricing** | What each competitor charges as its own page shows it, what typical setups cost cheapest first, what changed |
+| **Pricing** | What each company charges as its own pricing page shows it, what typical buyer setups cost cheapest first and where you stand, what changed, and what pages say about you |
 | **AI Visibility** | How ChatGPT, Claude, Gemini, Perplexity and Google AI Overviews recommend your brand vs competitors |
 | **AI Sources** | The pages Perplexity and Google AI Overviews retrieve while answering, and whether they name you |
 

@@ -1606,7 +1606,7 @@ export type PricingHeaderResponse = {
      */
     unread: Array<PricingHeaderUnreadResponse>;
     /**
-     * true: the check ran out of time before it judged everything it read.
+     * true: not everything the check read is in this response yet; what is here holds, and the rest comes with a later check. A company that could not be read does not set it.
      */
     partial: boolean;
 };
@@ -1702,18 +1702,18 @@ export type PricingFactPriceResponse = {
 };
 
 /**
- * How much of the price the page shows: `full`, `starting_from` (a 'from' price), `leaked` (shown only in the page's code), `gated` (behind a form or a login), `no_page`.
+ * How much of the price the page shows: `full`, `starting_from` (a 'from' price), `in_page_code` (a price shown only in the page's code), `gated` (behind a form or a login), `no_page`.
  */
-export type PricingVisibility = 'full' | 'starting_from' | 'leaked' | 'gated' | 'no_page';
+export type PricingVisibility = 'full' | 'starting_from' | 'in_page_code' | 'gated' | 'no_page';
 
 /**
- * What kind of page the price was found on.
+ * Where the price was found: `vendor_page` (the company's own pricing page), `listing` (a software listing), `review_site`, `other_page` (another page of the company's site: a calculator, a docs page), `redirect` (the page the company's address now sends to).
  */
-export type PricingSourceKind = 'vendor_page' | 'listing' | 'review_site' | 'hinted_page' | 'redirect';
+export type PricingSourceKind = 'vendor_page' | 'listing' | 'review_site' | 'other_page' | 'redirect';
 
 export type PricingFactSourceResponse = {
     /**
-     * What kind of page the price was found on.
+     * Where the price was found: `vendor_page` (the company's own pricing page), `listing` (a software listing), `review_site`, `other_page` (another page of the company's site: a calculator, a docs page), `redirect` (the page the company's address now sends to).
      */
     kind: PricingSourceKind;
     /**
@@ -1759,7 +1759,7 @@ export type PricingFactResponse = {
      */
     unit?: string;
     /**
-     * How much of the price the page shows: `full`, `starting_from` (a 'from' price), `leaked` (shown only in the page's code), `gated` (behind a form or a login), `no_page`.
+     * How much of the price the page shows: `full`, `starting_from` (a 'from' price), `in_page_code` (a price shown only in the page's code), `gated` (behind a form or a login), `no_page`.
      */
     visibility?: PricingVisibility;
     /**
@@ -1767,7 +1767,7 @@ export type PricingFactResponse = {
      */
     includes?: string;
     /**
-     * What the page kept from the check for this fact, in the check's words. Absent: nothing.
+     * What the check could not read on the page for this fact, in its words. Absent: nothing.
      */
     notRead?: string;
     /**
@@ -2383,13 +2383,17 @@ export type PricingDashboardResponse = {
      */
     progress: PricingProgressResponse;
     /**
-     * true: the check ran out of time before it judged everything it read. A company that could not be read does not set it.
+     * true: not everything the check read is in this response yet; what is here holds, and the rest comes with a later check. A company that could not be read does not set it.
      */
     partial: boolean;
     /**
-     * When the next scheduled check runs (ISO-8601). Absent: none is scheduled.
+     * When the next scheduled check runs (ISO-8601). Absent with `nextCheckDue` saying a check is due: the next check is due and starts when a slot is free — say "due now", never a time of day. Absent otherwise: none is scheduled.
      */
     nextCheckAt?: string;
+    /**
+     * true: `nextCheckAt` is absent because a check is due: it starts when a slot is free — say "due now", never a time of day. Absent otherwise: with `nextCheckAt` absent too, none is scheduled.
+     */
+    nextCheckDue?: boolean;
 };
 
 export type PricingHistoryItemResponse = {
@@ -2410,7 +2414,7 @@ export type PricingHistoryItemResponse = {
      */
     pagesFailed: number;
     /**
-     * true: it ran out of time before it judged everything it read.
+     * true: not everything the check read is in this response yet; what is here holds, and the rest comes with a later check. A company that could not be read does not set it.
      */
     partial: boolean;
     /**
@@ -2487,7 +2491,7 @@ export type PricingRunDetailResponse = {
      */
     progress: PricingProgressResponse;
     /**
-     * true: the check ran out of time before it judged everything it read. A company that could not be read does not set it.
+     * true: not everything the check read is in this response yet; what is here holds, and the rest comes with a later check. A company that could not be read does not set it.
      */
     partial: boolean;
 };
@@ -4880,7 +4884,7 @@ export type AlertListItemResponse = {
      */
     severity: 'critical' | 'high' | 'medium' | 'info';
     /**
-     * The level, on a pricing alert: now (tell me now: severity high), this_week (tell me this week: medium), record (keep a record: info, stored and never delivered to any channel). Absent on a dimension that writes no level.
+     * The level, on a pricing alert: now is "Tell me now" (severity high), this_week is "Tell me this week" (medium), record is "Keep a record" (info: stored and listed, never sent on any channel). Absent on a dimension that writes no level.
      */
     level?: AlertLevel;
     /**
@@ -8231,7 +8235,7 @@ export type PublicAlertsControllerListAlertsV1Data = {
          */
         severity?: 'critical' | 'high' | 'medium' | 'info';
         /**
-         * Filter by level, on the pricing alerts that carry one: now (tell me now), this_week (tell me this week), record (keep a record: stored, never delivered to any channel). An alert of a dimension that writes no level never matches.
+         * Filter by level, on the pricing alerts that carry one: now is "Tell me now", this_week is "Tell me this week", record is "Keep a record" (stored, never sent on any channel). An alert of a dimension that writes no level never matches.
          */
         level?: AlertLevel;
         /**

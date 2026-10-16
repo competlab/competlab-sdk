@@ -9,15 +9,16 @@ Pricing is the pricing check now: each company's prices as its own pricing page 
 typical buyer setups cost, what changed, what pages say about you, and companies closing, renamed or
 bought. The three `cl.pricing` methods keep their names and their paths; everything they return is
 new, so this is a major: every pricing response type is replaced. Types regenerated from the
-backend's exported spec of 2026-10-16 (Epic 2 phase 2b, branch `epic2-2b6-machine`). Publish after
-the backend deploy, never before.
+backend's exported spec of 2026-10-16 (Epic 2 phase 2b, branch `epic2-phase2b`, with Mark's
+signatures on the API's words folded in). Publish after the backend deploy, never before.
 
 ### Changed — `cl.pricing` reads the pricing check
 
 - `cl.pricing.dashboard(projectId, { view })` and `cl.pricing.runDetail(projectId, runId, { view })`
   answer the same cards: `companies` (the customer first; each with its `state` — `read`,
   `could_not_read`, `never_read`, `no_page` — and its `facts`), `setups` (what typical buyer setups
-  cost, cheapest first; the row order is the only ranking, `customerRank` of `of`), `changes`,
+  cost, cheapest first; the row order is the only ranking: the customer's place is `customerRank`,
+  and `of` is how many rows are ranked), `changes`,
   `aboutYou`, `marketEvents`, `header`, `progress`, `partial`. `view` is `compact` unless you ask for
   `full`; `compact` trims each fact to what it sells and its price.
 - Prices are each company's own amount and currency, with `period` and `billed`: nothing is
@@ -25,6 +26,14 @@ the backend deploy, never before.
   the check read and could not place in a currency, never "no price". A setup row's price always has
   its currency; a row that fits with no `rank` is one the check could not place, and its `quote` is
   the page's own words.
+- A fact's `visibility` is `full`, `starting_from`, `in_page_code` (a price shown only in the page's
+  code), `gated` or `no_page`; a price found elsewhere has a `source.kind` of `vendor_page`,
+  `listing`, `review_site`, `other_page` (another page of the company's site) or `redirect`.
+- `partial` true: not everything the check read is in the response yet; what is there holds, and
+  the rest comes with a later check.
+- The dashboard says when the next check runs: `nextCheckAt` while one is dated; `nextCheckDue: true`
+  when one is due and starts when a slot is free (say "due now", never a time of day); neither when
+  none is scheduled.
 - A change carries `level` (`AlertLevel`): `now` is "Tell me now", `this_week` is "Tell me this
   week", `record` is "Keep a record" (stored and listed, never sent on any channel). `kind` is
   `change`, or `market_event` for a company closing, renamed or bought, listed by its title; its
