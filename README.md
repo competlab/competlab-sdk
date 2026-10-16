@@ -43,7 +43,7 @@ Competitive intelligence for the AI era. One platform, 6 dimensions, monitored a
 | **Tech & Trust** | Tech stacks, security headers, trust signals |
 | **Content** | Sitemaps, content categories, publishing cadence |
 | **Positioning** | Homepage messaging, value props, CTAs |
-| **Pricing** | Plans, pricing models, feature comparisons |
+| **Pricing** | What each competitor charges as its own page shows it, what typical setups cost cheapest first, what changed |
 | **AI Visibility** | How ChatGPT, Claude, Gemini, Perplexity and Google AI Overviews recommend your brand vs competitors |
 | **AI Sources** | The pages Perplexity and Google AI Overviews retrieve while answering, and whether they name you |
 
@@ -60,7 +60,7 @@ cl.competitors       // Monitored competitors
 cl.techTrust         // Tech stack & trust signals
 cl.content           // Content analysis & changelog
 cl.positioning       // Homepage messaging analysis
-cl.pricing           // Pricing intelligence
+cl.pricing           // The pricing check: prices, typical setups, what changed
 cl.aiVisibility      // AI visibility scores, the market map & trends
 cl.aiSources         // Pages the engines retrieve while answering, and who they name
 cl.strategicBriefing // Synthesized competitive briefing — what changed, what it means, what to do
@@ -313,7 +313,7 @@ A ticket a Strategic Briefing opened cannot be deleted — read `deletable`, and
 ```typescript
 const alerts = await cl.alerts.list('proj_abc', {
   dimension: 'pricing',
-  severity: 'critical'
+  level: 'now' // "Tell me now"; this_week is "Tell me this week", record is "Keep a record"
 });
 // Know the moment a competitor changes pricing — not weeks later from a churned customer
 ```
@@ -373,10 +373,10 @@ one of them:
 
 ```typescript
 const { data } = await cl.pricing.dashboard('proj_abc');
-const you = data.item.summary.customer; // hasFreePlan: boolean | null, tierCount: number | null
+const rival = data.item.companies.find((c) => !c.isSelf)!; // facts: PricingFactResponse[] | null
 
-if (!you.hasFreePlan) { /* WRONG — also true when we never checked */ }
-const tiers = you.tierCount ?? 0; //     WRONG — invents a measured zero
+if (!rival.facts?.length) { /* WRONG — also true when we never read its pricing page */ }
+const facts = rival.facts ?? []; //  WRONG — invents a page we read and found empty
 ```
 
 Use the exported guards instead:
@@ -384,14 +384,15 @@ Use the exported guards instead:
 ```typescript
 import CompetLab, { isMeasured, isMeasuredTrue, isMeasuredFalse } from '@competlab/sdk';
 
-if (isMeasuredFalse(you.hasFreePlan)) {
-  // We looked, and you genuinely have no free plan. Safe to state as a finding.
-}
-
-if (isMeasured(you.tierCount)) {
-  console.log(`${you.tierCount} tiers`); // narrowed to number, no cast needed
+if (isMeasured(rival.facts)) {
+  console.log(`${rival.facts.length} facts read`); // narrowed to the list, no cast needed
+} else {
+  console.log(`not read: ${rival.factsAvailable?.reason}`); // never_read or no_page
 }
 ```
+
+`isMeasuredTrue` and `isMeasuredFalse` do the same for a `boolean | null`: `!value` is also true
+for `null`, so a bare negation reads "we didn't measure it" as "they don't have it".
 
 ### Two neighbours of `null` that are not `null`
 

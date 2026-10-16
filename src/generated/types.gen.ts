@@ -1526,337 +1526,970 @@ export type PositioningRunDetailResponse = {
     competitors: Array<PositioningCompetitorResponse>;
 };
 
-export type PricingUnavailableResponse = {
+/**
+ * `published`: prices are on the companies' pages. `quote_only`: prices on request; prices found elsewhere are `external_price` facts. `mixed`: both.
+ */
+export type PricingMarketKind = 'published' | 'quote_only' | 'mixed';
+
+export type PricingMarketSetupResponse = {
     /**
-     * Always false for this discriminator.
+     * The setup's id.
      */
-    available: boolean;
+    id: string;
     /**
-     * Why your own pricing couldn't be analyzed. 'pricing_fetch_failed' = we couldn't retrieve your pricing page this run; 'pricing_url_not_configured' = no pricing URL is set for your own domain.
+     * The setup in words.
      */
-    reason: 'pricing_fetch_failed' | 'pricing_url_not_configured';
+    label: string;
+    /**
+     * What the check assumes to price it.
+     */
+    assumptions: string;
 };
 
-export type PricingSummaryCustomerResponse = {
+export type PricingMarketResponse = {
     /**
-     * Your domain. Unlike every other field here it is not nulled when nothing was measured, because it stays a known fact — it is read from your project's own configuration, not from the pricing check. The one exception is a project with no own-domain entry on file at all, where there is no domain to report and this carries the literal placeholder `unknown`. That string is a marker, never a domain: don't render it, resolve it, or describe it as a site.
+     * `published`: prices are on the companies' pages. `quote_only`: prices on request; prices found elsewhere are `external_price` facts. `mixed`: both.
+     */
+    kind: PricingMarketKind;
+    /**
+     * When the check decided it (its first check; ISO-8601).
+     */
+    decidedAt: string;
+    /**
+     * The unit the market prices on. Absent: the check named none.
+     */
+    unit?: string;
+    /**
+     * The typical buyer setups the check prices, set on its first check and kept the same.
+     */
+    setups: Array<PricingMarketSetupResponse>;
+};
+
+export type PricingHeaderUnreadResponse = {
+    /**
+     * The company's competitor ID.
+     */
+    competitorId: string;
+    /**
+     * Its domain.
      */
     domain: string;
     /**
-     * The price of the plan named by `popularPlanName` — which is not always the plan you badge as most popular; see that field. Null if unavailable. Check `popularPlanCurrency` before rendering a currency symbol next to it — this amount is in whatever currency your pricing page uses, not necessarily USD — and `popularPlanUnit` before describing it, since it may be priced per seat rather than flat.
+     * Its own name as its page writes it, when the check stored one. Absent: say the domain.
      */
-    popularPlanPrice?: number | null;
+    name?: string;
     /**
-     * Currency of `popularPlanPrice` as read off your pricing page — 'USD' / 'EUR' / 'GBP', or the verbatim currency symbol for other currencies. Null when no currency could be detected on the page, or on data recorded before currency capture existed — never treat null as USD.
+     * true for the customer's own company.
      */
-    popularPlanCurrency?: string | null;
+    isSelf: boolean;
     /**
-     * The licensed unit your popular plan price is quoted in — 'flat' for a plain monthly amount, or 'per-seat' / 'per-license' / similar for per-unit monthly licensing. Null when your price isn't a comparable monthly amount at all (usage-based, one-time, or unreadable), and absent on data recorded before unit capture existed — never treat either as 'flat'. Compare it with `marketPricingUnit`: when the two differ, `pricePositionPercent` is null because a per-seat price and a flat price are not the same kind of number, however similar the figures look.
+     * When the prices shown for it were read (ISO-8601). Absent: no read has given any.
      */
-    popularPlanUnit?: string | null;
-    /**
-     * The plan we use to represent your pricing: your own 'most popular' badge when that plan lists a comparable monthly price, otherwise the cheapest plan on your page that does — a free or quote-only flagship carries no amount to position against a market. So this is not always the plan you feature. `popularPlanPrice`, `popularPlanCurrency` and `popularPlanUnit` all describe THIS plan, whichever one it is. Null if your pricing wasn't measured this run.
-     */
-    popularPlanName?: string | null;
-    /**
-     * Your pricing model type, or null if unavailable
-     */
-    pricingModel?: string | null;
-    /**
-     * Whether you offer a permanent free plan, or null if your own pricing wasn't measured this run. `false` is a measured finding — we read your pricing page and there is no free plan. Never report a null as 'no free plan'.
-     */
-    hasFreePlan: boolean | null;
-    /**
-     * Whether you offer a free trial, or null if your own pricing wasn't measured this run. `false` is a measured finding.
-     */
-    hasFreeTrial: boolean | null;
-    /**
-     * Free trial duration, or null if not offered or not measured
-     */
-    freeTrialDuration?: string | null;
-    /**
-     * Whether you offer enterprise/custom pricing, or null if your own pricing wasn't measured this run. `false` is a measured finding.
-     */
-    hasEnterprisePricing: boolean | null;
-    /**
-     * Number of pricing tiers, or null if your own pricing wasn't measured this run. Never read a null as 0 — '0 tiers' is a claim about your pricing page, not about whether we reached it.
-     */
-    tierCount: number | null;
-    /**
-     * Availability flag for your own pricing. Present ONLY when your own pricing couldn't be analyzed this run (fetch failed, or no pricing URL configured) — see `reason`. When present, every pricing metric in this object is `null`, and so are `pricePositionPercent` and all three gap flags (`hasPriceGap`, `hasFreeTierGap`, `hasEnterpriseGap`). Nothing here is a measured fact: report no price, market position, tier status, tier count or gap verdict. Only `domain` remains populated — and where no domain was on file it holds the literal placeholder `unknown` rather than being omitted, so treat that exact string as 'no domain', not as a site name. Note this flag is a sufficient reason for those nulls, never a necessary one: `hasPriceGap` and the market figures also null on a market too thin or too mixed to compare, with this flag absent. Absent on healthy runs (the normal path).
-     */
-    pricingAnalysisAvailable?: PricingUnavailableResponse;
+    shownAsReadAt?: string;
 };
 
-export type PricingSummaryPriceCompetitorResponse = {
+export type PricingHeaderResponse = {
     /**
-     * Competitor domain
+     * The day the check read on (ISO-8601).
      */
-    domain: string;
+    readOn: string;
     /**
-     * Price (numeric)
+     * Pricing pages to read: one per company with a page set or found.
      */
-    price: number;
+    pages: number;
     /**
-     * Plan name
+     * Of them, read this check.
      */
-    planName: string;
+    read: number;
+    /**
+     * The companies whose pricing page this check could not read, the customer first.
+     */
+    unread: Array<PricingHeaderUnreadResponse>;
+    /**
+     * true: the check ran out of time before it judged everything it read.
+     */
+    partial: boolean;
 };
 
-export type PricingDashboardSummaryResponse = {
+/**
+ * `heading` carries `text` (and `level`); `prose` carries `body`.
+ */
+export type PricingNarrativeBlockType = 'heading' | 'prose';
+
+export type PricingNarrativeBlockResponse = {
     /**
-     * Number of competitor pricing pages checked
+     * `heading` carries `text` (and `level`); `prose` carries `body`.
      */
-    competitorsChecked: number;
+    type: PricingNarrativeBlockType;
     /**
-     * Number of competitor pricing pages successfully analyzed
+     * A heading's words.
      */
-    competitorsSuccessful: number;
+    text?: string;
     /**
-     * Your pricing metrics
+     * A heading's level.
      */
-    customer: PricingSummaryCustomerResponse;
+    level?: number;
     /**
-     * Market average price (numeric, in `marketCurrency`, per `marketPricingUnit`). Only comparable competitor prices are averaged: fixed monthly recurring amounts sharing BOTH that currency and that licensed unit — your own price is never included. Usage-based prices (per-GB, per-request, hourly), one-time prices, prices in other currencies, and prices in a different licensed unit are never averaged; no currency conversion and no unit mixing is ever performed, so a per-seat price and a flat monthly price never land in the same average. Null when fewer than 3 comparable competitor prices exist — treat null as 'not enough comparable market data', never as zero. Always quote it with its unit: '$59 per seat per month' and '$59 per month' are different claims. Data recorded before unit grouping existed carries no `marketPricingUnit` and its average may mix units — check for that field's absence before quoting a historical figure.
+     * A paragraph, in the check's words.
      */
-    marketAvgPrice?: number | null;
-    /**
-     * The currency all market figures are computed in — the majority currency among comparable competitor prices (a tie prefers your own). Together with `marketPricingUnit` it sets `marketAvgPrice`, `pricePositionPercent`, `topPriceCompetitor`, `lowestPriceCompetitor`, and which prices count toward `pricingSampleSize`. Prices in other currencies stay visible on their rows but are excluded. Null when no comparable competitor price exists, or on data recorded before currency capture existed.
-     */
-    marketCurrency?: string | null;
-    /**
-     * The licensed unit all market figures are computed in — 'flat' for plain monthly amounts, or 'per-seat' / 'per-license' / similar for per-unit monthly licensing. It is the majority unit among the comparable competitor prices already sharing `marketCurrency` (a tie prefers your own), and it is the second half of what makes a market figure comparable: competitors pricing in a different unit stay visible on their rows but are excluded from every market figure, because averaging '$15 per seat per month' with '$475 per month' describes no market that exists. Null when no comparable competitor price exists. ABSENT on data recorded before unit grouping existed — on that data the market figures were averaged across mixed units, so the absence of this field is your signal not to quote them as a like-for-like market price.
-     */
-    marketPricingUnit?: string | null;
-    /**
-     * Your price position vs market average (percent; negative = below market). Null when `marketAvgPrice` is null, and ALSO null whenever your own price isn't comparable to the market — a different currency (no conversion is ever performed), a different licensed unit (compare `popularPlanUnit` with `marketPricingUnit`), or non-monthly pricing. Treat null as 'no comparable position', never as 0%.
-     */
-    pricePositionPercent?: number | null;
-    /**
-     * Competitor with the highest comparable price (fixed monthly, in `marketCurrency`, per `marketPricingUnit`). Descriptive, not a market verdict: present at any sample size — caption it with `pricingSampleSize`. Null when no comparable competitor price exists. A competitor priced in another currency or another unit may well charge more and still not appear here. Data recorded before this change stored null whenever `pricingIsReliable` was false.
-     */
-    topPriceCompetitor?: PricingSummaryPriceCompetitorResponse | null;
-    /**
-     * Competitor with the lowest comparable price (fixed monthly, in `marketCurrency`, per `marketPricingUnit`). Same semantics as `topPriceCompetitor` — descriptive at any sample size, null when no comparable competitor price exists.
-     */
-    lowestPriceCompetitor?: PricingSummaryPriceCompetitorResponse | null;
-    /**
-     * Number of competitor prices comparable enough to aggregate: fixed monthly recurring amounts sharing both `marketCurrency` and `marketPricingUnit`, your own domain always excluded. This is the honest denominator behind `marketAvgPrice`. Competitors with usage-based, one-time, other-currency, or other-unit pricing don't count here — their pricing model is still visible on their rows, and a low number here usually means the market prices in several different ways rather than that we failed to read it. On data recorded before this change, this counted any numeric price regardless of unit or currency.
-     */
-    pricingSampleSize: number;
-    /**
-     * True when `pricingSampleSize` >= 3 — enough comparable competitor prices for market-average and position claims. When false, `marketAvgPrice`, `pricePositionPercent` and `hasPriceGap` are all null: there is no market average to sit above, so there is no verdict either. `topPriceCompetitor` / `lowestPriceCompetitor` remain as descriptive data points.
-     */
-    pricingIsReliable: boolean;
-    /**
-     * Number of competitors offering a free plan
-     */
-    competitorsWithFreePlan: number;
-    /**
-     * Number of competitors offering a free trial
-     */
-    competitorsWithFreeTrial: number;
-    /**
-     * Number of competitors with enterprise pricing
-     */
-    competitorsWithEnterprise: number;
-    /**
-     * Number of competitors running active promotions
-     */
-    activePromotionCount: number;
-    /**
-     * Whether you sit 20%+ above the market average. `false` means measured, with no gap. Null in three cases, all of them 'we couldn't make the comparison': your own pricing wasn't measured this run; `pricingIsReliable` is false (too few comparable competitor prices to establish a market average); or `pricePositionPercent` is null because your own price isn't comparable to the market — a different currency, a different licensed unit, or usage-based rather than a fixed monthly amount. That is a WIDER set of null conditions than the other two gap flags carry, so check this field's own list rather than assuming all three null together. Never read a null as 'no gap'.
-     */
-    hasPriceGap: boolean | null;
-    /**
-     * Whether at least half of your tracked competitors offer a free tier and you don't. `false` means measured, with no gap. Null when either side of the comparison is missing — those are its only two null conditions: your own pricing wasn't measured this run, or no competitor was measured at all (with no market there is no majority to be behind). It does NOT null on a thin comparable-price sample, because free-tier availability doesn't depend on prices being comparable: a `false` here alongside a null `hasPriceGap` is consistent, not contradictory. Read `competitorsWithFreePlan` alongside it.
-     */
-    hasFreeTierGap: boolean | null;
-    /**
-     * Whether competitors offer enterprise pricing and you don't. Null when either side of the comparison is missing — your own pricing unmeasured, or no competitor measured. Those are its only two null conditions; like `hasFreeTierGap`, and unlike `hasPriceGap`, it does not null on a thin comparable-price sample. `false` means measured, with no gap.
-     */
-    hasEnterpriseGap: boolean | null;
-    /**
-     * Whether competitors are running promotions you should know about
-     */
-    hasPromotionAlert: boolean;
+    body?: string;
 };
 
-export type PricingPlanResponse = {
+export type PricingNarrativeResponse = {
     /**
-     * Plan name
+     * Headings and paragraphs, in order.
+     */
+    blocks: Array<PricingNarrativeBlockResponse>;
+};
+
+/**
+ * How far the check got with its pricing page: `read` (read this check), `could_not_read` (tried this check and not read; the facts are its last read's), `never_read` (no read has given facts yet), `no_page` (no pricing page set and none found).
+ */
+export type PricingCompanyState = 'read' | 'could_not_read' | 'never_read' | 'no_page';
+
+/**
+ * Where the page was read from: `us` is as a visitor from the US, `eu` is from Germany (used when the US read failed).
+ */
+export type PricingEgress = 'us' | 'eu';
+
+export type PricingCompanyReadResponse = {
+    /**
+     * The page the prices were read on.
+     */
+    url: string;
+    /**
+     * When (ISO-8601).
+     */
+    readAt: string;
+    /**
+     * Where the page was read from: `us` is as a visitor from the US, `eu` is from Germany (used when the US read failed).
+     */
+    egress: PricingEgress;
+};
+
+/**
+ * What the fact is: a `plan`, an `addon`, a page's price `visibility`, the `unit` it prices on, a `trial`, a `promotion`, an `external_price` (a price found on another site), or a `setup_quote` (the plan that fits one of the market's typical buyer setups, and its price).
+ */
+export type PricingFactKind = 'plan' | 'addon' | 'visibility' | 'unit' | 'trial' | 'promotion' | 'external_price' | 'setup_quote';
+
+/**
+ * What the amount is for: a month, a year, once, or usage. Absent: the page does not say.
+ */
+export type PricingPeriod = 'month' | 'year' | 'one_time' | 'usage';
+
+/**
+ * How the amount is billed: `annually` on a monthly rate means the month's rate when paid for a year. Absent: the page does not say.
+ */
+export type PricingBilled = 'monthly' | 'annually' | 'one_time';
+
+export type PricingFactPriceResponse = {
+    /**
+     * The page's own number. Never converted, added up or averaged with another company's.
+     */
+    amount: number;
+    /**
+     * The currency the price was read in (ISO 4217). null: the check read the amount and could not place it in a currency — report the number as the page shows it, never compare it.
+     */
+    currency: string | null;
+    /**
+     * What the amount is for: a month, a year, once, or usage. Absent: the page does not say.
+     */
+    period?: PricingPeriod;
+    /**
+     * How the amount is billed: `annually` on a monthly rate means the month's rate when paid for a year. Absent: the page does not say.
+     */
+    billed?: PricingBilled;
+};
+
+/**
+ * How much of the price the page shows: `full`, `starting_from` (a 'from' price), `leaked` (shown only in the page's code), `gated` (behind a form or a login), `no_page`.
+ */
+export type PricingVisibility = 'full' | 'starting_from' | 'leaked' | 'gated' | 'no_page';
+
+/**
+ * What kind of page the price was found on.
+ */
+export type PricingSourceKind = 'vendor_page' | 'listing' | 'review_site' | 'hinted_page' | 'redirect';
+
+export type PricingFactSourceResponse = {
+    /**
+     * What kind of page the price was found on.
+     */
+    kind: PricingSourceKind;
+    /**
+     * The page.
+     */
+    url: string;
+    /**
+     * The date the page itself carries. Absent: undated.
+     */
+    date?: string;
+};
+
+export type PricingAmountResponse = {
+    /**
+     * The amount, as written.
+     */
+    amount: number;
+    /**
+     * Its currency (ISO 4217).
+     */
+    currency: string;
+};
+
+export type PricingFactResponse = {
+    /**
+     * What the fact is: a `plan`, an `addon`, a page's price `visibility`, the `unit` it prices on, a `trial`, a `promotion`, an `external_price` (a price found on another site), or a `setup_quote` (the plan that fits one of the market's typical buyer setups, and its price).
+     */
+    kind: PricingFactKind;
+    /**
+     * The company's own name for it. On a setup quote, the plan that fits.
      */
     name: string;
     /**
-     * Plan price
+     * The price as the page shows it. Absent: the page shows no amount for it.
      */
-    price: string;
+    price?: PricingFactPriceResponse;
     /**
-     * Brief summary of the plan
+     * The other billing's price for the same plan, where the page shows both ("$46 a month, or $39 a month billed annually").
      */
-    summary: string;
+    altPrice?: PricingFactPriceResponse;
+    /**
+     * What it prices on, in the page's word.
+     */
+    unit?: string;
+    /**
+     * How much of the price the page shows: `full`, `starting_from` (a 'from' price), `leaked` (shown only in the page's code), `gated` (behind a form or a login), `no_page`.
+     */
+    visibility?: PricingVisibility;
+    /**
+     * What it includes, in the page's words.
+     */
+    includes?: string;
+    /**
+     * What the page kept from the check for this fact, in the check's words. Absent: nothing.
+     */
+    notRead?: string;
+    /**
+     * The page lists the thing twice and the two disagree: what each says, in the check's words. Report both; never pick one.
+     */
+    contradiction?: string;
+    /**
+     * trial only: its length in days, when the page states one.
+     */
+    trialDays?: number;
+    /**
+     * external_price only: where it was found.
+     */
+    source?: PricingFactSourceResponse;
+    /**
+     * external_price only: the yearly figure the check wrote, twelve times a monthly price. Absent on a per-seat price.
+     */
+    perYear?: PricingAmountResponse;
+    /**
+     * setup_quote only: the setup it prices, an id of `market.setups`.
+     */
+    setupId?: string;
+    /**
+     * setup_quote only: whether a plan of the company serves the setup.
+     */
+    fits?: boolean;
+    /**
+     * setup_quote only, with fits false: why it cannot, in the page's words.
+     */
+    reason?: string;
+    /**
+     * Users or seats included, or "unlimited" where the page says so. Full view only.
+     */
+    seats?: number | 'unlimited';
+    /**
+     * A one-time setup fee. Full view only.
+     */
+    setupFee?: PricingAmountResponse;
+    /**
+     * AI as the page puts it: included, an add-on, metered. Full view only.
+     */
+    ai?: string;
+    /**
+     * The plan's limits, as read. Full view only.
+     */
+    limits?: {
+        [key: string]: string | number;
+    };
+    /**
+     * The page's own words for the fact, verbatim. Full view only.
+     */
+    quote?: string;
+    /**
+     * The page the fact was read on. Full view only.
+     */
+    pageUrl?: string;
+    /**
+     * When it was read (ISO-8601). Full view only.
+     */
+    readAt?: string;
+    /**
+     * Where the page was read from: `us` is as a visitor from the US, `eu` is from Germany (used when the US read failed). Full view only.
+     */
+    egress?: PricingEgress;
+    /**
+     * Which version of the page was read, where the site serves more than one (`default` where it serves one). Full view only.
+     */
+    variant?: string;
 };
 
-export type PricingCompetitorContentResponse = {
-    /**
-     * Page title
-     */
-    pageTitle: string;
-    /**
-     * Page meta description
-     */
-    pageDescription: string;
-    /**
-     * Main pricing page headline
-     */
-    mainHeadline: string;
-    /**
-     * Pricing model type
-     */
-    pricingModel: string;
-    /**
-     * Structured pricing plans extracted from the page
-     */
-    plans: Array<PricingPlanResponse>;
-    /**
-     * Name of the recommended/popular plan
-     */
-    popularPlanName: string;
-    /**
-     * Whether a free plan is offered
-     */
-    hasFreePlan: boolean;
-    /**
-     * Name of the free plan if offered
-     */
-    freePlanName: string;
-    /**
-     * Whether a free trial is offered
-     */
-    hasFreeTrial: boolean;
-    /**
-     * Free trial duration if offered
-     */
-    freeTrialDuration: string;
-    /**
-     * Billing cycles offered
-     */
-    billingCycleOffered: string;
-    /**
-     * Annual discount amount if offered
-     */
-    annualDiscountAmount: string;
-    /**
-     * Money-back guarantee details
-     */
-    moneyBackGuarantee: string;
-    /**
-     * Whether enterprise/custom pricing is available
-     */
-    hasEnterpriseCustomPricing: boolean;
-    /**
-     * Enterprise plan CTA text
-     */
-    enterprisePlanCTA: string;
-    /**
-     * Key features listed on pricing page (comma-separated)
-     */
-    pricingPageFeatures: string;
-    /**
-     * Whether an active promotion is running
-     */
-    hasActivePromotion: boolean;
-    /**
-     * Promotion details if active
-     */
-    promotionDetails: string;
-};
+/**
+ * Why: `never_read` (no read of its pricing page has given facts yet), `no_page` (no pricing page set and none found).
+ */
+export type PricingFactsUnavailableReason = 'never_read' | 'no_page';
 
-export type PricingCompetitorUnavailableResponse = {
+export type PricingFactsAvailableResponse = {
     /**
-     * Always false — present only when this row carries no pricing data
+     * Always false: the facts were not measured.
      */
     available: boolean;
     /**
-     * Why this row has no pricing data. 'no_page_found' = we didn't find a pricing page for this competitor — they may simply not publish one; if you know the URL, adding it in competitor settings enables this check. 'fetch_failed_their_side' = their pricing page didn't respond to this check (blocked, errored, or timed out) — nothing was measured. 'fetch_failed_our_side' = a temporary problem on our side stopped this check — nothing was measured, and it says nothing about the competitor. Never turn any of these reasons into a pricing claim: a row carrying one has no price, plan, or tier facts to quote.
+     * Why: `never_read` (no read of its pricing page has given facts yet), `no_page` (no pricing page set and none found).
      */
-    reason: 'no_page_found' | 'fetch_failed_their_side' | 'fetch_failed_our_side';
+    reason: PricingFactsUnavailableReason;
 };
 
-export type PricingCompetitorResponse = {
+/**
+ * On `read`, when the prices come from another page than the one set: what the one set did — `redirects` (it sends visitors to the page read), `not_found`, `no_prices` (it was read and shows none).
+ */
+export type PricingConfiguredPageOutcome = 'redirects' | 'not_found' | 'no_prices';
+
+export type PricingPriceResponse = {
     /**
-     * Competitor domain
+     * The page's own number. Never converted, added up or averaged with another company's.
+     */
+    amount: number;
+    /**
+     * The currency the price was read in (ISO 4217), as the page shows it.
+     */
+    currency: string;
+    /**
+     * What the amount is for: a month, a year, once, or usage. Absent: the page does not say.
+     */
+    period?: PricingPeriod;
+    /**
+     * How the amount is billed: `annually` on a monthly rate means the month's rate when paid for a year. Absent: the page does not say.
+     */
+    billed?: PricingBilled;
+};
+
+export type PricingPriceSetPlanResponse = {
+    /**
+     * The plan's name.
+     */
+    name: string;
+    /**
+     * The higher price, the one the facts list.
+     */
+    listed: PricingPriceResponse;
+    /**
+     * The other price seen.
+     */
+    other: PricingPriceResponse;
+};
+
+export type PricingPriceSetsResponse = {
+    /**
+     * The earliest read of the two sets (ISO-8601).
+     */
+    since: string;
+    /**
+     * Each plan seen at two prices.
+     */
+    plans: Array<PricingPriceSetPlanResponse>;
+};
+
+export type PricingCompanyResponse = {
+    /**
+     * The company's competitor ID.
+     */
+    competitorId: string;
+    /**
+     * Its domain.
      */
     domain: string;
     /**
-     * Whether this is the project's own domain
+     * Its own name as its page writes it, when the check stored one. Absent: say the domain, never a name made from it.
      */
-    isOwn: boolean;
+    name?: string;
     /**
-     * Pricing page URL that was analyzed, or null exactly when `pricingDataAvailable` is present (no pricing data on this row).
+     * true for the customer's own company.
      */
-    pricingUrl: string | null;
+    isSelf: boolean;
     /**
-     * How the pricing page was located, or null exactly when `pricingDataAvailable` is present.
+     * How far the check got with its pricing page: `read` (read this check), `could_not_read` (tried this check and not read; the facts are its last read's), `never_read` (no read has given facts yet), `no_page` (no pricing page set and none found).
      */
-    pricingLocationType: string | null;
+    state: PricingCompanyState;
     /**
-     * Extracted pricing page content, or null exactly when `pricingDataAvailable` is present. A null here means this competitor's pricing is unmeasured — never 'they offer no pricing'.
+     * The pricing page this check read: where, when, from which exit. null unless `state` is `read`: the state is why.
      */
-    content: PricingCompetitorContentResponse | null;
+    read: PricingCompanyReadResponse | null;
     /**
-     * Present ONLY when this row has no pricing data — `reason` says why. When present, `pricingUrl`, `pricingLocationType`, and `content` are null: branch on this field before quoting any price, plan, or pricing fact from the row. Absent on measured rows, including every response from before this field existed. On the dashboard, competitor rows keep their most recent successful read, so this marker appears only for a competitor never read successfully — its `reason` reflects the latest completed check. Your own row is different: it always reflects the latest completed check, success or failure. In run-detail responses the marker is scoped to that run.
+     * What it charges, as read: this check's facts, or on `could_not_read` its last read's. null: not measured, `factsAvailable` says why. An empty list: the page was read and stated nothing the check keeps.
      */
-    pricingDataAvailable?: PricingCompetitorUnavailableResponse;
+    facts: Array<PricingFactResponse> | null;
+    /**
+     * Present only when `facts` is null: why.
+     */
+    factsAvailable?: PricingFactsAvailableResponse;
+    /**
+     * On `could_not_read`: when the facts shown were read (ISO-8601).
+     */
+    shownAsReadAt?: string;
+    /**
+     * On `could_not_read` and `never_read`: when this check tried its pricing page (ISO-8601).
+     */
+    attemptedAt?: string;
+    /**
+     * The pricing page set in the project for it, when one was set.
+     */
+    configuredUrl?: string;
+    /**
+     * On `read`, when the prices come from another page than the one set: what the one set did — `redirects` (it sends visitors to the page read), `not_found`, `no_prices` (it was read and shows none).
+     */
+    configuredPage?: PricingConfiguredPageOutcome;
+    /**
+     * On `no_page`: the URL the check looked at and found nothing on.
+     */
+    lookedAt?: string;
+    /**
+     * Not read, and no pricing page set in the project: the page the check tried on the company's site and could not read.
+     */
+    triedUrl?: string;
+    /**
+     * Not read, and the address set in the project now ends on another site: that site's host (`www.` aside). `configuredUrl` is the address set.
+     */
+    movedTo?: string;
+    /**
+     * Two price sets seen on its page this check (a pricing test, never a change). The facts list the higher price.
+     */
+    priceSets?: PricingPriceSetsResponse;
+};
+
+export type PricingSetupPartResponse = {
+    /**
+     * The part, in the page's words.
+     */
+    name: string;
+    /**
+     * Its amount, in the row's currency and period.
+     */
+    amount: number;
+    /**
+     * The page's words for it, verbatim.
+     */
+    quote: string;
+};
+
+export type PricingSetupRowResponse = {
+    /**
+     * The company's competitor ID.
+     */
+    competitorId: string;
+    /**
+     * Its domain.
+     */
+    domain: string;
+    /**
+     * true for the customer's own company.
+     */
+    isSelf: boolean;
+    /**
+     * Whether a plan of the company serves the setup.
+     */
+    fits: boolean;
+    /**
+     * Its place among the rows that fit and show a price with a currency, cheapest first, as the check ordered them. Absent on a row that cannot serve the setup, and on a row that fits and could not be placed in the order (an amount with no currency, or no amount): `quote` then gives the page's own words for its price.
+     */
+    rank?: number;
+    /**
+     * The plan that fits, in the company's own name.
+     */
+    plan?: string;
+    /**
+     * The plan's price as the page shows it.
+     */
+    price?: PricingPriceResponse;
+    /**
+     * On a row that cannot serve the setup: why, in the page's words.
+     */
+    reason?: string;
+    /**
+     * The page's words the row rests on, verbatim. On a row with no `rank` that fits, the page's own words for its price: print them as they are, never a converted or guessed price.
+     */
+    quote?: string;
+    /**
+     * The page the row rests on.
+     */
+    pageUrl?: string;
+    /**
+     * When that page was read (ISO-8601).
+     */
+    readAt?: string;
+    /**
+     * true: the price is the annual rate and the page shows no monthly price for the plan.
+     */
+    monthlyNotOnPage?: boolean;
+    /**
+     * A price made of parts (a pack), as the page lists them: the parts add up to `price`, in its currency and period.
+     */
+    parts?: Array<PricingSetupPartResponse>;
+};
+
+/**
+ * `could_not_read`: its pricing page was not read this check. `no_quote`: it was read and the check priced no plan for this setup.
+ */
+export type PricingNotPricedReason = 'could_not_read' | 'no_quote';
+
+export type PricingSetupNotPricedResponse = {
+    /**
+     * The company's competitor ID.
+     */
+    competitorId: string;
+    /**
+     * Its domain.
+     */
+    domain: string;
+    /**
+     * true for the customer's own company.
+     */
+    isSelf: boolean;
+    /**
+     * `could_not_read`: its pricing page was not read this check. `no_quote`: it was read and the check priced no plan for this setup.
+     */
+    reason: PricingNotPricedReason;
+};
+
+export type PricingSetupResponse = {
+    /**
+     * The setup's id in `market.setups`.
+     */
+    setupId: string;
+    /**
+     * The setup in words.
+     */
+    label: string;
+    /**
+     * What the check assumed to price it.
+     */
+    assumptions: string;
+    /**
+     * Cheapest first, as the check ordered them; the rows that cannot serve the setup after, unranked. The order is the only ranking.
+     */
+    rows: Array<PricingSetupRowResponse>;
+    /**
+     * The customer's place among the ranked rows: with `of`, '2nd cheapest of 3'. Absent when it has none (it publishes no price for this setup, or cannot serve it).
+     */
+    customerRank?: number;
+    /**
+     * How many rows are ranked (fit and show a price).
+     */
+    of: number;
+    /**
+     * The check's companies with no price for this setup, and why. Not among `rows`.
+     */
+    notPriced: Array<PricingSetupNotPricedResponse>;
+};
+
+/**
+ * `quote_only_market`: the companies publish no comparable prices; their `external_price` facts are what was found. `not_built`: the check built none.
+ */
+export type PricingSetupsUnavailableReason = 'quote_only_market' | 'not_built';
+
+export type PricingSetupsAvailableResponse = {
+    /**
+     * Always false: no setup card for this check.
+     */
+    available: boolean;
+    /**
+     * `quote_only_market`: the companies publish no comparable prices; their `external_price` facts are what was found. `not_built`: the check built none.
+     */
+    reason: PricingSetupsUnavailableReason;
+};
+
+/**
+ * `change`: a confirmed change at a tracked company. `market_event`: the alert a company closing, renamed or bought raised, listed by its title, level and page alone; its words, its date and what the company sold are its entry in `marketEvents`.
+ */
+export type PricingChangeKind = 'change' | 'market_event';
+
+/**
+ * In the customer's words: `now` is "Tell me now", `this_week` is "Tell me this week", `record` is "Keep a record" (stored and listed, never sent on any channel).
+ */
+export type AlertLevel = 'now' | 'this_week' | 'record';
+
+export type PricingChangeResponse = {
+    /**
+     * The alert's ID.
+     */
+    alertId: string;
+    /**
+     * `change`: a confirmed change at a tracked company. `market_event`: the alert a company closing, renamed or bought raised, listed by its title, level and page alone; its words, its date and what the company sold are its entry in `marketEvents`.
+     */
+    kind: PricingChangeKind;
+    /**
+     * The company's competitor ID.
+     */
+    competitorId: string;
+    /**
+     * Its domain.
+     */
+    domain: string;
+    /**
+     * In the customer's words: `now` is "Tell me now", `this_week` is "Tell me this week", `record` is "Keep a record" (stored and listed, never sent on any channel).
+     */
+    level: AlertLevel;
+    /**
+     * What changed, from what to what, with the two dates: one sentence.
+     */
+    title: string;
+    /**
+     * One more sentence. Absent when the check wrote none, and always on a `market_event`.
+     */
+    detail?: string;
+    /**
+     * The value before, as the page put it.
+     */
+    from?: string;
+    /**
+     * The value now, as the page puts it.
+     */
+    to?: string;
+    /**
+     * When the page was read with the new value (ISO-8601).
+     */
+    readAt?: string;
+    /**
+     * When it was read with the old value: the read compared (ISO-8601).
+     */
+    previousReadAt?: string;
+    /**
+     * The live page.
+     */
+    pageUrl?: string;
+    /**
+     * The page's words before, verbatim.
+     */
+    quoteBefore?: string;
+    /**
+     * The page's words now, verbatim.
+     */
+    quoteAfter?: string;
+    /**
+     * When the check listed it (ISO-8601).
+     */
+    createdAt: string;
+};
+
+/**
+ * `switching_offer`: a page offering the customer's users a deal to switch. `listing_misquotes_price`: a listing shows a price or trial the customer's own page does not. `page_names_you`: a page speaking of the customer's price or plans. `board_ticket_stale`: a ticket on the project's board quotes a line no longer on the customer's page. `comparison_page_stale`: kept for a later check.
+ */
+export type PricingAboutYouKind = 'switching_offer' | 'listing_misquotes_price' | 'page_names_you' | 'comparison_page_stale' | 'board_ticket_stale';
+
+/**
+ * What the check read the page as, when it read it this check.
+ */
+export type PricingPageRole = 'pricing' | 'homepage' | 'sitemap' | 'other';
+
+export type PricingAboutYouTicketResponse = {
+    /**
+     * The ticket's ID.
+     */
+    id: string;
+    /**
+     * Its number on the board (#17 in the app).
+     */
+    number?: number;
+    /**
+     * Its title.
+     */
+    title?: string;
+};
+
+export type PricingAboutYouResponse = {
+    /**
+     * `switching_offer`: a page offering the customer's users a deal to switch. `listing_misquotes_price`: a listing shows a price or trial the customer's own page does not. `page_names_you`: a page speaking of the customer's price or plans. `board_ticket_stale`: a ticket on the project's board quotes a line no longer on the customer's page. `comparison_page_stale`: kept for a later check.
+     */
+    kind: PricingAboutYouKind;
+    /**
+     * The page it was found on.
+     */
+    pageUrl: string;
+    /**
+     * The date the page itself carries. Absent: undated.
+     */
+    pageDate?: string;
+    /**
+     * When the check found it (ISO-8601).
+     */
+    firstSeen: string;
+    /**
+     * The page's words, verbatim.
+     */
+    quote: string;
+    /**
+     * What the customer's own page says beside it.
+     */
+    ourPageSays?: string;
+    /**
+     * The tracked company whose site the page is on. Absent: a site the project does not track.
+     */
+    competitorId?: string;
+    /**
+     * That company's domain.
+     */
+    domain?: string;
+    /**
+     * What the check read the page as, when it read it this check.
+     */
+    page?: PricingPageRole;
+    /**
+     * board_ticket_stale: the ticket on the project's board.
+     */
+    ticket?: PricingAboutYouTicketResponse;
+    /**
+     * board_ticket_stale: when the quoted line was last read on the customer's page (ISO-8601).
+     */
+    thereOn?: string;
+};
+
+export type PricingMarketEventResponse = {
+    /**
+     * The company's competitor ID.
+     */
+    competitorId: string;
+    /**
+     * Its domain.
+     */
+    domain: string;
+    /**
+     * `shut_down`, `renamed` or `acquired`.
+     */
+    kind: string;
+    /**
+     * What happened, in one sentence.
+     */
+    title: string;
+    /**
+     * One more sentence: what the company sold. Absent when the check wrote none.
+     */
+    detail?: string;
+    /**
+     * The page's words, verbatim.
+     */
+    quote: string;
+    /**
+     * The page it was seen on.
+     */
+    pageUrl: string;
+    /**
+     * The date the page itself carries. Absent: undated.
+     */
+    pageDate?: string;
+    /**
+     * When the check first saw it (ISO-8601).
+     */
+    firstSeen: string;
+    /**
+     * What the check read the page as, when it read it this check.
+     */
+    page?: PricingPageRole;
+};
+
+export type PricingProgressResponse = {
+    /**
+     * Every page the check read: pricing pages, homepages and the others.
+     */
+    pagesRead: number;
+    /**
+     * Pages it could not read.
+     */
+    pagesFailed: number;
+    /**
+     * Pages it found worth reading.
+     */
+    pagesFound: number;
+    /**
+     * Of them, left for the next check.
+     */
+    readNextRun: number;
+    /**
+     * Companies read for the first time in this check.
+     */
+    companiesFirstRun?: number;
 };
 
 export type PricingDashboardResponse = {
     /**
-     * When this data was last updated (ISO-8601)
+     * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
      */
-    lastUpdatedAt: string;
+    readingGuide?: {
+        [key: string]: string;
+    };
     /**
-     * Run summary with pricing gap analysis
+     * The check's ID.
      */
-    summary: PricingDashboardSummaryResponse;
+    runId: string;
     /**
-     * Per-competitor pricing data. Every competitor tracked by the project appears, your own domain included — rows without pricing data carry `pricingDataAvailable` saying why instead of being dropped. Competitor rows show the most recent successful read (which may predate the latest run); your own row reflects the latest completed check.
+     * When the check completed (ISO-8601).
      */
-    competitors: Array<PricingCompetitorResponse>;
+    completedAt: string;
+    /**
+     * The market's kind and the typical buyer setups the check prices.
+     */
+    market: PricingMarketResponse;
+    /**
+     * How far the check got: one pricing page per company.
+     */
+    header: PricingHeaderResponse;
+    /**
+     * The check's own few paragraphs ('In short'). Absent when it wrote none.
+     */
+    narrative?: PricingNarrativeResponse;
+    /**
+     * The customer first, then each company the project tracks: what each charges, as read.
+     */
+    companies: Array<PricingCompanyResponse>;
+    /**
+     * What typical buyer setups cost, cheapest first, one card per setup. null: not built, `setupsAvailable` says why.
+     */
+    setups: Array<PricingSetupResponse> | null;
+    /**
+     * Present only when `setups` is null: why.
+     */
+    setupsAvailable?: PricingSetupsAvailableResponse;
+    /**
+     * This check's confirmed changes at tracked companies, newest first, records included, and a company closing, renamed or bought by its title alone (`kind` `market_event`; its words and date are in `marketEvents`).
+     */
+    changes: Array<PricingChangeResponse>;
+    /**
+     * The previous check's date (ISO-8601): the changes are since then. Absent on a project's first check.
+     */
+    changesSince?: string;
+    /**
+     * What pages say about the customer, in the order to read them.
+     */
+    aboutYou: Array<PricingAboutYouResponse>;
+    /**
+     * Tracked companies closing, renamed or bought.
+     */
+    marketEvents: Array<PricingMarketEventResponse>;
+    /**
+     * Every page the check read or failed, homepages and other pages included.
+     */
+    progress: PricingProgressResponse;
+    /**
+     * true: the check ran out of time before it judged everything it read. A company that could not be read does not set it.
+     */
+    partial: boolean;
+    /**
+     * When the next scheduled check runs (ISO-8601). Absent: none is scheduled.
+     */
+    nextCheckAt?: string;
 };
 
 export type PricingHistoryItemResponse = {
     /**
-     * Run ID
+     * The check's ID.
      */
     runId: string;
     /**
-     * When this run completed (ISO-8601)
+     * When it completed (ISO-8601).
      */
     completedAt: string;
     /**
-     * Run summary statistics
+     * Pricing pages it read, one per company: never a homepage or a sitemap.
      */
-    summary: PricingDashboardSummaryResponse;
+    pagesRead: number;
+    /**
+     * Pricing pages it could not read.
+     */
+    pagesFailed: number;
+    /**
+     * true: it ran out of time before it judged everything it read.
+     */
+    partial: boolean;
+    /**
+     * Where its reads came from: `us` is as a visitor from the US, `eu` is from Germany. `["us"]` on a check read wholly from the US.
+     */
+    egress: Array<PricingEgress>;
+    /**
+     * Its confirmed changes at tracked companies, newest first, records included, each with its level, from and to, the two read dates and the page's words; and a company closing, renamed or bought by its title alone (`kind` `market_event`; its words are in `marketEvents`).
+     */
+    changes: Array<PricingChangeResponse>;
+    /**
+     * Tracked companies it saw closing, renamed or bought.
+     */
+    marketEvents: Array<PricingMarketEventResponse>;
 };
 
 export type PricingRunDetailResponse = {
     /**
-     * Run ID
+     * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
+     */
+    readingGuide?: {
+        [key: string]: string;
+    };
+    /**
+     * The check's ID.
      */
     runId: string;
     /**
-     * When this run completed (ISO-8601)
+     * When the check completed (ISO-8601).
      */
     completedAt: string;
     /**
-     * Run summary statistics
+     * The market's kind and the typical buyer setups the check prices.
      */
-    summary: PricingDashboardSummaryResponse;
+    market: PricingMarketResponse;
     /**
-     * Per-competitor pricing data for this run. Every competitor this run attempted appears — rows the run could not measure carry `pricingDataAvailable` saying why instead of being dropped.
+     * How far the check got: one pricing page per company.
      */
-    competitors: Array<PricingCompetitorResponse>;
+    header: PricingHeaderResponse;
+    /**
+     * The check's own few paragraphs ('In short'). Absent when it wrote none.
+     */
+    narrative?: PricingNarrativeResponse;
+    /**
+     * The customer first, then each company the project tracks: what each charges, as read.
+     */
+    companies: Array<PricingCompanyResponse>;
+    /**
+     * What typical buyer setups cost, cheapest first, one card per setup. null: not built, `setupsAvailable` says why.
+     */
+    setups: Array<PricingSetupResponse> | null;
+    /**
+     * Present only when `setups` is null: why.
+     */
+    setupsAvailable?: PricingSetupsAvailableResponse;
+    /**
+     * This check's confirmed changes at tracked companies, newest first, records included, and a company closing, renamed or bought by its title alone (`kind` `market_event`; its words and date are in `marketEvents`).
+     */
+    changes: Array<PricingChangeResponse>;
+    /**
+     * The previous check's date (ISO-8601): the changes are since then. Absent on a project's first check.
+     */
+    changesSince?: string;
+    /**
+     * What pages say about the customer, in the order to read them.
+     */
+    aboutYou: Array<PricingAboutYouResponse>;
+    /**
+     * Tracked companies closing, renamed or bought.
+     */
+    marketEvents: Array<PricingMarketEventResponse>;
+    /**
+     * Every page the check read or failed, homepages and other pages included.
+     */
+    progress: PricingProgressResponse;
+    /**
+     * true: the check ran out of time before it judged everything it read. A company that could not be read does not set it.
+     */
+    partial: boolean;
 };
 
 export type AiVisibilityProviderMetricResponse = {
@@ -4247,15 +4880,23 @@ export type AlertListItemResponse = {
      */
     severity: 'critical' | 'high' | 'medium' | 'info';
     /**
-     * Alert title describing the detected change
+     * The level, on a pricing alert: now (tell me now: severity high), this_week (tell me this week: medium), record (keep a record: info, stored and never delivered to any channel). Absent on a dimension that writes no level.
+     */
+    level?: AlertLevel;
+    /**
+     * Alert title describing the detected change. On a pricing alert, one sentence: what changed from what to what, with the company, the plan and the two dates.
      */
     title: string;
     /**
-     * Suggested action for the user
+     * One more sentence under the title, on a pricing alert: the line for the customer, the plan's includes, or the page's words. Absent where the dimension writes none.
+     */
+    detail?: string;
+    /**
+     * Suggested action for the user. The empty string on a pricing alert, which gives no advice.
      */
     actionHint: string;
     /**
-     * Specific competitive gap warnings
+     * Specific competitive gap warnings. An empty list on a pricing alert.
      */
     gapWarnings: Array<string>;
     /**
@@ -4263,11 +4904,11 @@ export type AlertListItemResponse = {
      */
     runId: string;
     /**
-     * Alert sub-type classifier. Values vary by dimension — e.g., price_change, plan_restructure, feature_toggle (pricing), messaging_shift, positioning_change (positioning), content_growth, content_removal (content), tech_stack_evolution, crawl_strategy (tech-trust), own_standing_changed, rival_standing_changed, untracked_brand_recommended, prompt_market_changed (ai-visibility). AI Visibility alerts report who the AI models recommend, never score movement.
+     * Alert sub-type classifier. Values vary by dimension — e.g., messaging_shift, positioning_change (positioning), content_growth, content_removal (content), tech_stack_evolution, crawl_strategy (tech-trust), own_standing_changed, rival_standing_changed, untracked_brand_recommended, prompt_market_changed (ai-visibility). Absent on a pricing alert: its level, title and context say what changed. AI Visibility alerts report who the AI models recommend, never score movement.
      */
     alertType?: string;
     /**
-     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state).
+     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state). Pricing carries { version: 4, level, change } — kind, field, from, to, readAt and previousReadAt (the two reads compared), pageUrl, quoteBefore and quoteAfter (the page's words, verbatim) — or { version: 4, level, marketEvent } for a company closing, renamed or bought (kind, pageUrl, pageDate, firstSeen, quote).
      */
     context: {
         [key: string]: unknown;
@@ -7032,11 +7673,17 @@ export type PublicPricingControllerGetPricingDashboardV1Data = {
          */
         projectId: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * How much of the response to return. `compact`: each company's facts are trimmed to what it sells and its price: kind, name, price, altPrice, unit, visibility, includes, notRead and contradiction, a trial's trialDays, an outside price's source and perYear, a setup quote's setupId, fits and reason. Every other card is whole. `full`: every row of every list, as stored — large, and meant for export rather than for reading. Omitted, the API's default view applies: `compact` on `/v1`.
+         */
+        view?: 'compact' | 'full';
+    };
     url: '/v1/projects/{projectId}/pricing';
 };
 
 export type PublicPricingControllerGetPricingDashboardV1Errors = {
+    400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
 };
@@ -7071,11 +7718,16 @@ export type PublicPricingControllerGetPricingHistoryV1Data = {
          * Number of items per page
          */
         limit?: number;
+        /**
+         * Only the checks completed at or after this moment (ISO-8601: a date, or a date and time). With it, every row's changes together are what changed since then. Paged as without it.
+         */
+        since?: string;
     };
     url: '/v1/projects/{projectId}/pricing/history';
 };
 
 export type PublicPricingControllerGetPricingHistoryV1Errors = {
+    400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
 };
 
@@ -7086,6 +7738,12 @@ export type PublicPricingControllerGetPricingHistoryV1Responses = {
      * PaginatedResponseOfPricingHistoryItemResponse
      */
     200: {
+        /**
+         * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
+         */
+        readingGuide?: {
+            [key: string]: string;
+        };
         items: Array<PricingHistoryItemResponse>;
         pagination: PaginationMeta;
     };
@@ -7097,7 +7755,7 @@ export type PublicPricingControllerGetPricingRunDetailV1Data = {
     body?: never;
     path: {
         /**
-         * Run ID
+         * The check's ID, from the history
          */
         runId: string;
         /**
@@ -7105,11 +7763,17 @@ export type PublicPricingControllerGetPricingRunDetailV1Data = {
          */
         projectId: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * How much of the response to return. `compact`: each company's facts are trimmed to what it sells and its price: kind, name, price, altPrice, unit, visibility, includes, notRead and contradiction, a trial's trialDays, an outside price's source and perYear, a setup quote's setupId, fits and reason. Every other card is whole. `full`: every row of every list, as stored — large, and meant for export rather than for reading. Omitted, the API's default view applies: `compact` on `/v1`.
+         */
+        view?: 'compact' | 'full';
+    };
     url: '/v1/projects/{projectId}/pricing/history/{runId}';
 };
 
 export type PublicPricingControllerGetPricingRunDetailV1Errors = {
+    400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
 };
@@ -7567,6 +8231,10 @@ export type PublicAlertsControllerListAlertsV1Data = {
          */
         severity?: 'critical' | 'high' | 'medium' | 'info';
         /**
+         * Filter by level, on the pricing alerts that carry one: now (tell me now), this_week (tell me this week), record (keep a record: stored, never delivered to any channel). An alert of a dimension that writes no level never matches.
+         */
+        level?: AlertLevel;
+        /**
          * Filter by competitor ID
          */
         competitorId?: string;
@@ -7585,6 +8253,12 @@ export type PublicAlertsControllerListAlertsV1Responses = {
      * PaginatedResponseOfAlertListItemResponse
      */
     200: {
+        /**
+         * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
+         */
+        readingGuide?: {
+            [key: string]: string;
+        };
         items: Array<AlertListItemResponse>;
         pagination: PaginationMeta;
     };

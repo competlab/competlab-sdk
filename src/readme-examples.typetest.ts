@@ -13,7 +13,7 @@
  * warning about. It is excluded from the bundle by not being reachable from
  * `src/index.ts`, and from the package by `files` in package.json.
  */
-import CompetLab, { type AiProvider } from './index';
+import CompetLab, { isMeasured, type AiProvider } from './index';
 
 declare function report(msg: string): void;
 
@@ -159,4 +159,38 @@ async function sevenZeroExamples() {
   report(`${ticketTotal} ${moreTickets} ${todo}`);
 }
 
-export { marketMapExamples, sevenZeroExamples };
+// README "Reading the data", the pricing check's halves, WRONG lines included.
+async function pricingNullExamples() {
+  const { data } = await cl.pricing.dashboard('proj_abc');
+  const rival = data.item.companies.find((c) => !c.isSelf)!; // facts: PricingFactResponse[] | null
+
+  if (!rival.facts?.length) { /* WRONG — also true when we never read its pricing page */ }
+  const facts = rival.facts ?? []; //  WRONG — invents a page we read and found empty
+  report(String(facts.length));
+
+  if (isMeasured(rival.facts)) {
+    console.log(`${rival.facts.length} facts read`); // narrowed to the list, no cast needed
+  } else {
+    console.log(`not read: ${rival.factsAvailable?.reason}`); // never_read or no_page
+  }
+
+  const alerts = await cl.alerts.list('proj_abc', {
+    dimension: 'pricing',
+    level: 'now' // "Tell me now"; this_week is "Tell me this week", record is "Keep a record"
+  });
+  report(String(alerts.data.items.length));
+}
+
+// CHANGELOG 8.0.0, the "After" half.
+async function eightZeroExamples() {
+  const { data: check } = await cl.pricing.dashboard('proj_abc');
+  const setup = check.item.setups?.[0];
+  const place = setup?.customerRank; // with setup.of: "2nd cheapest of 3"
+  const { data: full } = await cl.pricing.dashboard('proj_abc', { view: 'full' });
+  const { data: since } = await cl.pricing.history('proj_abc', { since: '2026-05-01' });
+  const price = full.item.companies[0]?.facts?.[0]?.price;
+  const currency: string | null | undefined = price?.currency;
+  report(`${place} ${since.items.length} ${currency}`);
+}
+
+export { marketMapExamples, sevenZeroExamples, pricingNullExamples, eightZeroExamples };

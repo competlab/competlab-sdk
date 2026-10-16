@@ -22,7 +22,9 @@ import type {
   PublicContentControllerGetContentHistoryV1Data,
   PublicContentControllerGetContentChangelogV1Data,
   PublicPositioningControllerGetPositioningHistoryV1Data,
+  PublicPricingControllerGetPricingDashboardV1Data,
   PublicPricingControllerGetPricingHistoryV1Data,
+  PublicPricingControllerGetPricingRunDetailV1Data,
   PublicAiVisibilityControllerGetAiVisibilityHistoryV1Data,
   PublicAiVisibilityControllerGetAiVisibilityTrendV1Data,
   PublicBriefingControllerGetStrategicBriefingV1Data,
@@ -384,14 +386,20 @@ namespace CompetLab {
     }
   }
 
+  /**
+   * The pricing check: each company's prices as its own page shows them, what typical buyer setups
+   * cost (the row order is the only ranking), what changed, what pages say about you. Every response
+   * opens with `readingGuide`, the rules for its fields; `view` is `compact` unless you ask for `full`.
+   */
   export class Pricing {
     constructor(private readonly client: Client) {}
 
-    dashboard(projectId: string) {
+    dashboard(projectId: string, query?: PublicPricingControllerGetPricingDashboardV1Data['query']) {
       return GenPricing.publicPricingControllerGetPricingDashboardV1({
         client: this.client,
         throwOnError: true,
         path: { projectId },
+        query,
       });
     }
 
@@ -404,11 +412,16 @@ namespace CompetLab {
       });
     }
 
-    runDetail(projectId: string, runId: string) {
+    runDetail(
+      projectId: string,
+      runId: string,
+      query?: PublicPricingControllerGetPricingRunDetailV1Data['query'],
+    ) {
       return GenPricing.publicPricingControllerGetPricingRunDetailV1({
         client: this.client,
         throwOnError: true,
         path: { projectId, runId },
+        query,
       });
     }
   }

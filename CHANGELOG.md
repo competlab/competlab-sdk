@@ -3,6 +3,59 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 8.0.0
+
+Pricing is the pricing check now: each company's prices as its own pricing page shows them, what
+typical buyer setups cost, what changed, what pages say about you, and companies closing, renamed or
+bought. The three `cl.pricing` methods keep their names and their paths; everything they return is
+new, so this is a major: every pricing response type is replaced. Types regenerated from the
+backend's exported spec of 2026-10-16 (Epic 2 phase 2b, branch `epic2-2b6-machine`). Publish after
+the backend deploy, never before.
+
+### Changed — `cl.pricing` reads the pricing check
+
+- `cl.pricing.dashboard(projectId, { view })` and `cl.pricing.runDetail(projectId, runId, { view })`
+  answer the same cards: `companies` (the customer first; each with its `state` — `read`,
+  `could_not_read`, `never_read`, `no_page` — and its `facts`), `setups` (what typical buyer setups
+  cost, cheapest first; the row order is the only ranking, `customerRank` of `of`), `changes`,
+  `aboutYou`, `marketEvents`, `header`, `progress`, `partial`. `view` is `compact` unless you ask for
+  `full`; `compact` trims each fact to what it sells and its price.
+- Prices are each company's own amount and currency, with `period` and `billed`: nothing is
+  converted, added up or averaged. A fact's `price.currency` is `string | null`: `null` is an amount
+  the check read and could not place in a currency, never "no price". A setup row's price always has
+  its currency; a row that fits with no `rank` is one the check could not place, and its `quote` is
+  the page's own words.
+- A change carries `level` (`AlertLevel`): `now` is "Tell me now", `this_week` is "Tell me this
+  week", `record` is "Keep a record" (stored and listed, never sent on any channel). `kind` is
+  `change`, or `market_event` for a company closing, renamed or bought, listed by its title; its
+  words are in `marketEvents`.
+- `cl.pricing.history(projectId, { page, limit, since })` returns one row per completed check with
+  its `changes` and `marketEvents` in full; `since` keeps the checks completed at or after a moment.
+- Every pricing response opens with `readingGuide`, the reading rules for its fields.
+- Gone with the old dimension: `summary.customer` (`hasFreePlan`, `tierCount`, …), the gap flags,
+  `marketAvgPrice`, `pricePositionPercent`, `marketPricingUnit`, `pricingDataAvailable`, and the
+  404 `run_not_summarized`.
+
+```typescript
+// Before (7.x)
+const { data } = await cl.pricing.dashboard('proj_abc');
+const you = data.item.summary.customer;
+
+// After (8.0.0)
+const { data: check } = await cl.pricing.dashboard('proj_abc');
+const setup = check.item.setups?.[0];
+const place = setup?.customerRank; // with setup.of: "2nd cheapest of 3"
+const { data: full } = await cl.pricing.dashboard('proj_abc', { view: 'full' });
+const { data: since } = await cl.pricing.history('proj_abc', { since: '2026-05-01' });
+```
+
+### Added — alerts say their level
+
+`cl.alerts.list` takes `level` (`now`, `this_week`, `record`); a pricing alert row carries `level`
+and `detail`, and its `context.pricing` is version 4 (`change`: `from`, `to`, the two read dates,
+`pageUrl`, `quoteBefore`, `quoteAfter`; or `marketEvent`). A page with such a row opens with
+`readingGuide`. A record is listed and never delivered to any channel.
+
 ## 7.2.0
 
 Pricing phase 5 (Agency) is on production, and every project on `/v1` now says its plan. Types
