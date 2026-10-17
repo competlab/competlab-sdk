@@ -1535,7 +1535,7 @@ export type PositioningCompanyResponse = {
 };
 
 /**
- * What the check read that page as: `homepage` or `pricing`. Absent: another page.
+ * What the check read the page as, when it read it this check.
  */
 export type PositioningPageRole = 'homepage' | 'pricing' | 'sitemap' | 'other';
 
@@ -1592,7 +1592,7 @@ export type PositioningYourClaimResponse = {
      */
     pageUrl: string;
     /**
-     * What the check read that page as: `homepage` or `pricing`. Absent: another page.
+     * What the check read the page as, when it read it this check.
      */
     page?: PositioningPageRole;
     /**
