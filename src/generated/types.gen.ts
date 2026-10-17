@@ -1265,265 +1265,775 @@ export type ContentChangelogItemResponse = {
 
 export type ContentCategory = 'blog' | 'docs' | 'tools' | 'landing' | 'caseStudies' | 'comparison' | 'integrations' | 'changelog' | 'webinars' | 'legal' | 'programmatic' | 'other';
 
-export type PositioningMessagingUnavailableResponse = {
+export type PositioningHeaderUnreadResponse = {
     /**
-     * Always false for this discriminator.
+     * The company's competitor ID.
+     */
+    competitorId: string;
+    /**
+     * Its domain.
+     */
+    domain: string;
+    /**
+     * Its own name as its page writes it, when the check stored one. Absent: say the domain.
+     */
+    name?: string;
+    /**
+     * true for the customer's own company.
+     */
+    isSelf: boolean;
+    /**
+     * When the claims shown for it were read (ISO-8601). Absent: no read has given any.
+     */
+    shownAsReadAt?: string;
+};
+
+export type PositioningHeaderResponse = {
+    /**
+     * The day the check read on (ISO-8601).
+     */
+    readOn: string;
+    /**
+     * Homepages to read: one per company with a homepage set or found.
+     */
+    pages: number;
+    /**
+     * Of them, read this check, a homepage the check wrote nothing for included.
+     */
+    read: number;
+    /**
+     * The companies whose homepage this check could not read, the customer first.
+     */
+    unread: Array<PositioningHeaderUnreadResponse>;
+    /**
+     * true: not everything the check read is in this response yet; what is here holds, and the rest comes with a later check. A company that could not be read does not set it.
+     */
+    partial: boolean;
+    /**
+     * The pages naming the customer the check read this time.
+     */
+    pagesNamingYouRead: number;
+    /**
+     * Of them, how many carry a line in `aboutYou`.
+     */
+    pagesNamingYouWithLines: number;
+    /**
+     * Pages naming the customer found and left to the next check.
+     */
+    pagesNamingYouToRead: number;
+};
+
+/**
+ * `heading` carries `text` (and `level`); `prose` carries `body`.
+ */
+export type PositioningNarrativeBlockType = 'heading' | 'prose';
+
+export type PositioningNarrativeBlockResponse = {
+    /**
+     * `heading` carries `text` (and `level`); `prose` carries `body`.
+     */
+    type: PositioningNarrativeBlockType;
+    /**
+     * A heading's words.
+     */
+    text?: string;
+    /**
+     * A heading's level.
+     */
+    level?: number;
+    /**
+     * A paragraph, in the check's words.
+     */
+    body?: string;
+};
+
+export type PositioningNarrativeResponse = {
+    /**
+     * Headings and paragraphs, in order.
+     */
+    blocks: Array<PositioningNarrativeBlockResponse>;
+};
+
+/**
+ * How far the check got with its homepage: `read` (read this check), `could_not_read` (tried this check and not read; the claims are its last read's), `never_read` (no read has given claims yet), `no_page` (no homepage set and none found).
+ */
+export type PositioningCompanyState = 'read' | 'could_not_read' | 'never_read' | 'no_page';
+
+/**
+ * Where the page was read from: `us` is as a visitor from the US, `eu` is from Germany (used when the US read failed).
+ */
+export type PositioningEgress = 'us' | 'eu';
+
+export type PositioningCompanyReadResponse = {
+    /**
+     * The homepage read.
+     */
+    url: string;
+    /**
+     * When (ISO-8601).
+     */
+    readAt: string;
+    /**
+     * Where the page was read from: `us` is as a visitor from the US, `eu` is from Germany (used when the US read failed).
+     */
+    egress: PositioningEgress;
+};
+
+/**
+ * What the claim is: `title` (the page's title, as search shows it), `meta_description` (the line search shows under it), `headline`, `subheadline` (the line under the headline), `category` (what it calls itself), `audience` (who it says it is for), `main_button`, `proof` (a number it claims), `badge` (a badge it shows, as claimed), `feature` (what it says it does), `price` (the price it leads with).
+ */
+export type PositioningClaimKind = 'title' | 'meta_description' | 'headline' | 'subheadline' | 'category' | 'audience' | 'main_button' | 'proof' | 'badge' | 'feature' | 'price';
+
+/**
+ * main_button only: what kind of button it is — `free_start` (a free start), `trial`, `demo`, `sales` (talk to sales), `pricing` (see pricing), or `other` with the check's own word in `buttonKindWord`.
+ */
+export type PositioningButtonKind = 'free_start' | 'trial' | 'demo' | 'sales' | 'pricing' | 'other';
+
+export type PositioningClaimResponse = {
+    /**
+     * What the claim is: `title` (the page's title, as search shows it), `meta_description` (the line search shows under it), `headline`, `subheadline` (the line under the headline), `category` (what it calls itself), `audience` (who it says it is for), `main_button`, `proof` (a number it claims), `badge` (a badge it shows, as claimed), `feature` (what it says it does), `price` (the price it leads with).
+     */
+    kind: PositioningClaimKind;
+    /**
+     * The claim as the page prints it, verbatim.
+     */
+    value: string;
+    /**
+     * On the customer's own main claims: the id `yourClaims` rows are keyed by. Absent on another company's claim.
+     */
+    claimId?: string;
+    /**
+     * true: read from the page's markup (its title or meta description), not its visible text. Absent otherwise.
+     */
+    fromMarkup?: boolean;
+    /**
+     * proof only: the figure as a number.
+     */
+    number?: number;
+    /**
+     * proof only: what the figure counts.
+     */
+    unit?: string;
+    /**
+     * main_button only: what kind of button it is — `free_start` (a free start), `trial`, `demo`, `sales` (talk to sales), `pricing` (see pricing), or `other` with the check's own word in `buttonKindWord`.
+     */
+    buttonKind?: PositioningButtonKind;
+    /**
+     * main_button only, with `other`: the check's word for the kind.
+     */
+    buttonKindWord?: string;
+    /**
+     * The page's words around the claim, verbatim. Full view only.
+     */
+    quote?: string;
+    /**
+     * The page the claim was read on. Full view only.
+     */
+    pageUrl?: string;
+    /**
+     * When it was read (ISO-8601). Full view only.
+     */
+    readAt?: string;
+    /**
+     * Where the page was read from: `us` is as a visitor from the US, `eu` is from Germany (used when the US read failed). Full view only.
+     */
+    egress?: PositioningEgress;
+    /**
+     * Which version of the page was read, where the site serves more than one (`default` where it serves one). Full view only.
+     */
+    variant?: string;
+};
+
+/**
+ * Why: `never_read` (no read of its homepage has given claims yet), `no_page` (no homepage set and none found), `not_judged` (state `read`): the homepage was read and the check wrote nothing for it this time; nothing is claimed about what it says.
+ */
+export type PositioningClaimsUnavailableReason = 'never_read' | 'no_page' | 'not_judged';
+
+export type PositioningClaimsAvailableResponse = {
+    /**
+     * Always false: the claims were not measured.
      */
     available: boolean;
     /**
-     * Why your homepage messaging couldn't be scored. 'homepage_fetch_failed' = we couldn't retrieve your homepage this run; 'homepage_url_not_configured' = no homepage URL is set for your own domain.
+     * Why: `never_read` (no read of its homepage has given claims yet), `no_page` (no homepage set and none found), `not_judged` (state `read`): the homepage was read and the check wrote nothing for it this time; nothing is claimed about what it says.
      */
-    reason: 'homepage_fetch_failed' | 'homepage_url_not_configured';
+    reason: PositioningClaimsUnavailableReason;
 };
 
-export type PositioningSummaryCustomerResponse = {
+export type PositioningPageNamingYouResponse = {
     /**
-     * Your domain
+     * The page.
+     */
+    url: string;
+    /**
+     * Its title as the check read it. Absent: the check has none.
+     */
+    title?: string;
+    /**
+     * The date the page itself prints, as printed. Absent: undated.
+     */
+    pageDate?: string;
+    /**
+     * true: read this check. false: found, and left to the next check.
+     */
+    read: boolean;
+};
+
+export type PositioningCompanyResponse = {
+    /**
+     * The company's competitor ID.
+     */
+    competitorId: string;
+    /**
+     * Its domain.
      */
     domain: string;
     /**
-     * Messaging strength score (0-100) based on homepage completeness. `null` when your own homepage couldn't be analyzed this run (see `messagingAnalysisAvailable`) — do not report a messaging score or you-vs-competitor ranking in that case.
+     * Its own name as its page writes it, when the check stored one. Absent: say the domain, never a name made from it.
      */
-    messagingStrengthScore: number | null;
+    name?: string;
     /**
-     * Whether your headline includes specific metrics or numbers, or null when your own homepage couldn't be analyzed this run. A measured `false` is REAL — we read the page and the headline is generic — so never report a null as a generic headline.
+     * true for the customer's own company.
      */
-    hasSpecificHeadline: boolean | null;
+    isSelf: boolean;
     /**
-     * Whether your CTA is strong and specific (not just 'Get Started'), or null when your homepage was unmeasured. A measured `false` is a real finding.
+     * How far the check got with its homepage: `read` (read this check), `could_not_read` (tried this check and not read; the claims are its last read's), `never_read` (no read has given claims yet), `no_page` (no homepage set and none found).
      */
-    hasStrongCta: boolean | null;
+    state: PositioningCompanyState;
     /**
-     * Whether pricing is shown on your homepage, or null when it was unmeasured. A measured `false` is a real finding.
+     * The homepage this check read: where, when, from which exit. null unless `state` is `read`: the state is why.
      */
-    showsPricing: boolean | null;
+    read: PositioningCompanyReadResponse | null;
     /**
-     * Whether you offer a free trial, or null when your homepage was unmeasured. A measured `false` is a real finding.
+     * What its homepage says of itself, as read: this check's claims, or on `could_not_read` its last read's, in the check's order. null: not measured, `claimsAvailable` says why. An empty list: the page was read and makes no claim the check keeps. A claim about the customer is never here: it is in `aboutYou`.
      */
-    hasFreeTrial: boolean | null;
+    claims: Array<PositioningClaimResponse> | null;
     /**
-     * Your primary CTA text, or null when your homepage was unmeasured. Note the distinction: a measured empty string means we read the page and there IS no call to action — a real finding — while null means we never read it.
+     * Present only when `claims` is null: why.
      */
-    primaryCta: string | null;
+    claimsAvailable?: PositioningClaimsAvailableResponse;
     /**
-     * Your main headline, or null when your homepage was unmeasured. A measured empty string is a real finding.
+     * On `could_not_read`: when the claims shown were read (ISO-8601).
      */
-    mainHeadline: string | null;
+    shownAsReadAt?: string;
     /**
-     * Availability flag for your own homepage messaging. Present ONLY when your own homepage couldn't be analyzed this run (fetch failed, or no homepage URL configured) — see `reason`. When present, EVERY metric in this object is null, `messagingScoreGap` is null, and your own cells in the comparison widgets (`ctaComparison.yourCta`, `pricingComparison.youShowPrice`, `pricingComparison.youHaveFreeTrial`) are null too. Nothing here is a measured fact; the nulls say so on their own, and this field records why. Only `domain` remains populated. Absent on healthy runs (the normal path).
+     * On `could_not_read` and `never_read`: when this check tried its homepage (ISO-8601).
      */
-    messagingAnalysisAvailable?: PositioningMessagingUnavailableResponse;
+    attemptedAt?: string;
+    /**
+     * The homepage set in the project for it, when one was set for this check.
+     */
+    configuredUrl?: string;
+    /**
+     * true: read and judged, and every claim the check kept of it is about the customer, so `claims` is empty and the sentence is in `aboutYou`. Absent otherwise.
+     */
+    onlyAboutYou?: boolean;
+    /**
+     * Pages on its site that name the customer, as the check keeps them across checks: a count and the titles. What they say about the customer is in `aboutYou`, said once. Empty on the customer's own row.
+     */
+    pagesNamingYou: Array<PositioningPageNamingYouResponse>;
 };
 
-export type PositioningSummaryTopCompetitorResponse = {
+/**
+ * What the check read that page as: `homepage` or `pricing`. Absent: another page.
+ */
+export type PositioningPageRole = 'homepage' | 'pricing' | 'sitemap' | 'other';
+
+export type PositioningSaidByResponse = {
     /**
-     * Top messaging competitor domain
+     * The company's competitor ID.
+     */
+    competitorId: string;
+    /**
+     * Its domain.
      */
     domain: string;
     /**
-     * Their messaging strength score (0-100)
+     * Its own name as its page writes it, when the check stored one. Absent: say the domain.
      */
-    messagingStrengthScore: number;
+    name?: string;
     /**
-     * Their primary CTA text
+     * Its page's words, verbatim.
      */
-    primaryCta: string;
+    quote: string;
     /**
-     * Their main headline
+     * Its claim as its page prints it, when the check kept it: for a number or a price, its own figure.
      */
-    mainHeadline: string;
+    value?: string;
+    /**
+     * The page it says it on.
+     */
+    pageUrl: string;
+    /**
+     * What its claim is, when the check said it (the kinds of a company's claims).
+     */
+    kind?: string;
 };
 
-export type PositioningCtaComparisonResponse = {
+export type PositioningYourClaimResponse = {
     /**
-     * Your primary CTA text, or null when your own homepage couldn't be analyzed this run (see `customer.messagingAnalysisAvailable`) — never report a 'no primary CTA' finding or a your-CTA-vs-competitor comparison off a null. A measured homepage with no CTA is an empty string, not null.
+     * The claim's id, as the customer's own claim carries it.
      */
-    yourCta: string | null;
+    claimId: string;
     /**
-     * Strongest competitor's CTA text
+     * What the claim is (the kinds of a company's claims).
      */
-    strongestCompetitorCta: string;
+    kind: string;
     /**
-     * Domain of the competitor with the strongest CTA
+     * The claim as the customer's page prints it, verbatim.
      */
-    strongestCompetitorDomain: string;
+    value: string;
+    /**
+     * The customer's page's words around it, verbatim.
+     */
+    quote: string;
+    /**
+     * The page it comes from.
+     */
+    pageUrl: string;
+    /**
+     * What the check read that page as: `homepage` or `pricing`. Absent: another page.
+     */
+    page?: PositioningPageRole;
+    /**
+     * Each tracked company saying the same, in its own words. Empty: nobody else says it on the homepages the check read — their pricing pages may. For a number, a company's row is the same claim with its own figure.
+     */
+    saidBy: Array<PositioningSaidByResponse>;
 };
 
-export type PositioningPricingComparisonResponse = {
-    /**
-     * Number of competitors showing pricing on homepage
-     */
-    competitorsShowingPrice: number;
-    /**
-     * Number of competitors offering a free trial
-     */
-    competitorsWithFreeTrial: number;
-    /**
-     * Whether you show pricing on your homepage, or null when your own homepage couldn't be analyzed this run (see `customer.messagingAnalysisAvailable`) — never report a pricing-transparency posture off a null. A measured homepage that genuinely shows no pricing is false, not null.
-     */
-    youShowPrice: boolean | null;
-    /**
-     * Whether you offer a free trial, or null when your own homepage couldn't be analyzed this run (see `customer.messagingAnalysisAvailable`) — never report a free-trial claim off a null. A measured homepage with genuinely no free trial is false, not null.
-     */
-    youHaveFreeTrial: boolean | null;
-};
+/**
+ * `change`: a confirmed change at a tracked company. `market_event`: the alert a company closing, renamed or bought raised, listed by its title, level and page alone; its words and its date are its entry in `marketEvents`.
+ */
+export type PositioningChangeKind = 'change' | 'market_event';
 
-export type PositioningDashboardSummaryResponse = {
-    /**
-     * Number of competitor homepages checked in this run
-     */
-    competitorsChecked: number;
-    /**
-     * Number of competitor homepages successfully analyzed
-     */
-    competitorsSuccessful: number;
-    /**
-     * Your domain's messaging metrics
-     */
-    customer: PositioningSummaryCustomerResponse;
-    /**
-     * Competitor with the highest messaging strength score, or null if no competitors checked
-     */
-    topMessagingCompetitor?: PositioningSummaryTopCompetitorResponse | null;
-    /**
-     * CTA comparison between you and the strongest competitor, or null if unavailable
-     */
-    ctaComparison?: PositioningCtaComparisonResponse | null;
-    /**
-     * Pricing transparency comparison across competitors
-     */
-    pricingComparison: PositioningPricingComparisonResponse;
-    /**
-     * Your messaging score minus the top competitor's (negative = you are behind), or null when there is no comparison to make: your own homepage was unmeasured, or no competitor was scored. A 0 means genuinely level. Was a forced 0, which read as 'level' either way.
-     */
-    messagingScoreGap: number | null;
-};
+/**
+ * In the customer's words: `now` is "Tell me now", `this_week` is "Tell me this week", `record` is "Keep a record" (stored and listed, never sent on any channel).
+ */
+export type AlertLevel = 'now' | 'this_week' | 'record';
 
-export type PositioningCompetitorContentResponse = {
+export type PositioningChangeResponse = {
     /**
-     * Page title
+     * The alert's ID.
      */
-    pageTitle: string;
+    alertId: string;
     /**
-     * Page meta description
+     * `change`: a confirmed change at a tracked company. `market_event`: the alert a company closing, renamed or bought raised, listed by its title, level and page alone; its words and its date are its entry in `marketEvents`.
      */
-    pageDescription: string;
+    kind: PositioningChangeKind;
     /**
-     * Main homepage headline
+     * The company's competitor ID.
      */
-    mainHeadline: string;
+    competitorId: string;
     /**
-     * Tagline or subheadline
-     */
-    tagline: string;
-    /**
-     * Core value proposition statement
-     */
-    valueProposition: string;
-    /**
-     * Primary call-to-action text
-     */
-    primaryCTA: string;
-    /**
-     * Secondary call-to-action text
-     */
-    secondaryCTA: string;
-    /**
-     * Key product offerings listed on homepage
-     */
-    keyOfferings: Array<string>;
-    /**
-     * Target audience as described on homepage
-     */
-    targetAudience: string;
-    /**
-     * Main differentiator or unique selling point
-     */
-    mainDifferentiator: string;
-    /**
-     * Whether pricing is mentioned on the homepage
-     */
-    pricingMentioned: boolean;
-    /**
-     * Starting price if mentioned on homepage
-     */
-    startingPrice: string;
-    /**
-     * Whether a free trial is offered
-     */
-    hasFreeTrial: boolean;
-    /**
-     * Free trial duration if offered
-     */
-    freeTrialDuration: string;
-};
-
-export type PositioningCompetitorResponse = {
-    /**
-     * Competitor domain
+     * Its domain.
      */
     domain: string;
     /**
-     * Whether this is the project's own domain
+     * In the customer's words: `now` is "Tell me now", `this_week` is "Tell me this week", `record` is "Keep a record" (stored and listed, never sent on any channel).
      */
-    isOwn: boolean;
+    level: AlertLevel;
     /**
-     * Homepage URL that was analyzed
+     * What changed, from what to what, with the two dates: one sentence.
      */
-    homepageUrl: string;
+    title: string;
     /**
-     * Extracted homepage content and messaging
+     * One more sentence. Absent when the check wrote none, and always on a `market_event`.
      */
-    content: PositioningCompetitorContentResponse;
+    detail?: string;
+    /**
+     * What moved, as the check keys it: its kind, with the words or the name after a colon where a page can have several (`headline`, `audience:agencies`, `proof:regions`, `main_button.kind`). Absent on a `market_event`.
+     */
+    field?: string;
+    /**
+     * On a proof, badge or feature: the thing's name.
+     */
+    name?: string;
+    /**
+     * The words before, as the page put them. An empty string: the thing was not there (an audience named, a page published).
+     */
+    from?: string;
+    /**
+     * The words now, as the page puts them. An empty string: the thing is gone (an audience no longer named).
+     */
+    to?: string;
+    /**
+     * When the page was read with the new words (ISO-8601).
+     */
+    readAt?: string;
+    /**
+     * When it was read with the old words: the read compared (ISO-8601).
+     */
+    previousReadAt?: string;
+    /**
+     * The live page.
+     */
+    pageUrl?: string;
+    /**
+     * The page's words before, verbatim.
+     */
+    quoteBefore?: string;
+    /**
+     * The page's words now, verbatim.
+     */
+    quoteAfter?: string;
+    /**
+     * Where the page was read from: `us` is as a visitor from the US, `eu` is from Germany (used when the US read failed). Absent when its reads disagree or none answered.
+     */
+    egress?: PositioningEgress;
+    /**
+     * When the check listed it (ISO-8601).
+     */
+    createdAt: string;
+};
+
+/**
+ * `switching_offer`: a page offering the customer's users a deal to switch. `statement_contradicted`: a page says something about the customer's price, plan, free-plan terms or a feature, and the customer's own page says otherwise (`ourPageSays`). `page_about_you`: a page about the customer, its title or address naming it. `comparison_page_stale`: a tracked company's page now says something the customer's own comparison page states otherwise. `board_ticket_stale`: a ticket on the project's board quotes a line no longer on the customer's page.
+ */
+export type PositioningAboutYouKind = 'switching_offer' | 'statement_contradicted' | 'page_about_you' | 'comparison_page_stale' | 'board_ticket_stale';
+
+export type PositioningAboutYouTicketResponse = {
+    /**
+     * The ticket's ID.
+     */
+    id: string;
+    /**
+     * Its number on the board (#7 in the app).
+     */
+    number?: number;
+    /**
+     * Its title.
+     */
+    title?: string;
+};
+
+export type PositioningAboutYouResponse = {
+    /**
+     * `switching_offer`: a page offering the customer's users a deal to switch. `statement_contradicted`: a page says something about the customer's price, plan, free-plan terms or a feature, and the customer's own page says otherwise (`ourPageSays`). `page_about_you`: a page about the customer, its title or address naming it. `comparison_page_stale`: a tracked company's page now says something the customer's own comparison page states otherwise. `board_ticket_stale`: a ticket on the project's board quotes a line no longer on the customer's page.
+     */
+    kind: PositioningAboutYouKind;
+    /**
+     * The site the page is on.
+     */
+    domain: string;
+    /**
+     * The site's own name as its page spells it. Absent: say the domain.
+     */
+    name?: string;
+    /**
+     * The tracked company whose site the page is on. Absent on the customer's own site and on a site the project does not track.
+     */
+    competitorId?: string;
+    /**
+     * false: a site the project does not track; name it and say so.
+     */
+    tracked: boolean;
+    /**
+     * The page.
+     */
+    pageUrl: string;
+    /**
+     * The page's title. Absent: the check has none; say its address.
+     */
+    pageTitle?: string;
+    /**
+     * The date the page itself prints, as printed. Absent: undated.
+     */
+    pageDate?: string;
+    /**
+     * When the check found it (ISO-8601).
+     */
+    firstSeen: string;
+    /**
+     * On an undated page: the check after which it is new in its sitemap (ISO-8601). Absent: no complete earlier check says so.
+     */
+    sitemapNewSince?: string;
+    /**
+     * board_ticket_stale: when the quoted line was last read on the customer's page (ISO-8601).
+     */
+    lastSeenAt?: string;
+    /**
+     * comparison_page_stale: when the company's page was read this check (ISO-8601).
+     */
+    readAt?: string;
+    /**
+     * The page's words, verbatim.
+     */
+    quote: string;
+    /**
+     * The customer's own page beside it: its words, verbatim.
+     */
+    ourPageSays?: string;
+    /**
+     * That page.
+     */
+    ourPageUrl?: string;
+    /**
+     * What to call that page: "pricing page", "Terms", "homepage".
+     */
+    ourPageName?: string;
+    /**
+     * When that page was read (ISO-8601).
+     */
+    ourPageReadAt?: string;
+    /**
+     * What the check read the page as, when it read it this check.
+     */
+    page?: PositioningPageRole;
+    /**
+     * board_ticket_stale: the ticket on the project's board.
+     */
+    ticket?: PositioningAboutYouTicketResponse;
+};
+
+export type PositioningMarketEventResponse = {
+    /**
+     * The company's competitor ID.
+     */
+    competitorId: string;
+    /**
+     * Its domain.
+     */
+    domain: string;
+    /**
+     * `shut_down`, `renamed` or `acquired`.
+     */
+    kind: string;
+    /**
+     * What happened, in one sentence.
+     */
+    title: string;
+    /**
+     * One more sentence. Absent when the check wrote none.
+     */
+    detail?: string;
+    /**
+     * The page's words, verbatim.
+     */
+    quote: string;
+    /**
+     * The page it was seen on.
+     */
+    pageUrl: string;
+    /**
+     * The date the page itself prints, as printed. Absent: undated.
+     */
+    pageDate?: string;
+    /**
+     * When the check first saw it (ISO-8601).
+     */
+    firstSeen: string;
+    /**
+     * What the check read the page as, when it read it this check.
+     */
+    page?: PositioningPageRole;
+};
+
+export type PositioningProgressResponse = {
+    /**
+     * Every page the check read: homepages, the pages naming the customer and the others.
+     */
+    pagesRead: number;
+    /**
+     * Pages it could not read.
+     */
+    pagesFailed: number;
+    /**
+     * Pages it found worth reading.
+     */
+    pagesFound: number;
+    /**
+     * Of them, left for the next check.
+     */
+    readNextRun: number;
+    /**
+     * Companies read for the first time in this check.
+     */
+    companiesFirstRun?: number;
+    /**
+     * The pages naming the customer the check read this time.
+     */
+    pagesNamingYouRead: number;
+    /**
+     * Of them, how many carry a line in `aboutYou`.
+     */
+    pagesNamingYouWithLines: number;
+    /**
+     * Pages naming the customer found and left to the next check.
+     */
+    pagesNamingYouToRead: number;
 };
 
 export type PositioningDashboardResponse = {
     /**
-     * When this data was last updated (ISO-8601)
+     * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
      */
-    lastUpdatedAt: string;
+    readingGuide?: {
+        [key: string]: string;
+    };
     /**
-     * Run summary with messaging gap analysis
+     * The check's ID.
      */
-    summary: PositioningDashboardSummaryResponse;
+    runId: string;
     /**
-     * Per-competitor positioning data
+     * When the check completed (ISO-8601).
      */
-    competitors: Array<PositioningCompetitorResponse>;
+    completedAt: string;
+    /**
+     * The one language of the check's own sentences (BCP-47). Quotes stay in their page's own language. Absent: not said.
+     */
+    language?: string;
+    /**
+     * How far the check got: one homepage per company, and the pages naming the customer.
+     */
+    header: PositioningHeaderResponse;
+    /**
+     * The check's own few paragraphs ('In short'). Absent when it wrote none.
+     */
+    narrative?: PositioningNarrativeResponse;
+    /**
+     * The customer first, then each company the project tracks: what each homepage says of itself, as read.
+     */
+    companies: Array<PositioningCompanyResponse>;
+    /**
+     * The customer's main claims, and who else says the same, in their own words. null: the check built none.
+     */
+    yourClaims: Array<PositioningYourClaimResponse> | null;
+    /**
+     * This check's confirmed changes at tracked companies, newest first, records included, and a company closing, renamed or bought by its title alone (`kind` `market_event`; its words and date are in `marketEvents`).
+     */
+    changes: Array<PositioningChangeResponse>;
+    /**
+     * The previous check's date (ISO-8601): the changes are since then. Absent on a project's first check.
+     */
+    changesSince?: string;
+    /**
+     * What pages say about the customer, in the order to read them.
+     */
+    aboutYou: Array<PositioningAboutYouResponse>;
+    /**
+     * Tracked companies closing, renamed or bought.
+     */
+    marketEvents: Array<PositioningMarketEventResponse>;
+    /**
+     * Every page the check read or failed: homepages, the pages naming the customer and the others.
+     */
+    progress: PositioningProgressResponse;
+    /**
+     * true: not everything the check read is in this response yet; what is here holds, and the rest comes with a later check. A company that could not be read does not set it.
+     */
+    partial: boolean;
+    /**
+     * When the next scheduled check runs (ISO-8601). Absent with `nextCheckDue` saying a check is due: the next check is due and starts when a slot is free — say "due now", never a time of day. Absent otherwise: none is scheduled.
+     */
+    nextCheckAt?: string;
+    /**
+     * true: `nextCheckAt` is absent because a check is due: it starts when a slot is free — say "due now", never a time of day. Absent otherwise: with `nextCheckAt` absent too, none is scheduled.
+     */
+    nextCheckDue?: boolean;
 };
 
 export type PositioningHistoryItemResponse = {
     /**
-     * Run ID
+     * The check's ID.
      */
     runId: string;
     /**
-     * When this run completed (ISO-8601)
+     * When it completed (ISO-8601).
      */
     completedAt: string;
     /**
-     * Run summary statistics
+     * Homepages it read, one per company: never a sitemap or another page.
      */
-    summary: PositioningDashboardSummaryResponse;
+    pagesRead: number;
+    /**
+     * Homepages it could not read.
+     */
+    pagesFailed: number;
+    /**
+     * Homepages read this check for which it wrote nothing; their companies are in the run detail. Counted in `pagesRead` too.
+     */
+    pagesNotJudged: number;
+    /**
+     * The pages naming the customer it read.
+     */
+    pagesNamingYouRead: number;
+    /**
+     * true: not everything the check read is in this response yet; what is here holds, and the rest comes with a later check. A company that could not be read does not set it.
+     */
+    partial: boolean;
+    /**
+     * Where its homepage reads came from: `us` is as a visitor from the US, `eu` is from Germany. `["us"]` on a check read wholly from the US.
+     */
+    egress: Array<PositioningEgress>;
+    /**
+     * Its confirmed changes at tracked companies, newest first, records included, each with its level, what moved, from and to, the two read dates and the page's words; and a company closing, renamed or bought by its title alone (`kind` `market_event`; its words are in `marketEvents`).
+     */
+    changes: Array<PositioningChangeResponse>;
+    /**
+     * Tracked companies it saw closing, renamed or bought.
+     */
+    marketEvents: Array<PositioningMarketEventResponse>;
 };
 
 export type PositioningRunDetailResponse = {
     /**
-     * Run ID
+     * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
+     */
+    readingGuide?: {
+        [key: string]: string;
+    };
+    /**
+     * The check's ID.
      */
     runId: string;
     /**
-     * When this run completed (ISO-8601)
+     * When the check completed (ISO-8601).
      */
     completedAt: string;
     /**
-     * Run summary statistics
+     * The one language of the check's own sentences (BCP-47). Quotes stay in their page's own language. Absent: not said.
      */
-    summary: PositioningDashboardSummaryResponse;
+    language?: string;
     /**
-     * Per-competitor positioning data for this run
+     * How far the check got: one homepage per company, and the pages naming the customer.
      */
-    competitors: Array<PositioningCompetitorResponse>;
+    header: PositioningHeaderResponse;
+    /**
+     * The check's own few paragraphs ('In short'). Absent when it wrote none.
+     */
+    narrative?: PositioningNarrativeResponse;
+    /**
+     * The customer first, then each company the project tracks: what each homepage says of itself, as read.
+     */
+    companies: Array<PositioningCompanyResponse>;
+    /**
+     * The customer's main claims, and who else says the same, in their own words. null: the check built none.
+     */
+    yourClaims: Array<PositioningYourClaimResponse> | null;
+    /**
+     * This check's confirmed changes at tracked companies, newest first, records included, and a company closing, renamed or bought by its title alone (`kind` `market_event`; its words and date are in `marketEvents`).
+     */
+    changes: Array<PositioningChangeResponse>;
+    /**
+     * The previous check's date (ISO-8601): the changes are since then. Absent on a project's first check.
+     */
+    changesSince?: string;
+    /**
+     * What pages say about the customer, in the order to read them.
+     */
+    aboutYou: Array<PositioningAboutYouResponse>;
+    /**
+     * Tracked companies closing, renamed or bought.
+     */
+    marketEvents: Array<PositioningMarketEventResponse>;
+    /**
+     * Every page the check read or failed: homepages, the pages naming the customer and the others.
+     */
+    progress: PositioningProgressResponse;
+    /**
+     * true: not everything the check read is in this response yet; what is here holds, and the rest comes with a later check. A company that could not be read does not set it.
+     */
+    partial: boolean;
 };
 
 /**
@@ -2116,11 +2626,6 @@ export type PricingSetupsAvailableResponse = {
  * `change`: a confirmed change at a tracked company. `market_event`: the alert a company closing, renamed or bought raised, listed by its title, level and page alone; its words, its date and what the company sold are its entry in `marketEvents`.
  */
 export type PricingChangeKind = 'change' | 'market_event';
-
-/**
- * In the customer's words: `now` is "Tell me now", `this_week` is "Tell me this week", `record` is "Keep a record" (stored and listed, never sent on any channel).
- */
-export type AlertLevel = 'now' | 'this_week' | 'record';
 
 export type PricingChangeResponse = {
     /**
@@ -4888,23 +5393,23 @@ export type AlertListItemResponse = {
      */
     severity: 'critical' | 'high' | 'medium' | 'info';
     /**
-     * The level, on a pricing alert: now is "Tell me now" (severity high), this_week is "Tell me this week" (medium), record is "Keep a record" (info: stored and listed, never sent on any channel). Absent on a dimension that writes no level.
+     * The level, on a pricing or positioning alert: now is "Tell me now" (severity high), this_week is "Tell me this week" (medium), record is "Keep a record" (info: stored and listed, never sent on any channel). Absent on a dimension that writes no level.
      */
     level?: AlertLevel;
     /**
-     * Alert title describing the detected change. On a pricing alert, one sentence: what changed from what to what, with the company, the plan and the two dates.
+     * Alert title describing the detected change. On a pricing or positioning alert, one sentence in the check's words: what changed from what to what, with the company, the plan or the page, and the two dates.
      */
     title: string;
     /**
-     * One more sentence under the title, on a pricing alert: the line for the customer, the plan's includes, or the page's words. Absent where the dimension writes none.
+     * One more sentence under the title, on a pricing or positioning alert: the line for the customer, what else moved with it, or the page's words. Absent where the dimension writes none.
      */
     detail?: string;
     /**
-     * Suggested action for the user. The empty string on a pricing alert, which gives no advice.
+     * Suggested action for the user. The empty string on a pricing or positioning alert, which gives no advice.
      */
     actionHint: string;
     /**
-     * Specific competitive gap warnings. An empty list on a pricing alert.
+     * Specific competitive gap warnings. An empty list on a pricing or positioning alert.
      */
     gapWarnings: Array<string>;
     /**
@@ -4912,11 +5417,11 @@ export type AlertListItemResponse = {
      */
     runId: string;
     /**
-     * Alert sub-type classifier. Values vary by dimension — e.g., messaging_shift, positioning_change (positioning), content_growth, content_removal (content), tech_stack_evolution, crawl_strategy (tech-trust), own_standing_changed, rival_standing_changed, untracked_brand_recommended, prompt_market_changed (ai-visibility). Absent on a pricing alert: its level, title and context say what changed. AI Visibility alerts report who the AI models recommend, never score movement.
+     * Alert sub-type classifier. Values vary by dimension — e.g., content_growth, content_removal (content), tech_stack_evolution, crawl_strategy (tech-trust), own_standing_changed, rival_standing_changed, untracked_brand_recommended, prompt_market_changed (ai-visibility). Absent on a pricing or positioning alert: its level, title and context say what changed. AI Visibility alerts report who the AI models recommend, never score movement.
      */
     alertType?: string;
     /**
-     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state). Pricing carries { version: 4, level, change } — kind, field, from, to, readAt and previousReadAt (the two reads compared), pageUrl, quoteBefore and quoteAfter (the page's words, verbatim), and egress when it is known (where the change's own read came from: us is as a visitor from the US, eu is from Germany) — or { version: 4, level, marketEvent } for a company closing, renamed or bought (kind, pageUrl, pageDate, firstSeen, quote).
+     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state). Pricing carries { version: 4, level, change } — kind, field, from, to, readAt and previousReadAt (the two reads compared), pageUrl, quoteBefore and quoteAfter (the page's words, verbatim), and egress when it is known (where the change's own read came from: us is as a visitor from the US, eu is from Germany) — or { version: 4, level, marketEvent } for a company closing, renamed or bought (kind, pageUrl, pageDate, firstSeen, quote). Positioning carries { version: 1, level, change } — kind (what moved: a headline, a line under it, what the company calls itself, an audience added or dropped, the main button, a number, badge or feature it claims, the price it leads with, a page or a sentence about the customer, an offer to the customer's users), field, from and to (an empty side is a thing added or gone), readAt and previousReadAt, pageUrl, quoteBefore and quoteAfter verbatim, and on a page or a sentence about the customer the customer's own page beside it (ourPageSays, ourPageUrl, ourPageName, ourPageReadAt) — or { version: 1, level, marketEvent } as pricing's.
      */
     context: {
         [key: string]: unknown;
@@ -7578,11 +8083,17 @@ export type PublicPositioningControllerGetPositioningDashboardV1Data = {
          */
         projectId: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * How much of the response to return. `compact`: each company's claims are trimmed to what each claim is and its value as the page prints it: kind, value, claimId, fromMarkup, a number's number and unit, the main button's buttonKind and buttonKindWord. Every other card is whole. `full`: every row of every list, as stored — large, and meant for export rather than for reading. Omitted, the API's default view applies: `compact` on `/v1`.
+         */
+        view?: 'compact' | 'full';
+    };
     url: '/v1/projects/{projectId}/positioning';
 };
 
 export type PublicPositioningControllerGetPositioningDashboardV1Errors = {
+    400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
 };
@@ -7617,11 +8128,16 @@ export type PublicPositioningControllerGetPositioningHistoryV1Data = {
          * Number of items per page
          */
         limit?: number;
+        /**
+         * Only the checks completed at or after this moment (ISO-8601: a date, or a date and time). With it, every row's changes together are what changed since then. Paged as without it.
+         */
+        since?: string;
     };
     url: '/v1/projects/{projectId}/positioning/history';
 };
 
 export type PublicPositioningControllerGetPositioningHistoryV1Errors = {
+    400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
 };
 
@@ -7632,6 +8148,12 @@ export type PublicPositioningControllerGetPositioningHistoryV1Responses = {
      * PaginatedResponseOfPositioningHistoryItemResponse
      */
     200: {
+        /**
+         * The rules for reading this response, keyed by the field they govern — a dotted path, where `[]` means any element of that array — and only for fields this response carries. First in either view. Read them before quoting a figure; they say what each field is and is not.
+         */
+        readingGuide?: {
+            [key: string]: string;
+        };
         items: Array<PositioningHistoryItemResponse>;
         pagination: PaginationMeta;
     };
@@ -7643,7 +8165,7 @@ export type PublicPositioningControllerGetPositioningRunDetailV1Data = {
     body?: never;
     path: {
         /**
-         * Run ID
+         * The check's ID, from the history
          */
         runId: string;
         /**
@@ -7651,11 +8173,17 @@ export type PublicPositioningControllerGetPositioningRunDetailV1Data = {
          */
         projectId: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * How much of the response to return. `compact`: each company's claims are trimmed to what each claim is and its value as the page prints it: kind, value, claimId, fromMarkup, a number's number and unit, the main button's buttonKind and buttonKindWord. Every other card is whole. `full`: every row of every list, as stored — large, and meant for export rather than for reading. Omitted, the API's default view applies: `compact` on `/v1`.
+         */
+        view?: 'compact' | 'full';
+    };
     url: '/v1/projects/{projectId}/positioning/history/{runId}';
 };
 
 export type PublicPositioningControllerGetPositioningRunDetailV1Errors = {
+    400: ApiValidationErrorEnvelope;
     401: ApiUnauthorizedErrorEnvelope;
     404: ApiNotFoundErrorEnvelope;
 };
@@ -8239,7 +8767,7 @@ export type PublicAlertsControllerListAlertsV1Data = {
          */
         severity?: 'critical' | 'high' | 'medium' | 'info';
         /**
-         * Filter by level, on the pricing alerts that carry one: now is "Tell me now", this_week is "Tell me this week", record is "Keep a record" (stored, never sent on any channel). An alert of a dimension that writes no level never matches.
+         * Filter by level, on the pricing and positioning alerts that carry one: now is "Tell me now", this_week is "Tell me this week", record is "Keep a record" (stored, never sent on any channel). An alert of a dimension that writes no level never matches.
          */
         level?: AlertLevel;
         /**
