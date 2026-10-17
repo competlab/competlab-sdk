@@ -25,7 +25,9 @@ signatures on the API's words folded in). Publish after the backend deploy, neve
   converted, added up or averaged. A fact's `price.currency` is `string | null`: `null` is an amount
   the check read and could not place in a currency, never "no price". A setup row's price always has
   its currency; a row that fits with no `rank` is one the check could not place, and its `quote` is
-  the page's own words.
+  the page's own words. A company in a setup's `notPriced` with `no_quote` had its pricing page read
+  and no plan of it priced for this setup — nothing on the page fits it at a shown price; not "sells
+  by quote", which is the market's `quote_only`.
 - A fact's `visibility` is `full`, `starting_from`, `in_page_code` (a price shown only in the page's
   code), `gated` or `no_page`; a price found elsewhere has a `source.kind` of `vendor_page`,
   `listing`, `review_site`, `other_page` (another page of the company's site) or `redirect`.
@@ -62,7 +64,8 @@ const { data: since } = await cl.pricing.history('proj_abc', { since: '2026-05-0
 
 `cl.alerts.list` takes `level` (`now`, `this_week`, `record`); a pricing alert row carries `level`
 and `detail`, and its `context.pricing` is version 4 (`change`: `from`, `to`, the two read dates,
-`pageUrl`, `quoteBefore`, `quoteAfter`; or `marketEvent`). A page with such a row opens with
+`pageUrl`, `quoteBefore`, `quoteAfter`, and `egress` when it is known — `us` as a visitor from the
+US, `eu` from Germany, where the change's own read came from; or `marketEvent`). A page with such a row opens with
 `readingGuide`. A record is listed and never delivered to any channel.
 
 ## 7.2.0

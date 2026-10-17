@@ -2042,7 +2042,7 @@ export type PricingSetupRowResponse = {
 };
 
 /**
- * `could_not_read`: its pricing page was not read this check. `no_quote`: it was read and the check priced no plan for this setup.
+ * `could_not_read`: its pricing page was not read this check. `no_quote`: its pricing page was read and no plan of it was priced for this setup — nothing on the page fits it at a shown price. Not "sells by quote": that is the market's quote_only, on setupsAvailable.
  */
 export type PricingNotPricedReason = 'could_not_read' | 'no_quote';
 
@@ -2060,7 +2060,7 @@ export type PricingSetupNotPricedResponse = {
      */
     isSelf: boolean;
     /**
-     * `could_not_read`: its pricing page was not read this check. `no_quote`: it was read and the check priced no plan for this setup.
+     * `could_not_read`: its pricing page was not read this check. `no_quote`: its pricing page was read and no plan of it was priced for this setup — nothing on the page fits it at a shown price. Not "sells by quote": that is the market's quote_only, on setupsAvailable.
      */
     reason: PricingNotPricedReason;
 };
@@ -4912,7 +4912,7 @@ export type AlertListItemResponse = {
      */
     alertType?: string;
     /**
-     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state). Pricing carries { version: 4, level, change } — kind, field, from, to, readAt and previousReadAt (the two reads compared), pageUrl, quoteBefore and quoteAfter (the page's words, verbatim) — or { version: 4, level, marketEvent } for a company closing, renamed or bought (kind, pageUrl, pageDate, firstSeen, quote).
+     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state). Pricing carries { version: 4, level, change } — kind, field, from, to, readAt and previousReadAt (the two reads compared), pageUrl, quoteBefore and quoteAfter (the page's words, verbatim), and egress when it is known (where the change's own read came from: us is as a visitor from the US, eu is from Germany) — or { version: 4, level, marketEvent } for a company closing, renamed or bought (kind, pageUrl, pageDate, firstSeen, quote).
      */
     context: {
         [key: string]: unknown;
