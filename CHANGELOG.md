@@ -3,6 +3,39 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 9.1.0
+
+Positioning's change and market-event rows carry what its alert already stored: a page's two dates
+and how a market event was seen. Types regenerated from the spec the backend serves since the Epic 2
+phase 4 deploy (master `6aea9179`, 2026-10-17). Additive: two optional fields, one optional field
+with a new enum, and descriptions; no type renamed, no field removed. Publish after the backend
+deploy, never before.
+
+- `PositioningChangeResponse` gains `pageDate` and `sitemapLastmod`, both optional, on a page or a
+  sentence about you: `pageDate` is the date the page itself prints, as printed (absent: undated);
+  `sitemapLastmod` is the page's date in its sitemap (`lastmod`), ISO-8601, absent when the sitemap
+  gives none. They are the two dates such a page is listed by, on the `changes` of
+  `cl.positioning.dashboard`, `runDetail` and `history`.
+- `PositioningMarketEventResponse` gains `seenBy`, optional, typed by the new
+  `PositioningMarketEventSeenBy`: `'redirect'` (the homepage redirected to another company's site)
+  or `'page'` (the page said so), on the same three methods' `marketEvents`.
+- `cl.alerts.list`: the operation's description says a pricing or positioning alert carries a
+  level, a record is listed only on its dimension's page and under Records on the Alerts page, and
+  the response opens with `readingGuide` when a row carries a level, a detail or a pricing or
+  positioning context. `AlertListItemResponse.context`'s description now says pricing's and
+  positioning's context as a short list: positioning's `change` with `name`, `egress`, on a price
+  `amountFrom` and `amountTo` (`amountTo` 0 is a move to free), on a page or a sentence about you
+  `pageTitle`, `pageDate` and `sitemapLastmod`; a market event's fields on both checks, `seenBy`
+  among them; `samePricingAlert` and `samePositioningAlert` as `{ alertId, checkLevel }`. `context`
+  stays `{ [key: string]: unknown }`.
+- `comparison_page_stale`, on `PositioningAboutYouKind` and `PositioningAboutYouResponse.kind`: a
+  tracked company's page now says something other than what your own comparison page says of it
+  (was: "something the customer's own comparison page states otherwise").
+- `DimensionFreshnessResponse.positioning` and the positioning row of the API's dimension table end
+  without a full stop, as every other dimension's does.
+- The positioning `readingGuide` says that on a page or a sentence about you, `pageDate` is the
+  page's own date and `sitemapLastmod` its sitemap's, and words `comparison_page_stale` as above.
+
 ## 9.0.0
 
 Positioning is the positioning check now: what each company's homepage says of itself in its own

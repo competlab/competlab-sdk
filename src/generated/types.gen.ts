@@ -90,7 +90,7 @@ export type DimensionFreshnessResponse = {
      */
     content: DimensionLastRunResponse;
     /**
-     * What each company says on its homepage as the page says it, what you say that nobody else does, what changed, and what pages say about you.
+     * What each company says on its homepage as the page says it, what you say that nobody else does, what changed, and what pages say about you
      */
     positioning: DimensionLastRunResponse;
     /**
@@ -1677,6 +1677,14 @@ export type PositioningChangeResponse = {
      */
     quoteAfter?: string;
     /**
+     * On a page or a sentence about the customer: the date the page itself prints, as printed. Absent: undated.
+     */
+    pageDate?: string;
+    /**
+     * On a page or a sentence about the customer, ISO-8601: the page's date in its sitemap (lastmod); absent when the sitemap gives none.
+     */
+    sitemapLastmod?: string;
+    /**
      * Where the page was read from: `us` is as a visitor from the US, `eu` is from Germany (used when the US read failed). Absent when its reads disagree or none answered.
      */
     egress?: PositioningEgress;
@@ -1687,7 +1695,7 @@ export type PositioningChangeResponse = {
 };
 
 /**
- * `switching_offer`: a page offering the customer's users a deal to switch. `statement_contradicted`: a page says something about the customer's price, plan, free-plan terms or a feature, and the customer's own page says otherwise (`ourPageSays`). `page_about_you`: a page about the customer, its title or address naming it. `comparison_page_stale`: a tracked company's page now says something the customer's own comparison page states otherwise. `board_ticket_stale`: a ticket on the project's board quotes a line no longer on the customer's page.
+ * `switching_offer`: a page offering the customer's users a deal to switch. `statement_contradicted`: a page says something about the customer's price, plan, free-plan terms or a feature, and the customer's own page says otherwise (`ourPageSays`). `page_about_you`: a page about the customer, its title or address naming it. `comparison_page_stale`: a tracked company's page now says something other than what the customer's own comparison page says of it. `board_ticket_stale`: a ticket on the project's board quotes a line no longer on the customer's page.
  */
 export type PositioningAboutYouKind = 'switching_offer' | 'statement_contradicted' | 'page_about_you' | 'comparison_page_stale' | 'board_ticket_stale';
 
@@ -1708,7 +1716,7 @@ export type PositioningAboutYouTicketResponse = {
 
 export type PositioningAboutYouResponse = {
     /**
-     * `switching_offer`: a page offering the customer's users a deal to switch. `statement_contradicted`: a page says something about the customer's price, plan, free-plan terms or a feature, and the customer's own page says otherwise (`ourPageSays`). `page_about_you`: a page about the customer, its title or address naming it. `comparison_page_stale`: a tracked company's page now says something the customer's own comparison page states otherwise. `board_ticket_stale`: a ticket on the project's board quotes a line no longer on the customer's page.
+     * `switching_offer`: a page offering the customer's users a deal to switch. `statement_contradicted`: a page says something about the customer's price, plan, free-plan terms or a feature, and the customer's own page says otherwise (`ourPageSays`). `page_about_you`: a page about the customer, its title or address naming it. `comparison_page_stale`: a tracked company's page now says something other than what the customer's own comparison page says of it. `board_ticket_stale`: a ticket on the project's board quotes a line no longer on the customer's page.
      */
     kind: PositioningAboutYouKind;
     /**
@@ -1789,6 +1797,11 @@ export type PositioningAboutYouResponse = {
     ticket?: PositioningAboutYouTicketResponse;
 };
 
+/**
+ * "redirect" or "page": the homepage redirected to another company's site, or the page said so.
+ */
+export type PositioningMarketEventSeenBy = 'redirect' | 'page';
+
 export type PositioningMarketEventResponse = {
     /**
      * The company's competitor ID.
@@ -1830,6 +1843,10 @@ export type PositioningMarketEventResponse = {
      * What the check read the page as, when it read it this check.
      */
     page?: PositioningPageRole;
+    /**
+     * "redirect" or "page": the homepage redirected to another company's site, or the page said so.
+     */
+    seenBy?: PositioningMarketEventSeenBy;
 };
 
 export type PositioningProgressResponse = {
@@ -5425,7 +5442,14 @@ export type AlertListItemResponse = {
      */
     alertType?: string;
     /**
-     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state). Pricing carries { version: 4, level, change } — kind, field, from, to, readAt and previousReadAt (the two reads compared), pageUrl, quoteBefore and quoteAfter (the page's words, verbatim), and egress when it is known (where the change's own read came from: us is as a visitor from the US, eu is from Germany) — or { version: 4, level, marketEvent } for a company closing, renamed or bought (kind, pageUrl, pageDate, firstSeen, quote). Positioning carries { version: 1, level, change } — kind (what moved: a headline, a line under it, what the company calls itself, an audience added or dropped, the main button, a number, badge or feature it claims, the price it leads with, a page or a sentence about the customer, an offer to the customer's users), field, from and to (an empty side is a thing added or gone), readAt and previousReadAt, pageUrl, quoteBefore and quoteAfter verbatim, and, where the customer's own page says otherwise, that page beside it (ourPageSays, ourPageUrl, ourPageName, ourPageReadAt), and `sitemapLastmod` — ISO-8601: the page's date in its sitemap (lastmod); absent when the sitemap gives none — or { version: 1, level, marketEvent } as pricing's, with `seenBy` — "redirect" or "page": the homepage redirected to another company's site, or the page said so.
+     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state).
+     *
+     * Pricing and positioning carry `version`, `level`, and either `change` or `marketEvent`:
+     *
+     * - **Pricing**, `version` 4. `change`: `kind`, `field`, `from` and `to`, `readAt` and `previousReadAt` (the two reads compared), `pageUrl`, `quoteBefore` and `quoteAfter` (the page's words, verbatim), and `egress` when it is known (where the change's own read came from: `us` is as a visitor from the US, `eu` is from Germany).
+     * - **Positioning**, `version` 1. `change`: `kind` (what moved: a headline, the line under it, what the company calls itself, an audience added or dropped, the main button, a number, badge or feature it claims, the price it leads with, a page or a sentence about the customer, an offer to the customer's users), `field`, `name` (the name of a number, badge or feature), `from` and `to` (an empty side is a thing added or gone), `readAt` and `previousReadAt`, `pageUrl`, `quoteBefore` and `quoteAfter` (verbatim), and `egress` when it is known. On a price: `amountFrom` and `amountTo` (`amountTo` 0 is a move to free). On a page or a sentence about the customer: `pageTitle`, `pageDate` (the page's own date), `sitemapLastmod` (ISO-8601: the page's date in its sitemap; absent when the sitemap gives none) and, where the customer's own page says otherwise, that page beside it: `ourPageSays`, `ourPageUrl`, `ourPageName`, `ourPageReadAt`.
+     * - **A market event, both checks**: `marketEvent`, a company closing, renamed or bought: `kind`, `pageUrl`, `pageDate`, `firstSeen`, `quote`, and `seenBy` (`redirect`: the homepage redirected to another company's site; `page`: the page said so).
+     * - **One fact told by both checks**: a positioning alert's `samePricingAlert` names the pricing alert that told the same price move or the same market event first; a pricing alert's `samePositioningAlert` names the positioning alert that told the same price move from the company's homepage, or the same market event, first. Each is `{ alertId, checkLevel }`, the first alert's id and level; a channel the first alert reached is not sent the second.
      */
     context: {
         [key: string]: unknown;
