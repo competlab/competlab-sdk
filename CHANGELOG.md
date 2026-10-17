@@ -16,7 +16,8 @@ replaced. Types regenerated from the backend's exported spec (Epic 2 phase 3, br
 
 - `cl.positioning.dashboard(projectId, { view })` and `cl.positioning.runDetail(projectId, runId,
   { view })` answer the same cards: `companies` (the customer first; each with its `state` — `read`,
-  `could_not_read`, `never_read`, `no_page` — its `claims` and the pages on its site that name you),
+  `could_not_read`, `never_read`, `no_page` — its `claims` and the pages on its site that name you,
+  absent on your own row),
   `yourClaims` (your main claims, each with the tracked companies saying the same in their own
   words: an empty `saidBy` means nobody else says it on the homepages read), `changes`, `aboutYou`,
   `marketEvents`, `header`, `progress`, `partial`, and the check's `language`. `view` is `compact`
@@ -25,8 +26,8 @@ replaced. Types regenerated from the backend's exported spec (Epic 2 phase 3, br
   (`quote`), `pageUrl`, `readAt`, `egress` and `variant`.
 - A claim is the page's own words. Its `kind` is `title`, `meta_description`, `headline`,
   `subheadline`, `category`, `audience`, `main_button`, `proof`, `badge`, `feature` or `price`.
-  Nothing is scored, ranked or bucketed. A company's `claims` are `null` when no read gave any, with
-  `claimsAvailable.reason` `never_read`, `no_page` or `not_judged`; `read` is `null` unless `state`
+  Nothing is scored, ranked or bucketed. A company's `claims` are `null` when the check did not
+  measure them, with `claimsAvailable.reason` `never_read`, `no_page` or `not_judged`; `read` is `null` unless `state`
   is `read`.
 - A change carries `level` (`AlertLevel`): `now` is "Tell me now", `this_week` is "Tell me this
   week", `record` is "Keep a record" (stored and listed, never sent on any channel). `kind` is
@@ -36,7 +37,8 @@ replaced. Types regenerated from the backend's exported spec (Epic 2 phase 3, br
 - `aboutYou` lines (`switching_offer`, `statement_contradicted`, `page_about_you`,
   `comparison_page_stale`, `board_ticket_stale`) carry two pages' words with their dates — the
   other page's `quote` and, where it applies, your own page's `ourPageSays` with `ourPageReadAt` —
-  never a judgement of either page. `tracked: false` is a site the project does not track.
+  never a judgement of either page. `tracked: false` is a site the project does not track. Each line
+  carries `line`, the check's own sentence for it in the project's language, to quote as written.
 - `cl.positioning.history(projectId, { page, limit, since })` returns one row per completed check
   with `pagesRead`, `pagesFailed`, `pagesNotJudged`, `pagesNamingYouRead`, `partial`, `egress`, and
   its `changes` and `marketEvents` in full; `since` keeps the checks completed at or after a moment.

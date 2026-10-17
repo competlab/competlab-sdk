@@ -1505,7 +1505,7 @@ export type PositioningCompanyResponse = {
      */
     read: PositioningCompanyReadResponse | null;
     /**
-     * What its homepage says of itself, as read: this check's claims, or on `could_not_read` its last read's, in the check's order. null: not measured, `claimsAvailable` says why. An empty list: the page was read and makes no claim the check keeps. A claim about the customer is never here: it is in `aboutYou`.
+     * What its homepage says of itself, as read: this check's claims, or on `could_not_read` its last read's, in the check's order. null: not measured, `claimsAvailable` says why. An empty list: the page was read and makes no claim the check keeps. A sentence about the customer is in `aboutYou`, not here.
      */
     claims: Array<PositioningClaimResponse> | null;
     /**
@@ -1529,9 +1529,9 @@ export type PositioningCompanyResponse = {
      */
     onlyAboutYou?: boolean;
     /**
-     * Pages on its site that name the customer, as the check keeps them across checks: a count and the titles. What they say about the customer is in `aboutYou`, said once. Empty on the customer's own row.
+     * Pages on its site that name the customer, as the check keeps them across checks: a count and the titles. What they say about the customer is in `aboutYou`, said once. Absent on the customer's own row.
      */
-    pagesNamingYou: Array<PositioningPageNamingYouResponse>;
+    pagesNamingYou?: Array<PositioningPageNamingYouResponse>;
 };
 
 /**
@@ -1711,6 +1711,10 @@ export type PositioningAboutYouResponse = {
      * `switching_offer`: a page offering the customer's users a deal to switch. `statement_contradicted`: a page says something about the customer's price, plan, free-plan terms or a feature, and the customer's own page says otherwise (`ourPageSays`). `page_about_you`: a page about the customer, its title or address naming it. `comparison_page_stale`: a tracked company's page now says something the customer's own comparison page states otherwise. `board_ticket_stale`: a ticket on the project's board quotes a line no longer on the customer's page.
      */
     kind: PositioningAboutYouKind;
+    /**
+     * The check's own sentence for this line, in the project's language (`language`) and addressed to the customer as 'you': quote it as written. Absent on a check from before it.
+     */
+    line?: string;
     /**
      * The site the page is on.
      */
@@ -5421,7 +5425,7 @@ export type AlertListItemResponse = {
      */
     alertType?: string;
     /**
-     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state). Pricing carries { version: 4, level, change } — kind, field, from, to, readAt and previousReadAt (the two reads compared), pageUrl, quoteBefore and quoteAfter (the page's words, verbatim), and egress when it is known (where the change's own read came from: us is as a visitor from the US, eu is from Germany) — or { version: 4, level, marketEvent } for a company closing, renamed or bought (kind, pageUrl, pageDate, firstSeen, quote). Positioning carries { version: 1, level, change } — kind (what moved: a headline, a line under it, what the company calls itself, an audience added or dropped, the main button, a number, badge or feature it claims, the price it leads with, a page or a sentence about the customer, an offer to the customer's users), field, from and to (an empty side is a thing added or gone), readAt and previousReadAt, pageUrl, quoteBefore and quoteAfter verbatim, and on a page or a sentence about the customer the customer's own page beside it (ourPageSays, ourPageUrl, ourPageName, ourPageReadAt) — or { version: 1, level, marketEvent } as pricing's.
+     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state). Pricing carries { version: 4, level, change } — kind, field, from, to, readAt and previousReadAt (the two reads compared), pageUrl, quoteBefore and quoteAfter (the page's words, verbatim), and egress when it is known (where the change's own read came from: us is as a visitor from the US, eu is from Germany) — or { version: 4, level, marketEvent } for a company closing, renamed or bought (kind, pageUrl, pageDate, firstSeen, quote). Positioning carries { version: 1, level, change } — kind (what moved: a headline, a line under it, what the company calls itself, an audience added or dropped, the main button, a number, badge or feature it claims, the price it leads with, a page or a sentence about the customer, an offer to the customer's users), field, from and to (an empty side is a thing added or gone), readAt and previousReadAt, pageUrl, quoteBefore and quoteAfter verbatim, and, where the customer's own page says otherwise, that page beside it (ourPageSays, ourPageUrl, ourPageName, ourPageReadAt) — or { version: 1, level, marketEvent } as pricing's.
      */
     context: {
         [key: string]: unknown;

@@ -394,8 +394,8 @@ if (isMeasured(rival.facts)) {
 `isMeasuredTrue` and `isMeasuredFalse` do the same for a `boolean | null`: `!value` is also true
 for `null`, so a bare negation reads "we didn't measure it" as "they don't have it".
 
-Positioning reads the same way: a company's `claims` are `null` when its homepage gave none
-(`claimsAvailable.reason` says why), and an empty list is a homepage read that makes no claim the
+Positioning reads the same way: a company's `claims` are `null` when the check did not measure them
+(`claimsAvailable.reason` says why: `never_read`, `no_page` or `not_judged`), and an empty list is a homepage read that makes no claim the
 check keeps. Card 2's empty column is an answer too: a claim of yours with an empty `saidBy` is one
 nobody else makes on the homepages the check read — never call it unique.
 
