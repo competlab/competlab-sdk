@@ -193,4 +193,25 @@ async function eightZeroExamples() {
   report(`${place} ${since.items.length} ${currency}`);
 }
 
-export { marketMapExamples, sevenZeroExamples, pricingNullExamples, eightZeroExamples };
+// README "Reading the data", the positioning check's paragraph (9.0.0).
+async function positioningNullExamples() {
+  const { data: pos } = await cl.positioning.dashboard('proj_abc'); // compact: each claim's kind and value
+  const rival = pos.item.companies.find((c) => !c.isSelf)!; // claims: PositioningClaimResponse[] | null
+
+  if (isMeasured(rival.claims)) {
+    const headline = rival.claims.find((claim) => claim.kind === 'headline');
+    console.log(`${rival.name ?? rival.domain} says '${headline?.value}'`); // the page's own words
+  } else {
+    console.log(`not read: ${rival.claimsAvailable?.reason}`); // never_read, no_page or not_judged
+  }
+
+  for (const claim of pos.item.yourClaims ?? []) {
+    console.log(claim.value, claim.saidBy.length === 0 ? '— nobody else says it on the homepages read' : claim.saidBy.map((s) => s.quote));
+  }
+
+  const { data: full } = await cl.positioning.runDetail('proj_abc', 'run_1', { view: 'full' });
+  const { data: since } = await cl.positioning.history('proj_abc', { since: '2026-10-01' });
+  console.log(full.item.companies[0]?.claims?.[0]?.quote, since.items[0]?.changes[0]?.field);
+}
+
+export { marketMapExamples, sevenZeroExamples, pricingNullExamples, eightZeroExamples, positioningNullExamples };

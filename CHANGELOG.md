@@ -3,6 +3,55 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 9.0.0
+
+Positioning is the positioning check now: what each company's homepage says of itself in its own
+words, which of your claims other companies make too, what changed, what pages say about you, and
+companies closing, renamed or bought. The three `cl.positioning` methods keep their names and their
+paths; everything they return is new, so this is a major: every positioning response type is
+replaced. Types regenerated from the backend's exported spec (Epic 2 phase 3, branch
+`epic2-3c-machine`). Publish after the backend deploy, never before.
+
+### Changed — `cl.positioning` reads the positioning check
+
+- `cl.positioning.dashboard(projectId, { view })` and `cl.positioning.runDetail(projectId, runId,
+  { view })` answer the same cards: `companies` (the customer first; each with its `state` — `read`,
+  `could_not_read`, `never_read`, `no_page` — its `claims` and the pages on its site that name you),
+  `yourClaims` (your main claims, each with the tracked companies saying the same in their own
+  words: an empty `saidBy` means nobody else says it on the homepages read), `changes`, `aboutYou`,
+  `marketEvents`, `header`, `progress`, `partial`, and the check's `language`. `view` is `compact`
+  unless you ask for `full`; `compact` trims each claim to its `kind` and `value` (with a number's
+  `number` and `unit`, the main button's `buttonKind`), `full` adds the page's words around it
+  (`quote`), `pageUrl`, `readAt`, `egress` and `variant`.
+- A claim is the page's own words. Its `kind` is `title`, `meta_description`, `headline`,
+  `subheadline`, `category`, `audience`, `main_button`, `proof`, `badge`, `feature` or `price`.
+  Nothing is scored, ranked or bucketed. A company's `claims` are `null` when no read gave any, with
+  `claimsAvailable.reason` `never_read`, `no_page` or `not_judged`; `read` is `null` unless `state`
+  is `read`.
+- A change carries `level` (`AlertLevel`): `now` is "Tell me now", `this_week` is "Tell me this
+  week", `record` is "Keep a record" (stored and listed, never sent on any channel). `kind` is
+  `change` — with `field` (what moved, as the check keys it: `headline`, `audience:agencies`,
+  `proof:regions`), `name`, `from` and `to` (an empty side is a thing added or gone), the two read
+  dates, the page's words before and after, `pageUrl` and `egress` — or `market_event`, by its title.
+- `aboutYou` lines (`switching_offer`, `statement_contradicted`, `page_about_you`,
+  `comparison_page_stale`, `board_ticket_stale`) carry two pages' words with their dates — the
+  other page's `quote` and, where it applies, your own page's `ourPageSays` with `ourPageReadAt` —
+  never a judgement of either page. `tracked: false` is a site the project does not track.
+- `cl.positioning.history(projectId, { page, limit, since })` returns one row per completed check
+  with `pagesRead`, `pagesFailed`, `pagesNotJudged`, `pagesNamingYouRead`, `partial`, `egress`, and
+  its `changes` and `marketEvents` in full; `since` keeps the checks completed at or after a moment.
+- Every positioning response opens with `readingGuide`, the reading rules for its fields. The
+  dashboard says when the next check runs (`nextCheckAt`, or `nextCheckDue: true`).
+- Gone with the old dimension: `summary` and `competitors` (the messaging score and its gap, the
+  value proposition, the CTA comparison, the target audience and differentiator paraphrases, the
+  offerings), and the 404 `run_not_summarized`.
+
+### Changed — alerts
+
+- A positioning alert carries `level` and `detail` as a pricing alert does, an empty `actionHint`,
+  no `gapWarnings` and no `alertType`, and `context.positioning` (version 1: `level`, and `change`
+  or `marketEvent`). `cl.alerts.list(projectId, { level })` filters positioning's levels too.
+
 ## 8.1.0 — 2026-10-17
 
 Regenerated from the backend's exported spec after the 2b hotfix pass (branch `hotfix-2b-morning`).

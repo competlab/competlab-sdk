@@ -42,7 +42,7 @@ Competitive intelligence for the AI era. One platform, 6 dimensions, monitored a
 |-----------|---------------|
 | **Tech & Trust** | Tech stacks, security headers, trust signals |
 | **Content** | Sitemaps, content categories, publishing cadence |
-| **Positioning** | Homepage messaging, value props, CTAs |
+| **Positioning** | What each company says on its homepage as the page says it, what you say that nobody else does, what changed, and what pages say about you |
 | **Pricing** | What each company charges as its own pricing page shows it, what typical buyer setups cost cheapest first and where you stand, what changed, and what pages say about you |
 | **AI Visibility** | How ChatGPT, Claude, Gemini, Perplexity and Google AI Overviews recommend your brand vs competitors |
 | **AI Sources** | The pages Perplexity and Google AI Overviews retrieve while answering, and whether they name you |
@@ -59,7 +59,7 @@ cl.projects          // List and get projects
 cl.competitors       // Monitored competitors
 cl.techTrust         // Tech stack & trust signals
 cl.content           // Content analysis & changelog
-cl.positioning       // Homepage messaging analysis
+cl.positioning       // The positioning check: each homepage's claims, who says yours, what changed
 cl.pricing           // The pricing check: prices, typical setups, what changed
 cl.aiVisibility      // AI visibility scores, the market map & trends
 cl.aiSources         // Pages the engines retrieve while answering, and who they name
@@ -393,6 +393,27 @@ if (isMeasured(rival.facts)) {
 
 `isMeasuredTrue` and `isMeasuredFalse` do the same for a `boolean | null`: `!value` is also true
 for `null`, so a bare negation reads "we didn't measure it" as "they don't have it".
+
+Positioning reads the same way: a company's `claims` are `null` when its homepage gave none
+(`claimsAvailable.reason` says why), and an empty list is a homepage read that makes no claim the
+check keeps. Card 2's empty column is an answer too: a claim of yours with an empty `saidBy` is one
+nobody else makes on the homepages the check read — never call it unique.
+
+```typescript
+const { data: pos } = await cl.positioning.dashboard('proj_abc'); // compact: each claim's kind and value
+const rival = pos.item.companies.find((c) => !c.isSelf)!; // claims: PositioningClaimResponse[] | null
+
+if (isMeasured(rival.claims)) {
+  const headline = rival.claims.find((claim) => claim.kind === 'headline');
+  console.log(`${rival.name ?? rival.domain} says '${headline?.value}'`); // the page's own words
+} else {
+  console.log(`not read: ${rival.claimsAvailable?.reason}`); // never_read, no_page or not_judged
+}
+
+for (const claim of pos.item.yourClaims ?? []) {
+  console.log(claim.value, claim.saidBy.length === 0 ? '— nobody else says it on the homepages read' : claim.saidBy.map((s) => s.quote));
+}
+```
 
 ### Two neighbours of `null` that are not `null`
 

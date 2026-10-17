@@ -21,7 +21,9 @@ import type {
   PublicTechTrustControllerGetTechTrustHistoryV1Data,
   PublicContentControllerGetContentHistoryV1Data,
   PublicContentControllerGetContentChangelogV1Data,
+  PublicPositioningControllerGetPositioningDashboardV1Data,
   PublicPositioningControllerGetPositioningHistoryV1Data,
+  PublicPositioningControllerGetPositioningRunDetailV1Data,
   PublicPricingControllerGetPricingDashboardV1Data,
   PublicPricingControllerGetPricingHistoryV1Data,
   PublicPricingControllerGetPricingRunDetailV1Data,
@@ -357,14 +359,23 @@ namespace CompetLab {
     }
   }
 
+  /**
+   * The positioning check: what each company's homepage says of itself in its own words, which of
+   * your claims others make too, what changed, what pages say about you. Every response opens with
+   * `readingGuide`, the rules for its fields; `view` is `compact` unless you ask for `full`.
+   */
   export class Positioning {
     constructor(private readonly client: Client) {}
 
-    dashboard(projectId: string) {
+    dashboard(
+      projectId: string,
+      query?: PublicPositioningControllerGetPositioningDashboardV1Data['query'],
+    ) {
       return GenPositioning.publicPositioningControllerGetPositioningDashboardV1({
         client: this.client,
         throwOnError: true,
         path: { projectId },
+        query,
       });
     }
 
@@ -377,11 +388,16 @@ namespace CompetLab {
       });
     }
 
-    runDetail(projectId: string, runId: string) {
+    runDetail(
+      projectId: string,
+      runId: string,
+      query?: PublicPositioningControllerGetPositioningRunDetailV1Data['query'],
+    ) {
       return GenPositioning.publicPositioningControllerGetPositioningRunDetailV1({
         client: this.client,
         throwOnError: true,
         path: { projectId, runId },
+        query,
       });
     }
   }
