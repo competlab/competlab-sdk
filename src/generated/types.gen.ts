@@ -90,7 +90,7 @@ export type DimensionFreshnessResponse = {
      */
     content: DimensionLastRunResponse;
     /**
-     * Homepage messaging, value propositions, CTAs, and competitive positioning
+     * What each company says on its homepage as the page says it, what you say that nobody else does, what changed, and what pages say about you.
      */
     positioning: DimensionLastRunResponse;
     /**
@@ -1596,7 +1596,7 @@ export type PositioningYourClaimResponse = {
      */
     page?: PositioningPageRole;
     /**
-     * Each tracked company saying the same, in its own words. Empty: nobody else says it on the homepages the check read — their pricing pages may. For a number, a company's row is the same claim with its own figure.
+     * Each tracked company saying the same, in its own words. Empty: nobody else says it on the homepages the check read — their pricing pages may. For a number, a saidBy entry is the same claim with the company's own figure.
      */
     saidBy: Array<PositioningSaidByResponse>;
 };
@@ -1712,7 +1712,7 @@ export type PositioningAboutYouResponse = {
      */
     kind: PositioningAboutYouKind;
     /**
-     * The check's own sentence for this line, in the project's language (`language`) and addressed to the customer as 'you': quote it as written. Absent on a check from before it.
+     * The check's own sentence for this line, in the project's language (`language`) and addressed to the customer as 'you': quote it as written. Absent on a line from a check older than this field.
      */
     line?: string;
     /**
@@ -5425,7 +5425,7 @@ export type AlertListItemResponse = {
      */
     alertType?: string;
     /**
-     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state). Pricing carries { version: 4, level, change } — kind, field, from, to, readAt and previousReadAt (the two reads compared), pageUrl, quoteBefore and quoteAfter (the page's words, verbatim), and egress when it is known (where the change's own read came from: us is as a visitor from the US, eu is from Germany) — or { version: 4, level, marketEvent } for a company closing, renamed or bought (kind, pageUrl, pageDate, firstSeen, quote). Positioning carries { version: 1, level, change } — kind (what moved: a headline, a line under it, what the company calls itself, an audience added or dropped, the main button, a number, badge or feature it claims, the price it leads with, a page or a sentence about the customer, an offer to the customer's users), field, from and to (an empty side is a thing added or gone), readAt and previousReadAt, pageUrl, quoteBefore and quoteAfter verbatim, and, where the customer's own page says otherwise, that page beside it (ourPageSays, ourPageUrl, ourPageName, ourPageReadAt) — or { version: 1, level, marketEvent } as pricing's.
+     * Dimension-specific context, keyed by the canonical dimension slug — identical to the `dimension` field (e.g. an ai-visibility alert has an `ai-visibility` key), so you can index context[dimension]. Always present (an empty object when the alert has no extra context). Structure varies by dimension: most carry field-level changes with previousValue/currentValue pairs; AI Visibility carries either a standingChange (one brand's zone on the market map, the last reading that held and the current one, each with its presence, its range, and the answers it was drawn from; before is two or more published checks back — beforeChecksAgo says how many — and null when the brand was on no map then) or a promptMarketChange (the last prompt-market state that held, fromChecksAgo checks back, and the current one, with the sentence the app shows for the new state). Pricing carries { version: 4, level, change } — kind, field, from, to, readAt and previousReadAt (the two reads compared), pageUrl, quoteBefore and quoteAfter (the page's words, verbatim), and egress when it is known (where the change's own read came from: us is as a visitor from the US, eu is from Germany) — or { version: 4, level, marketEvent } for a company closing, renamed or bought (kind, pageUrl, pageDate, firstSeen, quote). Positioning carries { version: 1, level, change } — kind (what moved: a headline, a line under it, what the company calls itself, an audience added or dropped, the main button, a number, badge or feature it claims, the price it leads with, a page or a sentence about the customer, an offer to the customer's users), field, from and to (an empty side is a thing added or gone), readAt and previousReadAt, pageUrl, quoteBefore and quoteAfter verbatim, and, where the customer's own page says otherwise, that page beside it (ourPageSays, ourPageUrl, ourPageName, ourPageReadAt), and `sitemapLastmod` — ISO-8601: the page's date in its sitemap (lastmod); absent when the sitemap gives none — or { version: 1, level, marketEvent } as pricing's, with `seenBy` — "redirect" or "page": the homepage redirected to another company's site, or the page said so.
      */
     context: {
         [key: string]: unknown;

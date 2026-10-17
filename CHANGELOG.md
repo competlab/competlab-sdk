@@ -9,8 +9,8 @@ Positioning is the positioning check now: what each company's homepage says of i
 words, which of your claims other companies make too, what changed, what pages say about you, and
 companies closing, renamed or bought. The three `cl.positioning` methods keep their names and their
 paths; everything they return is new, so this is a major: every positioning response type is
-replaced. Types regenerated from the backend's exported spec (Epic 2 phase 3, branch
-`epic2-3c-machine`). Publish after the backend deploy, never before.
+replaced. Types regenerated from the spec the backend serves since the Epic 2 phase 3 deploy
+(master `de468206`, 2026-10-17). Publish after the backend deploy, never before.
 
 ### Changed — `cl.positioning` reads the positioning check
 
@@ -34,16 +34,22 @@ replaced. Types regenerated from the backend's exported spec (Epic 2 phase 3, br
   `change` — with `field` (what moved, as the check keys it: `headline`, `audience:agencies`,
   `proof:regions`), `name`, `from` and `to` (an empty side is a thing added or gone), the two read
   dates, the page's words before and after, `pageUrl` and `egress` — or `market_event`, by its title.
+  A change is listed only after it held on a second read; a page about you, only when its sitemap or
+  its own date puts it after the last check.
 - `aboutYou` lines (`switching_offer`, `statement_contradicted`, `page_about_you`,
   `comparison_page_stale`, `board_ticket_stale`) carry two pages' words with their dates — the
   other page's `quote` and, where it applies, your own page's `ourPageSays` with `ourPageReadAt` —
   never a judgement of either page. `tracked: false` is a site the project does not track. Each line
-  carries `line`, the check's own sentence for it in the project's language, to quote as written.
+  carries `line`, the check's own sentence for it in the project's language, to quote as written;
+  it is absent on a line from a check older than that field.
 - `cl.positioning.history(projectId, { page, limit, since })` returns one row per completed check
   with `pagesRead`, `pagesFailed`, `pagesNotJudged`, `pagesNamingYouRead`, `partial`, `egress`, and
   its `changes` and `marketEvents` in full; `since` keeps the checks completed at or after a moment.
 - Every positioning response opens with `readingGuide`, the reading rules for its fields. The
   dashboard says when the next check runs (`nextCheckAt`, or `nextCheckDue: true`).
+- The dimension's own description, on `DimensionFreshnessResponse.positioning` and in the API's
+  dimension table: what each company says on its homepage as the page says it, what you say that
+  nobody else does, what changed, and what pages say about you.
 - Gone with the old dimension: `summary` and `competitors` (the messaging score and its gap, the
   value proposition, the CTA comparison, the target audience and differentiator paraphrases, the
   offerings), and the 404 `run_not_summarized`.
@@ -53,6 +59,16 @@ replaced. Types regenerated from the backend's exported spec (Epic 2 phase 3, br
 - A positioning alert carries `level` and `detail` as a pricing alert does, an empty `actionHint`,
   no `gapWarnings` and no `alertType`, and `context.positioning` (version 1: `level`, and `change`
   or `marketEvent`). `cl.alerts.list(projectId, { level })` filters positioning's levels too.
+- On a page or a sentence about you, `context.positioning.change` carries `sitemapLastmod` (ISO-8601,
+  the page's date in its sitemap; absent when the sitemap gives none), and a
+  `context.positioning.marketEvent` says how it was seen in `seenBy` where it is known: `redirect`
+  (the homepage redirected to another company's site) or `page` (the page said so). `context` stays
+  `{ [key: string]: unknown }`; its description names both.
+- A positioning alert that tells the same price move or the same market event as a pricing alert
+  before it names that alert in `samePricingAlert` (a pricing alert names a positioning one in
+  `samePositioningAlert`): it keeps its own level, and a channel the named alert reached is not sent
+  this one. The response's `readingGuide` says so under `items[].context.positioning` and
+  `items[].context.pricing`.
 
 ## 8.1.0 — 2026-10-17
 
