@@ -3,7 +3,7 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
-## Unreleased
+## 8.1.0 — 2026-10-17
 
 Regenerated from the backend's exported spec after the 2b hotfix pass (branch `hotfix-2b-morning`).
 Additive; publish after the backend deploy, never before.
