@@ -1839,9 +1839,9 @@ export type PricingFactResponse = {
 };
 
 /**
- * Why: `never_read` (no read of its pricing page has given facts yet), `no_page` (no pricing page set and none found).
+ * Why: `never_read` (no read of its pricing page has given facts yet), `no_page` (no pricing page set and none found), `not_judged` (state `read`): the page was read and the check wrote nothing for it this time; nothing is claimed about its prices.
  */
-export type PricingFactsUnavailableReason = 'never_read' | 'no_page';
+export type PricingFactsUnavailableReason = 'never_read' | 'no_page' | 'not_judged';
 
 export type PricingFactsAvailableResponse = {
     /**
@@ -1849,7 +1849,7 @@ export type PricingFactsAvailableResponse = {
      */
     available: boolean;
     /**
-     * Why: `never_read` (no read of its pricing page has given facts yet), `no_page` (no pricing page set and none found).
+     * Why: `never_read` (no read of its pricing page has given facts yet), `no_page` (no pricing page set and none found), `not_judged` (state `read`): the page was read and the check wrote nothing for it this time; nothing is claimed about its prices.
      */
     reason: PricingFactsUnavailableReason;
 };
@@ -2042,9 +2042,9 @@ export type PricingSetupRowResponse = {
 };
 
 /**
- * `could_not_read`: its pricing page was not read this check. `no_quote`: its pricing page was read and no plan of it was priced for this setup — nothing on the page fits it at a shown price. Not "sells by quote": that is the market's quote_only, on setupsAvailable.
+ * `could_not_read`: its pricing page was not read this check. `no_quote`: its pricing page was read and no plan of it was priced for this setup — nothing on the page fits it at a shown price. Not "sells by quote": that is the market's quote_only, on setupsAvailable. `not_judged`: the page was read and the check wrote nothing for it this time; nothing is claimed about its prices. On the next check it is read again.
  */
-export type PricingNotPricedReason = 'could_not_read' | 'no_quote';
+export type PricingNotPricedReason = 'could_not_read' | 'no_quote' | 'not_judged';
 
 export type PricingSetupNotPricedResponse = {
     /**
@@ -2060,7 +2060,7 @@ export type PricingSetupNotPricedResponse = {
      */
     isSelf: boolean;
     /**
-     * `could_not_read`: its pricing page was not read this check. `no_quote`: its pricing page was read and no plan of it was priced for this setup — nothing on the page fits it at a shown price. Not "sells by quote": that is the market's quote_only, on setupsAvailable.
+     * `could_not_read`: its pricing page was not read this check. `no_quote`: its pricing page was read and no plan of it was priced for this setup — nothing on the page fits it at a shown price. Not "sells by quote": that is the market's quote_only, on setupsAvailable. `not_judged`: the page was read and the check wrote nothing for it this time; nothing is claimed about its prices. On the next check it is read again.
      */
     reason: PricingNotPricedReason;
 };
@@ -2413,6 +2413,10 @@ export type PricingHistoryItemResponse = {
      * Pricing pages it could not read.
      */
     pagesFailed: number;
+    /**
+     * Pages read this check for which it wrote nothing; their companies are in the run detail. Counted in `pagesRead` too.
+     */
+    pagesNotJudged: number;
     /**
      * true: not everything the check read is in this response yet; what is here holds, and the rest comes with a later check. A company that could not be read does not set it.
      */

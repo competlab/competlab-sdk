@@ -3,6 +3,18 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+Regenerated from the backend's exported spec after the 2b hotfix pass (branch `hotfix-2b-morning`).
+Additive; publish after the backend deploy, never before.
+
+- `PricingFactsUnavailableReason` gains `not_judged`: a company with `state` `read` whose page the
+  check read and wrote nothing for this time — its `facts` are `null`; nothing is claimed about its
+  prices. `PricingNotPricedReason` gains `not_judged` for the same company on a setup.
+- `PricingHistoryItemResponse.pagesNotJudged`: the pages a check read and wrote nothing for (counted
+  in `pagesRead` too); their companies are in the run detail.
+- The dashboard operation's description says `factsAvailable.reason`'s three values.
+
 ## 8.0.0
 
 Pricing is the pricing check now: each company's prices as its own pricing page shows them, what
