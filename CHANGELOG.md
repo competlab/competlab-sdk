@@ -3,6 +3,25 @@
 All notable changes to `@competlab/sdk` are documented here.
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 9.2.0
+
+Both histories say the day they begin, and a pricing company says when its pricing page is set to
+its homepage. Types regenerated from the spec the backend serves since the Epic 2 post-epic deploy
+(master `3ded3461`, 2026-10-18). Additive: two optional fields, one of them with a new enum, and one
+description; no type renamed, no field removed. Publish after the backend deploy, never before.
+
+- `cl.pricing.history` and `cl.positioning.history` gain `historyStartsAt`, optional: the day this
+  history begins; no row exists before it, so a question about an earlier change has no answer here.
+  An ISO date. Absent while no check has completed.
+- `PricingCompanyResponse` gains `setupState`, optional, typed by the new `PricingSetupState`. On
+  `read`, `'pricing_page_is_homepage'` says the configured pricing page is the company's homepage:
+  what was read is the homepage, and its facts are the homepage's. Never 'could not read'. Absent
+  otherwise, including when the check found the prices on another page it discovered itself, or
+  wrote nothing for the company this run.
+- `AlertListItemResponse.context`'s description: `samePricingAlert` and `samePositioningAlert` carry
+  `alertId`, the alert that told the same move first, and `checkLevel`, the level this alert's own
+  check gave the move. The value never changed; the sentence did.
+
 ## 9.1.0
 
 Positioning's change and market-event rows carry what its alert already stored: a page's two dates

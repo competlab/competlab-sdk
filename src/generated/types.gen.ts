@@ -2390,6 +2390,11 @@ export type PricingFactsAvailableResponse = {
  */
 export type PricingConfiguredPageOutcome = 'redirects' | 'not_found' | 'no_prices';
 
+/**
+ * On `read`: `pricing_page_is_homepage` — the configured pricing page is the company's homepage: what was read is the homepage, and its facts are the homepage's. Never 'could not read'. Absent otherwise.
+ */
+export type PricingSetupState = 'pricing_page_is_homepage';
+
 export type PricingPriceResponse = {
     /**
      * The page's own number. Never converted, added up or averaged with another company's.
@@ -2484,6 +2489,10 @@ export type PricingCompanyResponse = {
      * On `read`, when the prices come from another page than the one set: what the one set did — `redirects` (it sends visitors to the page read), `not_found`, `no_prices` (it was read and shows none).
      */
     configuredPage?: PricingConfiguredPageOutcome;
+    /**
+     * On `read`: `pricing_page_is_homepage` — the configured pricing page is the company's homepage: what was read is the homepage, and its facts are the homepage's. Never 'could not read'. Absent otherwise.
+     */
+    setupState?: PricingSetupState;
     /**
      * On `no_page`: the URL the check looked at and found nothing on.
      */
@@ -5449,7 +5458,7 @@ export type AlertListItemResponse = {
      * - **Pricing**, `version` 4. `change`: `kind`, `field`, `from` and `to`, `readAt` and `previousReadAt` (the two reads compared), `pageUrl`, `quoteBefore` and `quoteAfter` (the page's words, verbatim), and `egress` when it is known (where the change's own read came from: `us` is as a visitor from the US, `eu` is from Germany).
      * - **Positioning**, `version` 1. `change`: `kind` (what moved: a headline, the line under it, what the company calls itself, an audience added or dropped, the main button, a number, badge or feature it claims, the price it leads with, a page or a sentence about the customer, an offer to the customer's users), `field`, `name` (the name of a number, badge or feature), `from` and `to` (an empty side is a thing added or gone), `readAt` and `previousReadAt`, `pageUrl`, `quoteBefore` and `quoteAfter` (verbatim), and `egress` when it is known. On a price: `amountFrom` and `amountTo` (`amountTo` 0 is a move to free). On a page or a sentence about the customer: `pageTitle`, `pageDate` (the page's own date), `sitemapLastmod` (ISO-8601: the page's date in its sitemap; absent when the sitemap gives none) and, where the customer's own page says otherwise, that page beside it: `ourPageSays`, `ourPageUrl`, `ourPageName`, `ourPageReadAt`.
      * - **A market event, both checks**: `marketEvent`, a company closing, renamed or bought: `kind`, `pageUrl`, `pageDate`, `firstSeen`, `quote`, and `seenBy` (`redirect`: the homepage redirected to another company's site; `page`: the page said so).
-     * - **One fact told by both checks**: a positioning alert's `samePricingAlert` names the pricing alert that told the same price move or the same market event first; a pricing alert's `samePositioningAlert` names the positioning alert that told the same price move from the company's homepage, or the same market event, first. Each is `{ alertId, checkLevel }`, the first alert's id and level; a channel the first alert reached is not sent the second.
+     * - **One fact told by both checks**: a positioning alert's `samePricingAlert` names the pricing alert that told the same price move or the same market event first; a pricing alert's `samePositioningAlert` names the positioning alert that told the same price move from the company's homepage, or the same market event, first. Each holds `alertId`, and `checkLevel`, the level this alert's own check gave the move; a channel the first alert reached is not sent the second.
      */
     context: {
         [key: string]: unknown;
@@ -8182,6 +8191,10 @@ export type PublicPositioningControllerGetPositioningHistoryV1Responses = {
         readingGuide?: {
             [key: string]: string;
         };
+        /**
+         * The day this history begins; no row exists before it, so a question about an earlier change has no answer here. An ISO date. Absent while no check has completed.
+         */
+        historyStartsAt?: string;
         items: Array<PositioningHistoryItemResponse>;
         pagination: PaginationMeta;
     };
@@ -8308,6 +8321,10 @@ export type PublicPricingControllerGetPricingHistoryV1Responses = {
         readingGuide?: {
             [key: string]: string;
         };
+        /**
+         * The day this history begins; no row exists before it, so a question about an earlier change has no answer here. An ISO date. Absent while no check has completed.
+         */
+        historyStartsAt?: string;
         items: Array<PricingHistoryItemResponse>;
         pagination: PaginationMeta;
     };
