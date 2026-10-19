@@ -149,7 +149,7 @@ const { data } = await cl.aiVisibility.trend('proj_abc');
 //   window:    { from, to, checks, answersReceived, providersAsked: [...] },
 //   scope:     'all',
 //   companies: [
-//     { name: 'You', domain: 'you.com', isOwn: true,
+//     { name: 'Your Brand', domain: 'yourbrand.example', isOwn: true,
 //       now:   { presence: { answersNaming: 14, answersReceived: 20, presence: 70 }, rank: 1 },
 //       start: { presence: { answersNaming:  6, answersReceived: 18, presence: 33 }, rank: 3 },
 //       presenceChange: 37, presenceChangeSeparable: true, rankChange: 2 }
